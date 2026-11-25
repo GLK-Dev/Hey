@@ -7,8 +7,9 @@ See [Docs/DEVELOPMENT_PLAN.md](Docs/DEVELOPMENT_PLAN.md) for the full phase-by-p
 ## Architecture Overview
 
 - **Data flow:** `OS Event (winit) -> Input -> Action/Msg -> update(&mut Model) -> view(&Model) -> Reconcile -> Layout -> DrawCmd -> Backend`
-- **Planned crates:** `hey-core`, `hey-draw`, `hey-layout`, `hey-text`, `hey-style`, `hey-widgets`, `hey-render-cpu`, `hey-render-gpu`, `hey-shell`, `hey-test`
-- **Current stage:** Phase 0 (workspace setup, extracting the monolithic prototype into `examples/prototype_monolith`, and fixing dependency versions)
+- **Crates:** `hey-core`, `hey-draw`, `hey-layout`, `hey-text`, `hey-style`, `hey-widgets`, `hey-render-cpu`, `hey-render-gpu`, `hey-shell`, `hey-icons`, `hey-i18n`, `hey-test`
+- **Current stage:** Phase 10 (quality and documentation); see the plan
+- **Docs:** [Getting started](Docs/GETTING_STARTED.md), [Cookbook](Docs/COOKBOOK.md), [API policy](Docs/API_POLICY.md), [Changelog](CHANGELOG.md)
 
 ## Project Memory (VOS)
 

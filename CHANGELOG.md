@@ -1,0 +1,16 @@
+# Changelog
+
+All notable changes are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/), and the project follows [Semantic Versioning](https://semver.org/) (see `Docs/API_POLICY.md`).
+
+## [Unreleased]
+
+### Added
+- Workspace of 12 crates: core, layout (flexbox), style (design tokens, themes), text (shaping, bidi), draw (display list), CPU and GPU renderers, widgets, shell (winit), icons, i18n and the test harness.
+- MVU application shell (`App`, `Command`, `View` reconciliation).
+- Widgets: Button, Label, TextInput, TextArea, List, Tabs, Checkbox, Radio, Toggle, Slider, ProgressBar, Panel, Icon; overlays (Dropdown, Menu, Modal, Tooltip).
+- Accessibility tree (AccessKit), IME support, Fluent i18n, RTL text.
+- System appearance: light/dark, high contrast, reduced motion.
+- Platform-aware shortcuts (Cmd on macOS) and Shift+Z redo.
+- `hey-test`: input simulation and golden screenshots.
+- Property tests (`proptest`) and `criterion` benchmarks.
+- Documentation: getting started, cookbook, API policy.

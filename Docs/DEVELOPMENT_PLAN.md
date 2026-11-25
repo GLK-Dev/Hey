@@ -200,7 +200,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [ ] Цели: ввод→кадр ≤ 16 мс при 1080p/60 FPS на CPU-бэкенде для типового UI; холостой CPU ≈ 0%; холодный старт < 300 мс.
 - [~] Fuzz/property-тесты текстового редактора и арены. Done: `proptest` suites (`hey-text/tests/edit_props.rs`, `hey-core/tests/arena_props.rs`). Deferred: `cargo-fuzz` targets.
 - [x] Симуляция ввода в `hey-test` (сценарии «клик → ввод → undo → скриншот»): `Harness` (click/type/key/undo/redo/screenshot с golden PNG).
-- [ ] `cargo doc`, гайд «Начало работы», Cookbook, API-ревью, semver-политика, CHANGELOG.
+- [~] `cargo doc`, гайд «Начало работы», Cookbook, API-ревью, semver-политика, CHANGELOG. Done: `cargo doc` без предупреждений, `Docs/GETTING_STARTED.md`, `Docs/COOKBOOK.md`, `Docs/API_POLICY.md` (semver + чеклист), `CHANGELOG.md`. Deferred: фактический API-ревью по чеклисту (`#[non_exhaustive]`, типизированные ошибки, docs на всех pub-элементах).
 - [ ] Лицензия, публикация на crates.io (`0.1` → `0.x` → `1.0`).
 
 ### Фаза 11 (после v1.0, опционально)
