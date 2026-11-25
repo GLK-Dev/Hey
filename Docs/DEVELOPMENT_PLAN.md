@@ -183,7 +183,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Батчинг по scissor (смежные команды с одним клипом = один draw). [ ] минимизация смен текстур — вместе с атласом.
 - [x] Изображения: `hey-draw::ImageStore` (RGBA, id = индекс), `DrawCmd::Image` на CPU (эталон) и GPU (текстура на изображение, nearest, целочисленная выборка — пиксель-в-пиксель). [x] SVG-иконки: крейт `hey-icons` (`resvg`, `rasterize`/`add_svg` → straight-alpha RGBA в `ImageStore`, опциональный tint). [x] `IconCache`: именованные SVG, кэш (имя, физ. размер, tint) → `ImageId`, перерастеризация при смене масштаба. [ ] Упаковка в один атлас (нужны под-прямоугольники в `DrawCmd::Image`), фильтрация/9-slice.
 - [x] Golden-сравнение GPU↔CPU с допуском: `crates/hey-render-gpu/tests/parity.rs`, фигуры совпадают с точностью ≤ 1/255 на канал. текст и изображения совпадают пиксель-в-пиксель (`parity_text`, `parity_image`).
-- [ ] Рантайм-переключение CPU↔GPU: [x] флаг запуска `HEY_RENDERER=cpu|gpu` (по умолчанию GPU с fallback на CPU), [ ] горячая клавиша в dev-режиме.
+- [ ] Рантайм-переключение CPU↔GPU: [x] флаг запуска `HEY_RENDERER=cpu|gpu` (по умолчанию GPU с fallback на CPU), [x] горячая клавиша Ctrl+Shift+F12 (пересоздаёт поверхность окна; при сбое GPU остаётся CPU).
 
 ### Фаза 9. Доступность, i18n, платформа (3–4 Н)
 - [ ] **IME** (`WindowEvent::Ime`): preedit/commit, позиция окна кандидатов.

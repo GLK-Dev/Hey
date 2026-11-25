@@ -15,16 +15,18 @@ pub use clipboard::{install_system_clipboard, SystemClipboard};
 pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};
 pub use input::{InputState, LINE_PX};
 
-use hey_core::UiEvent;
+use hey_core::{Color, UiEvent};
 use hey_draw::{DisplayList, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
 use hey_render_gpu::GpuRenderer;
+use hey_text::Fonts;
 use std::{num::NonZeroU32, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
-    event::WindowEvent,
+    event::{ElementState, WindowEvent},
     event_loop::{ActiveEventLoop, ControlFlow, EventLoop},
+    keyboard::{Key, NamedKey},
     window::{Window, WindowId},
 };
 
@@ -99,7 +101,52 @@ enum Backend {
 
 struct Gfx {
     window: Arc<Window>,
-    backend: Backend,
+    /// `None` only while switching backends (the old one must be dropped before the new surface is created).
+    backend: Option<Backend>,
+}
+
+fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>) -> Result<Backend, String> {
+    let sz = window.inner_size();
+    let mut r = GpuRenderer::new_for_window(window.clone(), sz.width.max(1), sz.height.max(1)).map_err(|e| e.to_string())?;
+    r.clear_color = clear;
+    r.fonts = fonts;
+    Ok(Backend::Gpu(Box::new(r)))
+}
+
+fn create_cpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>) -> Backend {
+    let sz = window.inner_size();
+    let ctx = softbuffer::Context::new(window.clone()).expect("softbuffer context");
+    let surface = softbuffer::Surface::new(&ctx, window.clone()).expect("softbuffer surface");
+    let mut renderer = CpuRenderer::new(sz.width.max(1), sz.height.max(1));
+    renderer.clear_color = clear;
+    renderer.fonts = fonts;
+    Backend::Cpu { surface, renderer }
+}
+
+/// Dev hotkey Ctrl+Shift+F12: toggles between the GPU and CPU renderers at runtime.
+fn is_switch_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
+    matches!(event, WindowEvent::KeyboardInput { event: k, .. }
+        if k.state == ElementState::Pressed && !k.repeat && k.logical_key == Key::Named(NamedKey::F12))
+        && mods.ctrl
+        && mods.shift
+}
+
+impl Gfx {
+    fn switch_backend(&mut self, clear: Color, fonts: Option<Arc<Fonts>>) {
+        let to_gpu = matches!(self.backend, Some(Backend::Cpu { .. }));
+        self.backend = None; // release the current surface first: one window cannot hold two
+        let created =
+            if to_gpu { create_gpu(&self.window, clear, fonts.clone()) } else { Ok(create_cpu(&self.window, clear, fonts.clone())) };
+        self.backend = Some(match created {
+            Ok(b) => b,
+            Err(e) => {
+                eprintln!("hey: cannot switch to the GPU renderer ({e}), staying on the CPU");
+                create_cpu(&self.window, clear, fonts)
+            }
+        });
+        eprintln!("hey: renderer = {}", if matches!(self.backend, Some(Backend::Gpu(_))) { "gpu" } else { "cpu" });
+        self.window.request_redraw();
+    }
 }
 
 /// Which backends may be used, from `HEY_RENDERER` (`cpu`, `gpu`; anything else = auto).
@@ -144,36 +191,28 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
             .with_title(self.cfg.title.clone())
             .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1));
         let window = Arc::new(el.create_window(attrs).expect("create window"));
-        let sz = window.inner_size();
-        let (w, h) = (sz.width.max(1), sz.height.max(1));
         let (try_gpu, allow_cpu) = renderer_pref();
+        let (clear, fonts) = (self.cfg.clear, self.app.fonts());
         let mut backend = None;
         if try_gpu {
-            match GpuRenderer::new_for_window(window.clone(), w, h) {
-                Ok(mut r) => {
-                    r.clear_color = self.cfg.clear;
-                    r.fonts = self.app.fonts();
-                    backend = Some(Backend::Gpu(Box::new(r)));
-                }
+            match create_gpu(&window, clear, fonts.clone()) {
+                Ok(b) => backend = Some(b),
                 Err(e) if allow_cpu => eprintln!("hey: GPU unavailable ({e}), using the CPU renderer"),
                 Err(e) => panic!("hey: GPU renderer requested but unavailable: {e}"),
             }
         }
-        let backend = backend.unwrap_or_else(|| {
-            let ctx = softbuffer::Context::new(window.clone()).expect("softbuffer context");
-            let surface = softbuffer::Surface::new(&ctx, window.clone()).expect("softbuffer surface");
-            let mut renderer = CpuRenderer::new(w, h);
-            renderer.clear_color = self.cfg.clear;
-            renderer.fonts = self.app.fonts();
-            Backend::Cpu { surface, renderer }
-        });
+        let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
         window.set_ime_allowed(true);
         window.request_redraw();
-        self.gfx = Some(Gfx { window, backend });
+        self.gfx = Some(Gfx { window, backend: Some(backend) });
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let Some(g) = self.gfx.as_mut() else { return };
+        if is_switch_hotkey(&event, self.input.mods) {
+            g.switch_backend(self.cfg.clear, self.app.fonts());
+            return;
+        }
         let mut redraw = false;
         for ev in self.input.translate(&event) {
             redraw |= self.app.event(ev);
@@ -193,7 +232,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 self.list.clear();
                 self.app.draw(vp, &mut self.list);
-                match &mut g.backend {
+                match g.backend.as_mut().expect("backend") {
                     Backend::Gpu(r) => {
                         r.resize(sz.width, sz.height);
                         r.render(&self.list, vp);
