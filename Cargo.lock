@@ -760,6 +760,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hey-widgets"
+version = "0.1.0"
+dependencies = [
+ "hey-core",
+ "hey-draw",
+ "hey-layout",
+ "hey-style",
+ "hey-text",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
