@@ -5,7 +5,7 @@
 //! the CPU math (box-filter rect coverage, chamfer, centered border, erf shadow, capsule line).
 //!
 //! Text is drawn from an R8 glyph atlas (`atlas.rs`) with whole-pixel placement like the CPU path.
-//! Images are not drawn yet.
+//! Images are not drawn yet. Output goes to an offscreen texture (tests) or a window surface.
 
 mod atlas;
 
@@ -59,6 +59,7 @@ struct Globals {
 pub enum GpuError {
     NoAdapter,
     Device(String),
+    Surface(String),
 }
 
 impl std::fmt::Display for GpuError {
@@ -66,6 +67,7 @@ impl std::fmt::Display for GpuError {
         match self {
             GpuError::NoAdapter => write!(f, "no suitable GPU adapter"),
             GpuError::Device(e) => write!(f, "GPU device error: {e}"),
+            GpuError::Surface(e) => write!(f, "GPU surface error: {e}"),
         }
     }
 }
@@ -80,7 +82,13 @@ struct Batch {
     end: u32,
 }
 
-/// Offscreen (headless) GPU renderer. The window path will reuse the pipeline with a surface target.
+/// A window surface and its current configuration.
+struct Presenter {
+    surface: wgpu::Surface<'static>,
+    config: wgpu::SurfaceConfiguration,
+}
+
+/// GPU renderer: draws either into an offscreen texture (headless, for tests) or into a window surface.
 pub struct GpuRenderer {
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -97,7 +105,11 @@ pub struct GpuRenderer {
     atlas: atlas::Atlas,
     /// Font store used to rasterize glyphs (text is skipped when `None`).
     pub fonts: Option<Arc<Fonts>>,
-    target: wgpu::Texture,
+    /// Offscreen target (headless mode only).
+    target: Option<wgpu::Texture>,
+    /// Window surface (window mode only).
+    present: Option<Presenter>,
+    format: wgpu::TextureFormat,
     width: u32,
     height: u32,
     pub clear_color: Color,
@@ -106,15 +118,52 @@ pub struct GpuRenderer {
 impl GpuRenderer {
     /// Creates a headless renderer. Fails when no adapter is available (callers fall back to CPU).
     pub fn new_headless(width: u32, height: u32) -> Result<Self, GpuError> {
+        Self::create(wgpu::Instance::new(&wgpu::InstanceDescriptor::default()), None, width, height)
+    }
+
+    /// Creates a renderer that presents into `window` (`Arc<winit::window::Window>` works).
+    /// Fails when there is no adapter or surface (callers fall back to the CPU renderer).
+    pub fn new_for_window(window: impl Into<wgpu::SurfaceTarget<'static>>, width: u32, height: u32) -> Result<Self, GpuError> {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor::default());
+        let surface = instance.create_surface(window).map_err(|e| GpuError::Surface(e.to_string()))?;
+        Self::create(instance, Some(surface), width, height)
+    }
+
+    fn create(instance: wgpu::Instance, surface: Option<wgpu::Surface<'static>>, width: u32, height: u32) -> Result<Self, GpuError> {
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             force_fallback_adapter: false,
-            compatible_surface: None,
+            compatible_surface: surface.as_ref(),
         }))
         .ok_or(GpuError::NoAdapter)?;
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
             .map_err(|e| GpuError::Device(e.to_string()))?;
+        let (width, height) = (width.max(1), height.max(1));
+        // A non-sRGB surface format keeps the blending math identical to the CPU reference (gamma space).
+        let (format, present) = match surface {
+            None => (FORMAT, None),
+            Some(surface) => {
+                let caps = surface.get_capabilities(&adapter);
+                let format = caps
+                    .formats
+                    .iter()
+                    .copied()
+                    .find(|f| matches!(f, wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Rgba8Unorm))
+                    .ok_or_else(|| GpuError::Surface("no non-sRGB 8-bit surface format".into()))?;
+                let config = wgpu::SurfaceConfiguration {
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    format,
+                    width,
+                    height,
+                    present_mode: wgpu::PresentMode::Fifo,
+                    desired_maximum_frame_latency: 2,
+                    alpha_mode: caps.alpha_modes.first().copied().unwrap_or(wgpu::CompositeAlphaMode::Auto),
+                    view_formats: vec![],
+                };
+                surface.configure(&device, &config);
+                (format, Some(Presenter { surface, config }))
+            }
+        };
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("hey-shader"),
@@ -164,7 +213,7 @@ impl GpuRenderer {
                 module: &shader,
                 entry_point: Some("fs"),
                 compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState { format: FORMAT, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
+                targets: &[Some(wgpu::ColorTargetState { format, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
             }),
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
@@ -239,7 +288,7 @@ impl GpuRenderer {
                 module: &text_shader,
                 entry_point: Some("fs"),
                 compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState { format: FORMAT, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
+                targets: &[Some(wgpu::ColorTargetState { format, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
             }),
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
@@ -268,7 +317,7 @@ impl GpuRenderer {
         });
         let glyphs_cap = 1024 * std::mem::size_of::<GlyphInst>() as u64;
         let glyphs = Self::make_instances(&device, glyphs_cap);
-        let target = Self::make_target(&device, width.max(1), height.max(1));
+        let target = present.is_none().then(|| Self::make_target(&device, format, width, height));
         Ok(Self {
             device,
             queue,
@@ -285,8 +334,10 @@ impl GpuRenderer {
             atlas: atlas::Atlas::default(),
             fonts: None,
             target,
-            width: width.max(1),
-            height: height.max(1),
+            present,
+            format,
+            width,
+            height,
             clear_color: Color::rgb(0, 0, 0),
         })
     }
@@ -300,25 +351,38 @@ impl GpuRenderer {
         })
     }
 
-    fn make_target(device: &wgpu::Device, w: u32, h: u32) -> wgpu::Texture {
+    fn make_target(device: &wgpu::Device, format: wgpu::TextureFormat, w: u32, h: u32) -> wgpu::Texture {
         device.create_texture(&wgpu::TextureDescriptor {
             label: Some("hey-target"),
             size: wgpu::Extent3d { width: w, height: h, depth_or_array_layers: 1 },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: FORMAT,
+            format,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         })
+    }
+
+    /// Next surface texture; reconfigures once after `Outdated`/`Lost` (resize, display change).
+    fn acquire(device: &wgpu::Device, p: &Presenter) -> Option<wgpu::SurfaceTexture> {
+        for _ in 0..2 {
+            match p.surface.get_current_texture() {
+                Ok(f) => return Some(f),
+                Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => p.surface.configure(device, &p.config),
+                Err(_) => return None,
+            }
+        }
+        None
     }
 
     pub fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
 
-    /// Reads the last rendered frame back as tightly packed RGBA8, top row first.
+    /// Reads the last rendered frame back as tightly packed RGBA8, top row first (headless mode only).
     pub fn read_pixels(&self) -> Vec<u8> {
+        let target = self.target.as_ref().expect("read_pixels needs a headless renderer");
         let (w, h) = (self.width, self.height);
         let row = w * 4;
         let padded = row.div_ceil(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT) * wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
@@ -330,7 +394,7 @@ impl GpuRenderer {
         });
         let mut enc = self.device.create_command_encoder(&Default::default());
         enc.copy_texture_to_buffer(
-            self.target.as_image_copy(),
+            target.as_image_copy(),
             wgpu::TexelCopyBufferInfo {
                 buffer: &buf,
                 layout: wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(padded), rows_per_image: Some(h) },
@@ -465,9 +529,15 @@ impl UiRenderer for GpuRenderer {
     fn resize(&mut self, width: u32, height: u32) {
         let (w, h) = (width.max(1), height.max(1));
         if (w, h) != (self.width, self.height) {
-            self.target = Self::make_target(&self.device, w, h);
             self.width = w;
             self.height = h;
+            if let Some(p) = &mut self.present {
+                p.config.width = w;
+                p.config.height = h;
+                p.surface.configure(&self.device, &p.config);
+            } else {
+                self.target = Some(Self::make_target(&self.device, self.format, w, h));
+            }
         }
     }
 
@@ -520,7 +590,18 @@ impl UiRenderer for GpuRenderer {
         }
         self.queue.write_buffer(&self.globals, 0, bytemuck::bytes_of(&Globals { size: [w as f32, h as f32], _pad: [0.0; 2] }));
 
-        let view = self.target.create_view(&Default::default());
+        let frame = match &self.present {
+            Some(p) => match Self::acquire(&self.device, p) {
+                Some(f) => Some(f),
+                None => return, // frame skipped (occluded, timed out, ...); the next redraw retries
+            },
+            None => None,
+        };
+        let view = match (&frame, &self.target) {
+            (Some(f), _) => f.texture.create_view(&Default::default()),
+            (None, Some(t)) => t.create_view(&Default::default()),
+            (None, None) => return,
+        };
         let mut enc = self.device.create_command_encoder(&Default::default());
         {
             let cc = rgba(self.clear_color);
@@ -559,5 +640,8 @@ impl UiRenderer for GpuRenderer {
             }
         }
         self.queue.submit([enc.finish()]);
+        if let Some(f) = frame {
+            f.present();
+        }
     }
 }

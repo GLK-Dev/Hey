@@ -894,6 +894,7 @@ dependencies = [
  "hey-draw",
  "hey-layout",
  "hey-render-cpu",
+ "hey-render-gpu",
  "hey-style",
  "hey-text",
  "hey-widgets",

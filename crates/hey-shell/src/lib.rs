@@ -1,6 +1,8 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-shell: window (winit) and `CpuRenderer` frame output through softbuffer.
+//! hey-shell: window (winit) with a wgpu renderer, or the `CpuRenderer` through softbuffer.
+//!
+//! `HEY_RENDERER=cpu|gpu` picks the backend; by default the GPU is tried first and the CPU is the fallback.
 //!
 //! All sizes are in physical pixels (ADR-3); `scale` is passed to the app for reference.
 
@@ -16,7 +18,8 @@ pub use input::{InputState, LINE_PX};
 use hey_core::UiEvent;
 use hey_draw::{DisplayList, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
-use std::{num::NonZeroU32, rc::Rc};
+use hey_render_gpu::GpuRenderer;
+use std::{num::NonZeroU32, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
@@ -89,10 +92,23 @@ pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), winit::error::E
     event_loop.run_app(&mut shell)
 }
 
+enum Backend {
+    Cpu { surface: softbuffer::Surface<Arc<Window>, Arc<Window>>, renderer: CpuRenderer },
+    Gpu(Box<GpuRenderer>),
+}
+
 struct Gfx {
-    window: Rc<Window>,
-    surface: softbuffer::Surface<Rc<Window>, Rc<Window>>,
-    renderer: CpuRenderer,
+    window: Arc<Window>,
+    backend: Backend,
+}
+
+/// Which backends may be used, from `HEY_RENDERER` (`cpu`, `gpu`; anything else = auto).
+fn renderer_pref() -> (bool, bool) {
+    match std::env::var("HEY_RENDERER").as_deref() {
+        Ok("cpu") => (false, true),
+        Ok("gpu") => (true, false),
+        _ => (true, true),
+    }
 }
 
 struct Shell<A> {
@@ -127,16 +143,33 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let attrs = Window::default_attributes()
             .with_title(self.cfg.title.clone())
             .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1));
-        let window = Rc::new(el.create_window(attrs).expect("create window"));
-        let ctx = softbuffer::Context::new(window.clone()).expect("softbuffer context");
-        let surface = softbuffer::Surface::new(&ctx, window.clone()).expect("softbuffer surface");
+        let window = Arc::new(el.create_window(attrs).expect("create window"));
         let sz = window.inner_size();
-        let mut renderer = CpuRenderer::new(sz.width.max(1), sz.height.max(1));
-        renderer.clear_color = self.cfg.clear;
-        renderer.fonts = self.app.fonts();
+        let (w, h) = (sz.width.max(1), sz.height.max(1));
+        let (try_gpu, allow_cpu) = renderer_pref();
+        let mut backend = None;
+        if try_gpu {
+            match GpuRenderer::new_for_window(window.clone(), w, h) {
+                Ok(mut r) => {
+                    r.clear_color = self.cfg.clear;
+                    r.fonts = self.app.fonts();
+                    backend = Some(Backend::Gpu(Box::new(r)));
+                }
+                Err(e) if allow_cpu => eprintln!("hey: GPU unavailable ({e}), using the CPU renderer"),
+                Err(e) => panic!("hey: GPU renderer requested but unavailable: {e}"),
+            }
+        }
+        let backend = backend.unwrap_or_else(|| {
+            let ctx = softbuffer::Context::new(window.clone()).expect("softbuffer context");
+            let surface = softbuffer::Surface::new(&ctx, window.clone()).expect("softbuffer surface");
+            let mut renderer = CpuRenderer::new(w, h);
+            renderer.clear_color = self.cfg.clear;
+            renderer.fonts = self.app.fonts();
+            Backend::Cpu { surface, renderer }
+        });
         window.set_ime_allowed(true);
         window.request_redraw();
-        self.gfx = Some(Gfx { window, surface, renderer });
+        self.gfx = Some(Gfx { window, backend });
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -157,20 +190,27 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
                 let (Some(w), Some(h)) = (NonZeroU32::new(sz.width), NonZeroU32::new(sz.height)) else {
                     return; // minimized
                 };
-                if (g.renderer.fb.width, g.renderer.fb.height) != (sz.width, sz.height) {
-                    g.renderer.resize(sz.width, sz.height);
-                }
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 self.list.clear();
                 self.app.draw(vp, &mut self.list);
-                g.renderer.render(&self.list, vp);
-
-                g.surface.resize(w, h).expect("resize surface");
-                let mut buf = g.surface.buffer_mut().expect("buffer");
-                for (dst, px) in buf.iter_mut().zip(g.renderer.fb.data.chunks_exact(4)) {
-                    *dst = (px[0] as u32) << 16 | (px[1] as u32) << 8 | px[2] as u32;
+                match &mut g.backend {
+                    Backend::Gpu(r) => {
+                        r.resize(sz.width, sz.height);
+                        r.render(&self.list, vp);
+                    }
+                    Backend::Cpu { surface, renderer } => {
+                        if (renderer.fb.width, renderer.fb.height) != (sz.width, sz.height) {
+                            renderer.resize(sz.width, sz.height);
+                        }
+                        renderer.render(&self.list, vp);
+                        surface.resize(w, h).expect("resize surface");
+                        let mut buf = surface.buffer_mut().expect("buffer");
+                        for (dst, px) in buf.iter_mut().zip(renderer.fb.data.chunks_exact(4)) {
+                            *dst = (px[0] as u32) << 16 | (px[1] as u32) << 8 | px[2] as u32;
+                        }
+                        buf.present().expect("present");
+                    }
                 }
-                buf.present().expect("present");
             }
             _ => {}
         }
