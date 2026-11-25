@@ -167,7 +167,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 4. [x] TextInput + TextArea (скролл, drag, двойной клик, Esc)
 5. [~] List (виртуализация, выбор, клавиши, колесо, индикатор — готово; TODO: ScrollView-контейнер, ключи элементов, drag скроллбара)
 6. [x] Checkbox, Radio (RadioGroup), Toggle, Slider (мышь+drag+клавиши), ProgressBar.
-7. Dropdown/ComboBox, Menu/ContextMenu, Tooltip, Modal — через отдельный **overlay-слой** (z-порядок, закрытие по Esc/клику вне).
+7. [x] Dropdown/ComboBox, Menu/ContextMenu, Tooltip, Modal — через отдельный **overlay-слой** (z-порядок, закрытие по Esc/клику вне).
 8. Реализовать **focus manager** на уровне фреймворка: порядок фокуса строится из дерева (замена ручного `focus_order`), focus trap для модалок.
 
 ### Фаза 7. Reconcile и API приложения (`hey-shell`, фасад `hey-ui`) (3 Н)
