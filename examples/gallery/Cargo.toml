@@ -1,0 +1,13 @@
+[package]
+name = "gallery"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Витрина виджетов Hey"
+
+[dependencies]
+hey-core = { path = "../../crates/hey-core" }
+hey-layout = { path = "../../crates/hey-layout" }
+hey-style = { path = "../../crates/hey-style" }
+hey-widgets = { path = "../../crates/hey-widgets" }
+hey-shell = { path = "../../crates/hey-shell" }
