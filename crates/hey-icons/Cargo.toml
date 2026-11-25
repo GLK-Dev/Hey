@@ -1,0 +1,10 @@
+[package]
+name = "hey-icons"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+hey-core = { path = "../hey-core" }
+hey-draw = { path = "../hey-draw" }
+resvg = { workspace = true }
