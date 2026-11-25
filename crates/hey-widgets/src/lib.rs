@@ -3,11 +3,13 @@
 //! hey-widgets: виджеты поверх дерева раскладки. Без привязки к окну/GPU:
 //! вход — `UiEvent`, выход — `DisplayList` и сообщения приложения (MVU).
 
+mod controls;
 mod list;
 mod textarea;
 mod ui;
 mod widgets;
 
+pub use controls::{Checkbox, ProgressBar, Radio, RadioGroup, Slider, Toggle};
 pub use list::List;
 pub use textarea::TextArea;
 pub use ui::{Env, Ui, Widget};
