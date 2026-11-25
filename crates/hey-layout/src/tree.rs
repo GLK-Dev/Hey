@@ -1,0 +1,273 @@
+use crate::style::{Align, Axis, Dim, Justify, Kind, Style};
+use hey_core::{NodeId, Rect, Size, Tree};
+
+type MeasureFn = Box<dyn Fn(Option<f32>) -> Size>;
+
+struct Node {
+    style: Style,
+    measure: Option<MeasureFn>,
+    rect: Rect,
+}
+
+/// Дерево раскладки. Корень занимает всё окно; остальные узлы раскладываются flex-алгоритмом.
+pub struct LayoutTree {
+    tree: Tree<Node>,
+    root: NodeId,
+}
+
+fn clamp(v: f32, min: f32, max: f32) -> f32 {
+    v.max(min).min(max)
+}
+
+fn snap(x: f32, y: f32, w: f32, h: f32) -> Rect {
+    let (x0, y0) = (x.round(), y.round());
+    Rect::new(x0, y0, (x + w).round() - x0, (y + h).round() - y0)
+}
+
+fn offset(a: Align, free: f32) -> f32 {
+    match a {
+        Align::Start | Align::Stretch => 0.0,
+        Align::Center => free / 2.0,
+        Align::End => free,
+    }
+}
+
+impl LayoutTree {
+    pub fn new(root: Style) -> Self {
+        let mut tree = Tree::new();
+        let root = tree.add(Node { style: root, measure: None, rect: Rect::default() }, None).expect("корень");
+        Self { tree, root }
+    }
+
+    pub fn root(&self) -> NodeId {
+        self.root
+    }
+
+    pub fn add(&mut self, parent: NodeId, style: Style) -> Option<NodeId> {
+        self.tree.add(Node { style, measure: None, rect: Rect::default() }, Some(parent))
+    }
+
+    pub fn remove(&mut self, id: NodeId) {
+        self.tree.remove_subtree(id);
+    }
+
+    pub fn set_style(&mut self, id: NodeId, style: Style) {
+        if let Some(n) = self.tree.get_mut(id) {
+            n.style = style;
+        }
+    }
+
+    pub fn style(&self, id: NodeId) -> Option<&Style> {
+        self.tree.get(id).map(|n| &n.style)
+    }
+
+    /// Замыкание измерения листа: принимает доступную внутреннюю ширину (если известна).
+    pub fn set_measure(&mut self, id: NodeId, f: impl Fn(Option<f32>) -> Size + 'static) {
+        if let Some(n) = self.tree.get_mut(id) {
+            n.measure = Some(Box::new(f));
+        }
+    }
+
+    /// Абсолютный прямоугольник узла (после `compute`).
+    pub fn rect(&self, id: NodeId) -> Rect {
+        self.tree.get(id).map(|n| n.rect).unwrap_or_default()
+    }
+
+    pub fn children(&self, id: NodeId) -> &[NodeId] {
+        self.tree.children(id)
+    }
+
+    pub fn compute(&mut self, viewport: Size) {
+        let r = Rect::new(0.0, 0.0, viewport.w.round(), viewport.h.round());
+        self.arrange(self.root, r);
+    }
+
+    fn visible(&self, id: NodeId) -> Vec<NodeId> {
+        self.tree
+            .children(id)
+            .iter()
+            .copied()
+            .filter(|&c| !self.tree.get(c).is_some_and(|n| n.style.hidden))
+            .collect()
+    }
+
+    /// Размер border-box узла (без внешних отступов). `avail` — доступная ширина border-box.
+    fn measure(&self, id: NodeId, avail: Option<f32>) -> Size {
+        let Some(n) = self.tree.get(id) else { return Size::default() };
+        let st = n.style;
+        if st.hidden {
+            return Size::default();
+        }
+        let fixed_w = match st.width {
+            Dim::Px(p) => Some(p),
+            Dim::Auto => None,
+        };
+        let w_avail = fixed_w.or(avail).map(|w| clamp(w, st.min.w, st.max.w));
+        let inner = w_avail.map(|w| (w - st.padding.horizontal()).max(0.0));
+        let kids = self.visible(id);
+        let content = match st.kind {
+            Kind::Leaf => n.measure.as_ref().map_or(Size::default(), |f| f(inner)),
+            Kind::Stack => kids.iter().fold(Size::default(), |a, &c| {
+                let m = self.tree.get(c).unwrap().style.margin;
+                let s = self.measure(c, inner.map(|w| (w - m.horizontal()).max(0.0)));
+                Size::new(a.w.max(s.w + m.horizontal()), a.h.max(s.h + m.vertical()))
+            }),
+            Kind::Flex(axis) => {
+                let gaps = st.gap * kids.len().saturating_sub(1) as f32;
+                let (mut main, mut cross) = (gaps, 0.0f32);
+                for &c in &kids {
+                    let m = self.tree.get(c).unwrap().style.margin;
+                    let (sm, sc, mm, mc) = match axis {
+                        Axis::Row => {
+                            let s = self.measure(c, None);
+                            (s.w, s.h, m.horizontal(), m.vertical())
+                        }
+                        Axis::Column => {
+                            let s = self.measure(c, inner.map(|w| (w - m.horizontal()).max(0.0)));
+                            (s.h, s.w, m.vertical(), m.horizontal())
+                        }
+                    };
+                    main += sm + mm;
+                    cross = cross.max(sc + mc);
+                }
+                if axis == Axis::Row {
+                    Size::new(main, cross)
+                } else {
+                    Size::new(cross, main)
+                }
+            }
+        };
+        let w = match st.width {
+            Dim::Px(p) => p,
+            Dim::Auto => content.w + st.padding.horizontal(),
+        };
+        let h = match st.height {
+            Dim::Px(p) => p,
+            Dim::Auto => content.h + st.padding.vertical(),
+        };
+        Size::new(clamp(w, st.min.w, st.max.w), clamp(h, st.min.h, st.max.h))
+    }
+
+    fn set_rect(&mut self, id: NodeId, r: Rect) {
+        if let Some(n) = self.tree.get_mut(id) {
+            n.rect = r;
+        }
+    }
+
+    fn arrange(&mut self, id: NodeId, rect: Rect) {
+        self.set_rect(id, rect);
+        let st = self.tree.get(id).unwrap().style;
+        for c in self.tree.children(id).to_vec() {
+            if self.tree.get(c).is_some_and(|n| n.style.hidden) {
+                self.set_rect(c, Rect::default());
+            }
+        }
+        let inner = rect.deflate(st.padding);
+        let kids = self.visible(id);
+        match st.kind {
+            Kind::Leaf => {}
+            Kind::Stack => {
+                for c in kids {
+                    let cs = self.tree.get(c).unwrap().style;
+                    let al = cs.align_self.unwrap_or(st.align_items);
+                    let m = cs.margin;
+                    let (aw, ah) = ((inner.w - m.horizontal()).max(0.0), (inner.h - m.vertical()).max(0.0));
+                    let w = match cs.width {
+                        Dim::Px(p) => p,
+                        Dim::Auto if al == Align::Stretch => aw,
+                        Dim::Auto => self.measure(c, Some(aw)).w,
+                    };
+                    let w = clamp(w, cs.min.w, cs.max.w);
+                    let h = match cs.height {
+                        Dim::Px(p) => p,
+                        Dim::Auto if al == Align::Stretch => ah,
+                        Dim::Auto => self.measure(c, Some(w)).h,
+                    };
+                    let h = clamp(h, cs.min.h, cs.max.h);
+                    let (dx, dy) = (offset(al, aw - w), offset(al, ah - h));
+                    self.arrange(c, snap(inner.x + m.left + dx, inner.y + m.top + dy, w, h));
+                }
+            }
+            Kind::Flex(axis) => self.arrange_flex(&st, axis, inner, kids),
+        }
+    }
+
+    fn arrange_flex(&mut self, st: &Style, axis: Axis, inner: Rect, kids: Vec<NodeId>) {
+        struct K {
+            id: NodeId,
+            st: Style,
+            base: f32,
+            size: f32,
+        }
+        let row = axis == Axis::Row;
+        let (inner_main, inner_cross) = if row { (inner.w, inner.h) } else { (inner.h, inner.w) };
+        let mm = |s: &Style| if row { s.margin.horizontal() } else { s.margin.vertical() };
+        let mc = |s: &Style| if row { s.margin.vertical() } else { s.margin.horizontal() };
+        let bounds = |s: &Style| if row { (s.min.w, s.max.w) } else { (s.min.h, s.max.h) };
+
+        let mut ks: Vec<K> = kids
+            .iter()
+            .map(|&id| {
+                let cs = self.tree.get(id).unwrap().style;
+                let base = if row {
+                    self.measure(id, None).w
+                } else {
+                    self.measure(id, Some((inner_cross - mc(&cs)).max(0.0))).h
+                };
+                K { id, st: cs, base, size: base }
+            })
+            .collect();
+        let n = ks.len();
+        let gaps = st.gap * n.saturating_sub(1) as f32;
+        let total: f32 = ks.iter().map(|k| k.base + mm(&k.st)).sum::<f32>() + gaps;
+        let free = inner_main - total;
+        let grow: f32 = ks.iter().map(|k| k.st.grow).sum();
+        let shrink: f32 = ks.iter().map(|k| k.st.shrink * k.base).sum();
+        for k in &mut ks {
+            let (lo, hi) = bounds(&k.st);
+            if free > 0.0 && grow > 0.0 {
+                k.size = clamp(k.base + free * k.st.grow / grow, lo, hi);
+            } else if free < 0.0 && shrink > 0.0 {
+                k.size = clamp((k.base + free * k.st.shrink * k.base / shrink).max(0.0), lo, hi);
+            }
+        }
+        let used: f32 = ks.iter().map(|k| k.size + mm(&k.st)).sum::<f32>() + gaps;
+        let rem = (inner_main - used).max(0.0);
+        let nf = n as f32;
+        let (lead, between) = match st.justify {
+            Justify::Start => (0.0, st.gap),
+            Justify::Center => (rem / 2.0, st.gap),
+            Justify::End => (rem, st.gap),
+            Justify::SpaceBetween if n > 1 => (0.0, st.gap + rem / (nf - 1.0)),
+            Justify::SpaceAround if n > 0 => (rem / nf / 2.0, st.gap + rem / nf),
+            Justify::SpaceEvenly if n > 0 => (rem / (nf + 1.0), st.gap + rem / (nf + 1.0)),
+            _ => (0.0, st.gap),
+        };
+        let mut pos = lead;
+        for k in ks {
+            let cs = k.st;
+            let m = cs.margin;
+            let (m_start, m_end, c_start) = if row { (m.left, m.right, m.top) } else { (m.top, m.bottom, m.left) };
+            let avail = (inner_cross - mc(&cs)).max(0.0);
+            let al = cs.align_self.unwrap_or(st.align_items);
+            let (clo, chi) = if row { (cs.min.h, cs.max.h) } else { (cs.min.w, cs.max.w) };
+            let cross_dim = if row { cs.height } else { cs.width };
+            let cross = match cross_dim {
+                Dim::Px(p) => p,
+                Dim::Auto if al == Align::Stretch => avail,
+                Dim::Auto if row => self.measure(k.id, Some(k.size)).h,
+                Dim::Auto => self.measure(k.id, Some(avail)).w,
+            };
+            let cross = clamp(cross, clo, chi);
+            let coff = c_start + offset(al, avail - cross);
+            pos += m_start;
+            let r = if row {
+                snap(inner.x + pos, inner.y + coff, k.size, cross)
+            } else {
+                snap(inner.x + coff, inner.y + pos, cross, k.size)
+            };
+            self.arrange(k.id, r);
+            pos += k.size + m_end + between;
+        }
+    }
+}

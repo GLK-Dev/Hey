@@ -146,12 +146,12 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [ ] Спайк: `cosmic-text`/`parley` как замена fontdue (shaping, bidi) — решение по ADR-8.
 
 ### Фаза 4. Layout и hit-test (`hey-layout`) (3 Н)
-- [ ] Контейнеры: `Row`, `Column`, `Stack`, `Spacer`; `gap`, `padding`, `margin`, `align`, `justify`, `flex-grow/shrink`, min/max size.
-- [ ] Двухпроходный алгоритм (measure → arrange), кэш по dirty-флагам.
+- [x] Контейнеры: `Row`, `Column`, `Stack`, `Spacer`; `gap`, `padding`, `margin`, `align`, `justify`, `flex-grow/shrink`, min/max size.
+- [ ] Двухпроходный алгоритм (measure → arrange), кэш по dirty-флагам. (measure→arrange готов; dirty-кэш — позже)
 - [ ] Hit-test по дереву с учётом clip и скролла (вместо ручных `HitBox`), z-порядок, popup-слои.
 - [ ] Скролл-контейнеры (вертикальный/горизонтальный), инерция, скроллбар как виджет.
 - [ ] Спайк интеграции `taffy` и сравнение на бенчмарке (ADR-7).
-- [ ] Тесты layout (таблица «вход → Rect»).
+- [x] Тесты layout (таблица «вход → Rect»).
 
 ### Фаза 5. Стили и темы (`hey-style`) (2 Н)
 - [ ] `Theme`: цвета, геометрия, типографика (токены из idea.md §2), светлая/тёмная темы, режим «compact».

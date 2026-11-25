@@ -712,6 +712,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "hey-layout"
+version = "0.1.0"
+dependencies = [
+ "hey-core",
+]
+
+[[package]]
 name = "hey-render-cpu"
 version = "0.1.0"
 dependencies = [
