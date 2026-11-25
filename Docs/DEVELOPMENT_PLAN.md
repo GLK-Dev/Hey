@@ -117,7 +117,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Создать workspace (корневой `Cargo.toml`). - [x] CI (GitHub Actions: `cargo fmt --check`, `clippy -D warnings`, `cargo test`, Windows+Linux).
 - [x] Перенести прототип из `idea.md` в `examples/prototype_monolith` (компилируется; запуск не проверен; правки: `CachedGlyph: Clone+Copy`, лишний `&` у bind group).
 - [x] Зафиксировать версии зависимостей (`winit 0.30`, `wgpu 24`, `softbuffer 0.4`, `fontdue 0.9`, `bytemuck`, `pollster`).
-- [ ] Написать `Docs/ARCHITECTURE.md` и `Docs/ADR/*` по таблице 3.3.
+- [x] Написать `Docs/ARCHITECTURE.md` и `Docs/ADR/*` по таблице 3.3.
 - [ ] Шрифт по умолчанию: Onest (OFL, кириллица) из `design/fonts` — решено дизайном.
 
 **Критерий готовности:** монолит собирается и запускается, CI зелёный.
