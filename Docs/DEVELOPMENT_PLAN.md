@@ -164,7 +164,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 1. [x] Label, Button (`normal→hovered→pressed`, активация Enter/Space).
 2. [x] Panel / WindowFrame (рамка не «съедает» контент: `border_width` входит в padding).
 3. [x] Tabs (слияние активного таба с рамкой панели, навигация ←/→/Home/End, фокус-рамка).
-4. TextInput (на базе `TextEditState`: выделение, DnD, автоскролл, Esc-отмена, undo, Ctrl-навигация) + TextArea.
+4. [~] TextInput (готов: каретка, выделение Shift, Ctrl-навигация, clipboard, undo; TODO: DnD, автоскролл, Esc, TextArea) (на базе `TextEditState`: выделение, DnD, автоскролл, Esc-отмена, undo, Ctrl-навигация) + TextArea.
 5. List/ScrollView с ключами (сохранение скролла/фокуса при вставке/удалении) и виртуализацией для больших списков.
 6. Checkbox, Radio, Toggle, Slider, ProgressBar.
 7. Dropdown/ComboBox, Menu/ContextMenu, Tooltip, Modal — через отдельный **overlay-слой** (z-порядок, закрытие по Esc/клику вне).

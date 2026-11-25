@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-use hey_core::{MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
+use hey_core::{Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
 use hey_style::{Theme, WidgetState};
@@ -30,7 +30,11 @@ pub trait Widget<Msg> {
         self.activate(sink);
     }
     /// Клавиша на сфокусированном виджете; `true` — обработана.
-    fn key(&mut self, _code: &str, _sink: &MsgSink<Msg>) -> bool {
+    fn key(&mut self, _code: &str, _mods: Modifiers, _sink: &MsgSink<Msg>) -> bool {
+        false
+    }
+    /// Печатный текст (клавиатура/IME) на сфокусированном виджете; `true` — обработан.
+    fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
     }
 }
@@ -171,9 +175,9 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    fn key_to(&mut self, id: NodeId, code: &str) -> bool {
+    fn key_to(&mut self, id: NodeId, code: &str, mods: Modifiers) -> bool {
         match self.nodes.get_mut(&id) {
-            Some(n) if !n.disabled => n.widget.key(code, &self.sink),
+            Some(n) if !n.disabled => n.widget.key(code, mods, &self.sink),
             _ => false,
         }
     }
@@ -220,7 +224,7 @@ impl<Msg: 'static> Ui<Msg> {
                     self.move_focus(mods.shift);
                     true
                 }
-                c if self.focus.is_some_and(|f| self.key_to(f, c)) => true,
+                c if self.focus.is_some_and(|f| self.key_to(f, c, *mods)) => true,
                 "Enter" | " " => match self.focus {
                     Some(f) => {
                         self.activate(f);
@@ -229,6 +233,13 @@ impl<Msg: 'static> Ui<Msg> {
                     None => false,
                 },
                 _ => false,
+            },
+            UiEvent::Text(t) => match self.focus {
+                Some(f) => match self.nodes.get_mut(&f) {
+                    Some(n) if !n.disabled => n.widget.text(t, &self.sink),
+                    _ => false,
+                },
+                None => false,
             },
             _ => false,
         }

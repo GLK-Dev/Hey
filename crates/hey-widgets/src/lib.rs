@@ -7,4 +7,4 @@ mod ui;
 mod widgets;
 
 pub use ui::{Env, Ui, Widget};
-pub use widgets::{Button, Label, Panel, PanelKind, Tabs};
+pub use widgets::{Button, Label, Panel, PanelKind, Tabs, TextInput};

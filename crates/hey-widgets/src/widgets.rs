@@ -1,11 +1,11 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
 use crate::ui::{Env, Ui, Widget};
-use hey_core::{Callback, MsgSink, NodeId, Point, Rect, Size};
+use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::Style;
 use hey_style::{Variant, WidgetState};
-use hey_text::{layout, TextStyle};
+use hey_text::{layout, measure, MemoryClipboard, TextEditState, TextStyle};
 
 fn text_style(env: &Env, width: Option<f32>, wrap: bool) -> TextStyle {
     let mut st = TextStyle::new(env.chain.clone(), env.font_px);
@@ -267,7 +267,7 @@ impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
             x += w;
         }
     }
-    fn key(&mut self, code: &str, sink: &MsgSink<Msg>) -> bool {
+    fn key(&mut self, code: &str, _mods: Modifiers, sink: &MsgSink<Msg>) -> bool {
         let n = self.labels.len();
         if n == 0 {
             return false;
@@ -280,6 +280,127 @@ impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
             _ => return false,
         };
         self.select(i, sink);
+        true
+    }
+}
+
+/// Однострочное поле ввода на `TextEditState`: каретка, выделение (Shift+стрелки),
+/// Ctrl+A/C/X/V/Z/Y, слова (Ctrl+←/→), Backspace/Delete. Буфер обмена пока внутренний.
+/// Без горизонтальной прокрутки и выделения мышью (нужны clip и drag).
+pub struct TextInput<Msg> {
+    edit: TextEditState,
+    clipboard: MemoryClipboard,
+    on_change: Callback<Msg, String>,
+}
+
+impl<Msg: 'static> TextInput<Msg> {
+    pub fn add(ui: &mut Ui<Msg>, parent: NodeId, text: &str, width: f32, on_change: Callback<Msg, String>) -> NodeId {
+        let env = ui.env.clone();
+        let measure_fn = move |_w: Option<f32>| {
+            let h = layout(&env.fonts, "Ag", &text_style(&env, None, false)).height.ceil();
+            Size::new(width, h + 2.0 * env.theme.space(7.0))
+        };
+        let w = TextInput { edit: TextEditState::new(text), clipboard: MemoryClipboard::default(), on_change };
+        ui.add_widget(parent, Style::leaf(), w, measure_fn)
+    }
+
+    fn pad(env: &Env) -> f32 {
+        env.theme.space(10.0)
+    }
+
+    fn x_of(&self, env: &Env, byte: usize) -> f32 {
+        measure(&env.fonts, &self.edit.text()[..byte], &env.chain, env.font_px)
+    }
+
+    fn changed(&self, before: &str, sink: &MsgSink<Msg>) {
+        if self.edit.text() != before {
+            self.on_change.emit(sink, self.edit.text().to_string());
+        }
+    }
+}
+
+impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
+    fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
+        let t = &env.theme;
+        let p = &t.palette;
+        let border = if state.focused() { p.focus } else { p.line };
+        out.push(DrawCmd::Rect {
+            rect,
+            fill: if state.disabled() { p.panel } else { p.document },
+            border: Some(Border { width: 1.0, color: border }),
+            chamfer: t.chamfer_small(),
+            shadow: None,
+        });
+        let l = layout(&env.fonts, self.edit.text(), &text_style(env, None, false));
+        let origin = Point::new(rect.x + Self::pad(env), rect.y + (rect.h - l.height) / 2.0);
+        if self.edit.has_selection() && state.focused() {
+            let r = self.edit.selection();
+            let (a, b) = (self.x_of(env, r.start), self.x_of(env, r.end));
+            out.push(DrawCmd::fill(Rect::new(origin.x + a, origin.y, b - a, l.height), p.selection));
+        }
+        let color = if state.disabled() { p.text_disabled } else { p.text };
+        for run in l.to_runs(origin, color) {
+            out.push(DrawCmd::Text(run));
+        }
+        if state.focused() {
+            let x = (origin.x + self.x_of(env, self.edit.caret())).floor() + 0.5;
+            out.push(DrawCmd::Line {
+                a: Point::new(x, origin.y),
+                b: Point::new(x, origin.y + l.height),
+                width: 1.0,
+                color: p.text,
+            });
+        }
+    }
+    fn focusable(&self) -> bool {
+        true
+    }
+    fn click(&mut self, env: &Env, rect: Rect, pos: Point, _sink: &MsgSink<Msg>) {
+        let rel = pos.x - rect.x - Self::pad(env);
+        let text = self.edit.text();
+        let mut best = (0usize, f32::MAX);
+        for i in text.char_indices().map(|(i, _)| i).chain(std::iter::once(text.len())) {
+            let d = (self.x_of(env, i) - rel).abs();
+            if d < best.1 {
+                best = (i, d);
+            }
+        }
+        self.edit.set_caret(best.0, false);
+    }
+    fn key(&mut self, code: &str, mods: Modifiers, sink: &MsgSink<Msg>) -> bool {
+        let before = self.edit.text().to_string();
+        let (sh, ctrl) = (mods.shift, mods.ctrl);
+        let e = &mut self.edit;
+        match (code, ctrl) {
+            ("ArrowLeft", false) => e.move_left(sh),
+            ("ArrowLeft", true) => e.move_word_left(sh),
+            ("ArrowRight", false) => e.move_right(sh),
+            ("ArrowRight", true) => e.move_word_right(sh),
+            ("Home", _) => e.home(sh),
+            ("End", _) => e.end(sh),
+            ("Backspace", false) => e.backspace(),
+            ("Backspace", true) => e.delete_word_left(),
+            ("Delete", false) => e.delete(),
+            ("Delete", true) => e.delete_word_right(),
+            ("a", true) => e.select_all(),
+            ("c", true) => e.copy(&mut self.clipboard),
+            ("x", true) => e.cut(&mut self.clipboard),
+            ("v", true) => e.paste(&mut self.clipboard),
+            ("z", true) => {
+                e.undo();
+            }
+            ("y", true) => {
+                e.redo();
+            }
+            _ => return false,
+        }
+        self.changed(&before, sink);
+        true
+    }
+    fn text(&mut self, text: &str, sink: &MsgSink<Msg>) -> bool {
+        let before = self.edit.text().to_string();
+        self.edit.insert(text);
+        self.changed(&before, sink);
         true
     }
 }
