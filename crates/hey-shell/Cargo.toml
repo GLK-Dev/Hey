@@ -8,5 +8,6 @@ license.workspace = true
 hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
 hey-render-cpu = { path = "../hey-render-cpu" }
+hey-text = { path = "../hey-text" }
 winit = "0.30"
 softbuffer = "0.4"

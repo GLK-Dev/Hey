@@ -16,6 +16,11 @@ use winit::{
 /// Приложение для оболочки: строит display list на каждый кадр.
 pub trait ShellApp {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList);
+
+    /// Реестр шрифтов для отрисовки `DrawCmd::Text`; вызывается при создании окна.
+    fn fonts(&self) -> Option<std::sync::Arc<hey_text::Fonts>> {
+        None
+    }
 }
 
 pub struct WindowConfig {
@@ -65,6 +70,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let sz = window.inner_size();
         let mut renderer = CpuRenderer::new(sz.width.max(1), sz.height.max(1));
         renderer.clear_color = self.cfg.clear;
+        renderer.fonts = self.app.fonts();
         window.request_redraw();
         self.gfx = Some(Gfx { window, surface, renderer });
     }
