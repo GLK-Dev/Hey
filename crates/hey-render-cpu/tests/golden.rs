@@ -7,7 +7,12 @@ use hey_render_cpu::{CpuRenderer, Framebuffer};
 use std::path::PathBuf;
 
 fn check(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>) {
+    check_with(name, w, h, cmds, None);
+}
+
+fn check_with(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, fonts: Option<std::sync::Arc<hey_text::Fonts>>) {
     let mut r = CpuRenderer::new(w, h);
+    r.fonts = fonts;
     r.clear_color = Color::hex(0x0B0C10);
     let mut l = DisplayList::new();
     cmds.into_iter().for_each(|c| l.push(c));
@@ -68,4 +73,30 @@ fn golden_clip() {
         DrawCmd::Line { a: Point::new(0.0, 0.0), b: Point::new(64.0, 64.0), width: 3.0, color: Color::hex(0xFFFFFF) },
         DrawCmd::ClipPop,
     ]);
+}
+
+#[test]
+fn golden_text() {
+    use hey_text::{layout, Align, Fonts, TextStyle};
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts");
+    let mut f = Fonts::new();
+    let onest = f.add_file(format!("{root}/onest/Onest[wght].ttf")).unwrap();
+    let mono = f.add_file(format!("{root}/jetbrainsmono/JetBrainsMono[wght].ttf")).unwrap();
+    let mut st = TextStyle::new(vec![onest, mono], 18.0);
+    st.max_width = Some(220.0);
+    let l = layout(&f, "Привет, HeOS! Текст переносится по словам и обрезается.", &st);
+    let mut cmds: Vec<DrawCmd> = l.to_runs(Point::new(10.0, 10.0), Color::hex(0xE6E8EE)).into_iter().map(DrawCmd::Text).collect();
+    let mut st2 = TextStyle::new(vec![mono], 14.0);
+    st2.max_width = Some(220.0);
+    st2.align = Align::Right;
+    let l2 = layout(&f, "fn main() {}", &st2);
+    cmds.extend(l2.to_runs(Point::new(10.0, 110.0), Color::hex(0x4FC3F7)).into_iter().map(DrawCmd::Text));
+    // Клип: текст обрезается по прямоугольнику.
+    let mut st3 = TextStyle::new(vec![onest], 24.0);
+    st3.wrap = false;
+    let l3 = layout(&f, "Обрезка клипом", &st3);
+    cmds.push(DrawCmd::ClipPush(Rect::new(10.0, 140.0, 80.0, 18.0)));
+    cmds.extend(l3.to_runs(Point::new(10.0, 135.0), Color::hex(0xFFB74D)).into_iter().map(DrawCmd::Text));
+    cmds.push(DrawCmd::ClipPop);
+    check_with("text", 240, 180, cmds, Some(std::sync::Arc::new(f)));
 }

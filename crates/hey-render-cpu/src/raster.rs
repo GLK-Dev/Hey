@@ -1,10 +1,11 @@
 use crate::Framebuffer;
 use hey_core::{Color, Point, Rect};
-use hey_draw::{Border, DrawCmd, Shadow};
+use hey_draw::{Border, DrawCmd, GlyphRun, Shadow};
+use hey_text::Fonts;
 
 const SQRT2: f32 = std::f32::consts::SQRT_2;
 
-pub fn draw(fb: &mut Framebuffer, cmd: &DrawCmd, clip: Option<Rect>) {
+pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, cmd: &DrawCmd, clip: Option<Rect>) {
     match cmd {
         DrawCmd::Rect { rect, fill, border, chamfer, shadow } => {
             if let Some(s) = shadow {
@@ -33,9 +34,32 @@ pub fn draw(fb: &mut Framebuffer, cmd: &DrawCmd, clip: Option<Rect>) {
                 (*color, (0.5 + h - d).clamp(0.0, 1.0))
             });
         }
-        // Текст и изображения — позже (фаза 3).
-        DrawCmd::Text(_) | DrawCmd::Image { .. } => {}
+        DrawCmd::Text(run) => {
+            if let Some(fonts) = fonts {
+                draw_text(fb, fonts, run, clip);
+            }
+        }
+        // Изображения — позже.
+        DrawCmd::Image { .. } => {}
         DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
+    }
+}
+
+/// Глифы кладутся на целые пиксели (перо округляется), покрытие берётся из растра шрифта.
+fn draw_text(fb: &mut Framebuffer, fonts: &Fonts, run: &GlyphRun, clip: Option<Rect>) {
+    for g in &run.glyphs {
+        let bmp = fonts.bitmap(run.font, g.id as u16, run.size_px);
+        if bmp.w == 0 || bmp.h == 0 {
+            continue;
+        }
+        let x0 = g.x.round() as i32 + bmp.xmin;
+        let y0 = g.y.round() as i32 - bmp.ymin - bmp.h as i32;
+        let area = Rect::new(x0 as f32, y0 as f32, bmp.w as f32, bmp.h as f32);
+        paint(fb, area, clip, |x, y| {
+            let (dx, dy) = (x as i32 - x0, y as i32 - y0);
+            let cov = bmp.data[dy as usize * bmp.w as usize + dx as usize] as f32 / 255.0;
+            (run.color, cov)
+        });
     }
 }
 

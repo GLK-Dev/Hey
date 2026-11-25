@@ -2,9 +2,13 @@
 //!
 //! Соглашения: центр пикселя `(i+0.5, j+0.5)`; рамка центрируется на границе
 //! прямоугольника; отсечение округляется до целых пикселей; смешивание — straight alpha «over».
-//! Текст и изображения пока пропускаются (фаза 3).
+//! Текст рисуется из растров `hey_text::Fonts` (целые пиксели, без субпиксельного позиционирования).
+//! Изображения пока пропускаются.
 
 mod raster;
+
+use std::sync::Arc;
+use hey_text::Fonts;
 
 use hey_core::Color;
 use hey_draw::{DisplayList, UiRenderer, Viewport};
@@ -36,11 +40,13 @@ impl Framebuffer {
 pub struct CpuRenderer {
     pub fb: Framebuffer,
     pub clear_color: Color,
+    /// Реестр шрифтов; без него `DrawCmd::Text` пропускается.
+    pub fonts: Option<Arc<Fonts>>,
 }
 
 impl CpuRenderer {
     pub fn new(width: u32, height: u32) -> Self {
-        Self { fb: Framebuffer::new(width, height), clear_color: Color::rgb(0, 0, 0) }
+        Self { fb: Framebuffer::new(width, height), clear_color: Color::rgb(0, 0, 0), fonts: None }
     }
 }
 
@@ -53,7 +59,7 @@ impl UiRenderer for CpuRenderer {
         debug_assert!(list.validate().is_ok(), "некорректный DisplayList");
         self.fb.clear(self.clear_color);
         for (cmd, clip) in list.iter_clipped() {
-            raster::draw(&mut self.fb, cmd, clip);
+            raster::draw(&mut self.fb, self.fonts.as_deref(), cmd, clip);
         }
     }
 }
