@@ -131,10 +131,10 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Unit-тесты арены (удаление, переиспользование слотов, устаревшие ID).
 
 ### Фаза 2. Draw-слой (`hey-draw`) и CPU-бэкенд эталон (3 Н)
-- [ ] `DrawCmd`: `Rect{fill,border,chamfer,shadow}` (срез 45° вместо радиусов, см. 3.4), `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
-- [ ] `DisplayList` + clip-stack, валидация парности Push/Pop.
-- [ ] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
-- [ ] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`.
+- [x] `DrawCmd`: `Rect{fill,border,chamfer,shadow}` (срез 45° вместо радиусов, см. 3.4), `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
+- [x] `DisplayList` + clip-stack, валидация парности Push/Pop.
+- [x] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
+- [~] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`. _(готово: headless-растеризация rect/срез/рамка/тень/line/clip; осталось: softbuffer-вывод)_
 - [ ] Экспорт кадра в PNG; **headless-рендер без окна** для тестов.
 - [ ] Golden-тесты: набор эталонных кадров (rect, radius, border, clip, text).
 
