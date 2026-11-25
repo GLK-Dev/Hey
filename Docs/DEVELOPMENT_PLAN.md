@@ -173,7 +173,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 ### Фаза 7. Reconcile и API приложения (`hey-shell`, фасад `hey-ui`) (3 Н)
 - [ ] Диффинг дерева по `Key`: сохранение локального состояния виджетов между пересборками.
 - [ ] Публичный API: `App::new(model).update(fn).view(fn).theme(...).run()`; `Command`/`Task` для фоновых задач (каналы → `Msg`), состояния idle/loading/success/error.
-- [ ] Интеграция `winit`: `ApplicationHandler`, ControlFlow (Wait/WaitUntil), курсоры, мульти-окна (позже), Drag-and-drop файлов, системный clipboard (`arboard`), диалоги файлов (`rfd`).
+- [ ] Интеграция `winit`: [x] `ApplicationHandler` + трансляция ввода в `UiEvent` (мышь, колесо, клавиши, текст, IME, фокус), `ShellApp::event`; осталось: ControlFlow (Wait/WaitUntil), курсоры, мульти-окна (позже), Drag-and-drop файлов, системный clipboard (`arboard`), диалоги файлов (`rfd`).
 - [ ] Примеры: `counter`, `todo` (повторяет прототип на новом API), `gallery`.
 
 ### Фаза 8. GPU-бэкенд (`hey-render-gpu`) (4–5 Н)

@@ -4,6 +4,10 @@
 //!
 //! Все размеры в физических пикселях (ADR-3); `scale` передаётся приложению для справки.
 
+mod input;
+pub use input::{InputState, LINE_PX};
+
+use hey_core::UiEvent;
 use hey_draw::{DisplayList, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
 use std::{num::NonZeroU32, rc::Rc};
@@ -18,6 +22,11 @@ use winit::{
 /// Приложение для оболочки: строит display list на каждый кадр.
 pub trait ShellApp {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList);
+
+    /// Нормализованное событие ввода; вернуть `true`, чтобы запросить перерисовку.
+    fn event(&mut self, _ev: UiEvent) -> bool {
+        false
+    }
 
     /// Реестр шрифтов для отрисовки `DrawCmd::Text`; вызывается при создании окна.
     fn fonts(&self) -> Option<std::sync::Arc<hey_text::Fonts>> {
@@ -41,7 +50,7 @@ impl Default for WindowConfig {
 pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), winit::error::EventLoopError> {
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Wait);
-    let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new() };
+    let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default() };
     event_loop.run_app(&mut shell)
 }
 
@@ -56,6 +65,7 @@ struct Shell<A> {
     app: A,
     gfx: Option<Gfx>,
     list: DisplayList,
+    input: InputState,
 }
 
 impl<A: ShellApp> ApplicationHandler for Shell<A> {
@@ -73,12 +83,20 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let mut renderer = CpuRenderer::new(sz.width.max(1), sz.height.max(1));
         renderer.clear_color = self.cfg.clear;
         renderer.fonts = self.app.fonts();
+        window.set_ime_allowed(true);
         window.request_redraw();
         self.gfx = Some(Gfx { window, surface, renderer });
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let Some(g) = self.gfx.as_mut() else { return };
+        let mut redraw = false;
+        for ev in self.input.translate(&event) {
+            redraw |= self.app.event(ev);
+        }
+        if redraw {
+            g.window.request_redraw();
+        }
         match event {
             WindowEvent::CloseRequested => el.exit(),
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => g.window.request_redraw(),
