@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, Role};
 use crate::clipboard::SharedClipboard;
 use crate::ui::{Env, Ui, Widget};
 use crate::widgets::text_style;
@@ -159,6 +160,9 @@ impl<Msg: 'static> TextArea<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::MultilineTextInput, "").value(self.edit.text()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Text
     }

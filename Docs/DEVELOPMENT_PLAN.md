@@ -187,7 +187,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 
 ### Фаза 9. Доступность, i18n, платформа (3–4 Н)
 - [x] **IME** (`WindowEvent::Ime`): preedit/commit (`UiEvent::Preedit`, подчёркивание в `TextInput`/`TextArea`), позиция окна кандидатов (`ShellApp::ime_cursor_area`). Пропущены как неоправданные: ring-буферы, упаковка атласа, 9-slice (Ф8).
-- [ ] a11y через `accesskit` (роли/имена/состояния узлов, навигация экранным диктором).
+- [x] a11y через `accesskit` (роли/имена/состояния узлов, навигация экранным диктором).
 - [ ] RTL/bidi, локализация (`fluent`), форматирование чисел/дат.
 - [ ] Системные темы (dark/light auto), High-contrast, `prefers-reduced-motion`.
 - [ ] Платформенные нюансы: Windows (DPI awareness, DWM-рамка/кастомный titlebar), macOS (Cmd вместо Ctrl, меню), Linux (Wayland/X11 clipboard, DnD).

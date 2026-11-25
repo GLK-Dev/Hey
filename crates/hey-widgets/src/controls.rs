@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, Role};
 use crate::ui::{Env, Ui, Widget};
 use crate::widgets::text_style;
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
@@ -72,6 +73,9 @@ impl<Msg: 'static> Checkbox<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Checkbox<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::CheckBox, self.label.clone()).toggled(self.checked))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -121,6 +125,9 @@ impl<Msg: 'static> Toggle<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Toggle<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Switch, self.label.clone()).toggled(self.on))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -172,6 +179,9 @@ impl<Msg: 'static> Radio<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Radio<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::RadioButton, self.label.clone()).toggled(self.group.get() == Some(self.index)))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -241,6 +251,9 @@ impl<Msg: 'static> Slider<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Slider<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Slider, "").range(self.min as f64, self.max as f64, self.value as f64))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -306,6 +319,9 @@ impl ProgressBar {
 }
 
 impl<Msg: 'static> Widget<Msg> for ProgressBar {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::ProgressBar, "").range(0.0, 1.0, self.value as f64))
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let p = &env.theme.palette;
         out.push(DrawCmd::fill(rect, p.line));

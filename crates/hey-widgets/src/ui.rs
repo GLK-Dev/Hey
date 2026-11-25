@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, A11yAction, A11yNode, A11yTree};
 use hey_core::{Callback, Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
@@ -57,6 +58,10 @@ pub trait Widget<Msg> {
     }
     fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
+    }
+    /// Accessibility description; `None` for purely visual widgets.
+    fn a11y(&self) -> Option<A11y> {
+        None
     }
     /// Caret rectangle (as of the last paint) for positioning the IME candidate window.
     fn ime_area(&self) -> Option<Rect> {
@@ -313,6 +318,62 @@ impl<Msg: 'static> Ui<Msg> {
         }
         if disabled && self.focus == Some(id) {
             self.focus = None;
+        }
+    }
+
+    fn a11y_id(id: NodeId) -> u64 {
+        ((u64::from(id.generation) << 32) | u64::from(id.index)) + 1
+    }
+
+    fn a11y_node_id(v: u64) -> Option<NodeId> {
+        let v = v.checked_sub(1)?;
+        (v >> 63 == 0).then_some(NodeId { index: v as u32, generation: (v >> 32) as u32 })
+    }
+
+    /// Snapshot of the accessibility tree (positions as of the last layout).
+    /// Layout nodes without a widget description become `Role::Generic` containers; overlays hang off the root.
+    pub fn a11y_tree(&self) -> A11yTree {
+        let root = self.tree.root();
+        let mut nodes = Vec::new();
+        let mut stack = vec![root];
+        while let Some(id) = stack.pop() {
+            let n = self.nodes.get(&id);
+            let a11y = n.and_then(|n| n.widget.a11y()).unwrap_or_else(|| A11y::new(crate::a11y::Role::Generic, ""));
+            let kids = self.tree.children(id);
+            nodes.push(A11yNode {
+                id: Self::a11y_id(id),
+                rect: self.tree.rect(id),
+                a11y,
+                disabled: n.is_some_and(|n| n.disabled),
+                focusable: n.is_some_and(|n| n.widget.focusable()),
+                children: kids.iter().map(|&k| Self::a11y_id(k)).collect(),
+            });
+            stack.extend(kids.iter().rev().copied());
+        }
+        let overlay_ids: Vec<u64> = (0..self.overlays.len() as u64).map(|i| (1 << 63) | i).collect();
+        for (i, o) in self.overlays.iter().enumerate() {
+            if let Some(a11y) = o.widget.a11y() {
+                nodes.push(A11yNode { id: overlay_ids[i], rect: o.rect, a11y, disabled: false, focusable: false, children: Vec::new() });
+            }
+        }
+        let live: Vec<u64> = nodes.iter().map(|n| n.id).collect();
+        if let Some(r) = nodes.first_mut() {
+            r.children.extend(overlay_ids.into_iter().filter(|id| live.contains(id)));
+        }
+        A11yTree { root: Self::a11y_id(root), nodes, focus: self.focus.map(Self::a11y_id) }
+    }
+
+    /// Applies a request from assistive technology; `true` if the UI changed or reacted.
+    pub fn a11y_action(&mut self, action: A11yAction) -> bool {
+        match action {
+            A11yAction::Focus(v) => Self::a11y_node_id(v).is_some_and(|id| self.focus(id)),
+            A11yAction::Activate(v) => match Self::a11y_node_id(v) {
+                Some(id) if self.nodes.get(&id).is_some_and(|n| !n.disabled) => {
+                    self.activate(id);
+                    true
+                }
+                _ => false,
+            },
         }
     }
 

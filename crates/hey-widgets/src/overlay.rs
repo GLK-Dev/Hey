@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, Role};
 use crate::ui::{Env, OverlayId, OverlayKind, Overlays, Ui, Widget};
 use crate::widgets::text_style;
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
@@ -74,6 +75,9 @@ impl<Msg: 'static> Menu<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Menu<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Menu, "").value(self.items.get(self.hot).cloned().unwrap_or_default()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -176,6 +180,9 @@ impl<Msg: 'static> Dropdown<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Dropdown<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::ComboBox, "").value(self.items.get(self.selected.get()).cloned().unwrap_or_default()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -244,6 +251,9 @@ impl Tooltip {
 }
 
 impl<Msg: 'static> Widget<Msg> for Tooltip {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Tooltip, self.text.clone()))
+    }
     fn paint(&self, env: &Env, rect: Rect, _state: WidgetState, out: &mut DisplayList) {
         panel(env, rect, out);
         let pad = env.theme.space(4.0);
@@ -302,6 +312,9 @@ impl<Msg: 'static> Modal<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Modal<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Dialog, self.title.clone()).value(self.message.clone()))
+    }
     fn paint(&self, env: &Env, rect: Rect, _state: WidgetState, out: &mut DisplayList) {
         panel(env, rect, out);
         let t = &env.theme;

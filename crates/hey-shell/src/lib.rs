@@ -6,6 +6,7 @@
 //!
 //! All sizes are in physical pixels (ADR-3); `scale` is passed to the app for reference.
 
+mod a11y;
 mod app;
 mod clipboard;
 mod dialog;
@@ -55,6 +56,16 @@ pub trait ShellApp {
     }
 
     /// Called when the loop wakes up: collect background task results; `true` means a redraw is needed.
+    /// Accessibility snapshot of the last laid-out frame (`None` — accessibility is not supported).
+    fn a11y_tree(&mut self) -> Option<hey_widgets::A11yTree> {
+        None
+    }
+
+    /// Performs an action requested by assistive technology; `true` means a redraw is needed.
+    fn a11y_action(&mut self, _action: hey_widgets::A11yAction) -> bool {
+        false
+    }
+
     fn tick(&mut self) -> bool {
         false
     }
@@ -100,9 +111,10 @@ impl Default for WindowConfig {
 
 pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), winit::error::EventLoopError> {
     install_system_clipboard();
-    let event_loop = EventLoop::new()?;
+    let event_loop = EventLoop::<a11y::UserEvent>::with_user_event().build()?;
+    let proxy = event_loop.create_proxy();
     event_loop.set_control_flow(ControlFlow::Wait);
-    let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default() };
+    let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default(), adapter: None, proxy };
     event_loop.run_app(&mut shell)
 }
 
@@ -191,9 +203,34 @@ struct Shell<A> {
     gfx: Option<Gfx>,
     list: DisplayList,
     input: InputState,
+    adapter: Option<accesskit_winit::Adapter>,
+    proxy: winit::event_loop::EventLoopProxy<a11y::UserEvent>,
 }
 
-impl<A: ShellApp> ApplicationHandler for Shell<A> {
+impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
+    fn user_event(&mut self, _el: &ActiveEventLoop, event: a11y::UserEvent) {
+        let a11y::UserEvent::Access(ev) = event;
+        let title = self.cfg.title.clone();
+        match ev.window_event {
+            accesskit_winit::WindowEvent::InitialTreeRequested => {
+                let upd = self.app.a11y_tree().map(|t| a11y::to_update(&t, &title)).unwrap_or_else(|| a11y::placeholder(&title));
+                if let Some(ad) = self.adapter.as_mut() {
+                    ad.update_if_active(|| upd);
+                }
+            }
+            accesskit_winit::WindowEvent::ActionRequested(req) => {
+                if let Some(a) = a11y::action(&req) {
+                    if self.app.a11y_action(a) {
+                        if let Some(g) = &self.gfx {
+                            g.window.request_redraw();
+                        }
+                    }
+                }
+            }
+            accesskit_winit::WindowEvent::AccessibilityDeactivated => {}
+        }
+    }
+
     fn about_to_wait(&mut self, el: &ActiveEventLoop) {
         // Read pending BEFORE tick: a task sends its result before it decrements the counter,
         // so pending == false guarantees that tick has already seen all results.
@@ -216,8 +253,12 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         }
         let attrs = Window::default_attributes()
             .with_title(self.cfg.title.clone())
-            .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1));
+            .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1))
+            .with_visible(false);
         let window = Arc::new(el.create_window(attrs).expect("create window"));
+        // The adapter must exist before the window becomes visible.
+        self.adapter = Some(accesskit_winit::Adapter::with_event_loop_proxy(el, &window, self.proxy.clone()));
+        window.set_visible(true);
         let (try_gpu, allow_cpu) = renderer_pref();
         let (clear, fonts) = (self.cfg.clear, self.app.fonts());
         let mut backend = None;
@@ -236,6 +277,9 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let Some(g) = self.gfx.as_mut() else { return };
+        if let Some(ad) = self.adapter.as_mut() {
+            ad.process_event(&g.window, &event);
+        }
         if is_switch_hotkey(&event, self.input.mods) {
             g.switch_backend(self.cfg.clear, self.app.fonts(), vsync_setting(self.cfg.vsync));
             return;
@@ -268,6 +312,11 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 self.list.clear();
                 self.app.draw(vp, &mut self.list);
+                if let Some(ad) = self.adapter.as_mut() {
+                    // The snapshot is only built while assistive technology is connected.
+                    let (app, title) = (&mut self.app, &self.cfg.title);
+                    ad.update_if_active(|| app.a11y_tree().map(|t| a11y::to_update(&t, title)).unwrap_or_else(|| a11y::placeholder(title)));
+                }
                 if let Some(r) = self.app.ime_cursor_area() {
                     g.window.set_ime_cursor_area(
                         winit::dpi::PhysicalPosition::new(r.x as f64, r.y as f64),

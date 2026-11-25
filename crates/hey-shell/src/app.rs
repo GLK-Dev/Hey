@@ -293,6 +293,15 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
         self.ui.ime_area()
     }
 
+    fn a11y_tree(&mut self) -> Option<hey_widgets::A11yTree> {
+        Some(self.ui.a11y_tree())
+    }
+
+    fn a11y_action(&mut self, action: hey_widgets::A11yAction) -> bool {
+        let handled = self.ui.a11y_action(action);
+        handled | self.pump()
+    }
+
     fn tick(&mut self) -> bool {
         self.poll()
     }

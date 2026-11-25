@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, Role};
 use crate::ui::{Env, Ui, Widget};
 use crate::widgets::text_style;
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
@@ -58,6 +59,9 @@ impl<Msg: 'static> List<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for List<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::List, "").value(self.selected.and_then(|i| self.items.get(i).cloned()).unwrap_or_default()))
+    }
     fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
         Some(Box::new(self.scroll.get()))
     }

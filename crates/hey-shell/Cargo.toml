@@ -14,6 +14,8 @@ hey-layout = { path = "../hey-layout" }
 hey-style = { path = "../hey-style" }
 hey-widgets = { path = "../hey-widgets" }
 winit = { workspace = true }
+accesskit = { workspace = true }
+accesskit_winit = { workspace = true }
 softbuffer = { workspace = true }
 arboard = { workspace = true }
 rfd = { workspace = true }

@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::a11y::{A11y, Role};
 use crate::clipboard::SharedClipboard;
 use crate::ui::{Env, Ui, Widget};
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
@@ -34,6 +35,9 @@ impl Label {
 }
 
 impl<Msg> Widget<Msg> for Label {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Label, self.text.clone()))
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let color = if state.disabled() { env.theme.palette.text_disabled } else { env.theme.palette.text };
         let l = layout(&env.fonts, &self.text, &text_style(env, Some(rect.w), true));
@@ -59,6 +63,9 @@ impl Icon {
 }
 
 impl<Msg> Widget<Msg> for Icon {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Image, self.name.clone()))
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let color = if state.disabled() { env.theme.palette.text_disabled } else { env.theme.palette.text };
         let px = rect.w.min(rect.h).round().max(1.0) as u32;
@@ -90,6 +97,9 @@ impl<Msg: 'static> Button<Msg> {
 }
 
 impl<Msg> Widget<Msg> for Button<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::Button, self.label.clone()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -213,6 +223,9 @@ impl<Msg: 'static> Tabs<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::TabList, "").value(self.labels.get(self.active).cloned().unwrap_or_default()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Pointer
     }
@@ -359,6 +372,9 @@ impl<Msg: 'static> TextInput<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::TextInput, "").value(self.edit.text()))
+    }
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Text
     }
