@@ -49,6 +49,11 @@ pub trait ShellApp {
         None
     }
 
+    /// Caret rectangle in physical pixels for the IME candidate window (`None` — no text input focused).
+    fn ime_cursor_area(&self) -> Option<hey_core::Rect> {
+        None
+    }
+
     /// Called when the loop wakes up: collect background task results; `true` means a redraw is needed.
     fn tick(&mut self) -> bool {
         false
@@ -263,6 +268,12 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 self.list.clear();
                 self.app.draw(vp, &mut self.list);
+                if let Some(r) = self.app.ime_cursor_area() {
+                    g.window.set_ime_cursor_area(
+                        winit::dpi::PhysicalPosition::new(r.x as f64, r.y as f64),
+                        winit::dpi::PhysicalSize::new(r.w as f64, r.h as f64),
+                    );
+                }
                 let images = self.app.images();
                 let changed = match (&images, &g.images) {
                     (Some(a), Some(b)) => !Arc::ptr_eq(a, b),

@@ -91,7 +91,9 @@ impl InputState {
                 }
                 out
             }
-            WindowEvent::Ime(Ime::Commit(s)) => vec![UiEvent::Text(s.clone())],
+            WindowEvent::Ime(Ime::Commit(s)) => vec![UiEvent::Preedit(String::new()), UiEvent::Text(s.clone())],
+            WindowEvent::Ime(Ime::Preedit(s, _)) => vec![UiEvent::Preedit(s.clone())],
+            WindowEvent::Ime(Ime::Disabled) => vec![UiEvent::Preedit(String::new())],
             WindowEvent::Focused(f) => vec![UiEvent::FocusChanged(*f)],
             WindowEvent::Resized(s) => vec![UiEvent::Resize { width: s.width, height: s.height }],
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => vec![UiEvent::ScaleFactor(*scale_factor)],

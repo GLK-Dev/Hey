@@ -58,6 +58,14 @@ pub trait Widget<Msg> {
     fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
     }
+    /// Caret rectangle (as of the last paint) for positioning the IME candidate window.
+    fn ime_area(&self) -> Option<Rect> {
+        None
+    }
+    /// IME composition text at the caret (not committed); empty clears it.
+    fn preedit(&mut self, _text: &str) -> bool {
+        false
+    }
     /// Local state (scroll, caret) that survives rebuilding the widget.
     fn save_state(&self) -> Option<Box<dyn Any>> {
         None
@@ -308,6 +316,11 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    /// Caret rectangle of the focused widget (for the IME candidate window).
+    pub fn ime_area(&self) -> Option<Rect> {
+        self.focus.and_then(|f| self.nodes.get(&f)).and_then(|n| n.widget.ime_area())
+    }
+
     pub fn focused(&self) -> Option<NodeId> {
         self.focus
     }
@@ -540,6 +553,13 @@ impl<Msg: 'static> Ui<Msg> {
                     None => false,
                 },
                 _ => false,
+            },
+            UiEvent::Preedit(t) => match self.focus {
+                Some(f) => match self.nodes.get_mut(&f) {
+                    Some(n) if !n.disabled => n.widget.preedit(t),
+                    _ => false,
+                },
+                None => false,
             },
             UiEvent::Text(t) => match self.focus {
                 Some(f) => match self.nodes.get_mut(&f) {

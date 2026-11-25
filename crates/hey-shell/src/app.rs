@@ -289,6 +289,10 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
         Some(self.ui.env.icons.borrow().images())
     }
 
+    fn ime_cursor_area(&self) -> Option<hey_core::Rect> {
+        self.ui.ime_area()
+    }
+
     fn tick(&mut self) -> bool {
         self.poll()
     }

@@ -47,3 +47,26 @@ fn typing_selection_clipboard_undo() {
     assert_eq!(sink.drain(), ["_Я"]);
     ui.paint(vp);
 }
+
+#[test]
+fn ime_preedit_is_not_committed_until_text() {
+    let mut f = Fonts::new();
+    let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
+    let sink = MsgSink::new();
+    let mut ui: Ui<String> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
+    let root = ui.root();
+    TextInput::add(&mut ui, root, "ab", 200.0, Callback::new(|s| s));
+    let vp = Size::new(400.0, 100.0);
+    ui.event(&key("Tab", false, false));
+    let plain = ui.paint(vp).cmds().len();
+
+    assert!(ui.event(&UiEvent::Preedit("ни".into())));
+    let composing = ui.paint(vp).cmds().len();
+    assert!(composing > plain, "preedit adds an underline");
+    assert!(sink.is_empty(), "preedit sends no messages");
+
+    ui.event(&UiEvent::Preedit(String::new()));
+    ui.event(&UiEvent::Text("ни".into()));
+    assert_eq!(sink.drain(), ["abни"]);
+    assert_eq!(ui.paint(vp).cmds().len(), plain);
+}

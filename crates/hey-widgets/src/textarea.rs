@@ -82,6 +82,10 @@ pub struct TextArea<Msg> {
     on_change: Callback<Msg, String>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
+    /// IME composition shown at the caret (not part of the text until committed).
+    preedit: String,
+    /// Caret rectangle at the last paint (for the IME candidate window).
+    caret_rect: Cell<Option<Rect>>,
     /// Rectangle size at the last paint (for keys without `rect`).
     size: Cell<(f32, f32)>,
 }
@@ -103,6 +107,8 @@ impl<Msg: 'static> TextArea<Msg> {
             on_change,
             scroll: Cell::new(0.0),
             follow: Cell::new(true),
+            preedit: String::new(),
+            caret_rect: Cell::new(None),
             size: Cell::new((width, h)),
         };
         ui.add_widget(parent, Style::leaf(), w, measure_fn)
@@ -185,9 +191,17 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
         });
         let (pad, vpad) = (Self::pad(env), Self::vpad(env));
         let (inner_w, inner_h) = ((rect.w - 2.0 * pad).max(1.0), (rect.h - 2.0 * vpad).max(1.0));
-        let text = self.edit.text();
+        let pre_at = self.edit.caret();
+        let shown;
+        let text = if self.preedit.is_empty() {
+            self.edit.text()
+        } else {
+            let t = self.edit.text();
+            shown = format!("{}{}{}", &t[..pre_at], self.preedit, &t[pre_at..]);
+            &shown
+        };
         let g = Geo::new(env, text, inner_w);
-        let c = self.edit.caret();
+        let c = pre_at + self.preedit.len();
         let cl = g.line_of(c);
         let mut sc = self.scroll.get();
         if self.follow.replace(false) {
@@ -203,7 +217,7 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
 
         out.push(DrawCmd::ClipPush(Rect::new(rect.x + 1.0, rect.y + vpad - 1.0, rect.w - 2.0, inner_h + 2.0)));
         let origin = Point::new(rect.x + pad, rect.y + vpad - sc);
-        if self.edit.has_selection() && state.focused() {
+        if self.edit.has_selection() && state.focused() && self.preedit.is_empty() {
             let sel = self.edit.selection();
             for (i, ln) in g.l.lines.iter().enumerate() {
                 let (start, end) = (g.starts[i], g.line_end(i, text.len()));
@@ -221,9 +235,19 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
         for run in g.l.to_runs(origin, color) {
             out.push(DrawCmd::Text(run));
         }
+        if !self.preedit.is_empty() && g.line_of(pre_at) == cl {
+            let y = origin.y + (cl + 1) as f32 * g.lh - 1.5;
+            out.push(DrawCmd::Line {
+                a: Point::new(origin.x + g.x_of(cl, pre_at), y),
+                b: Point::new(origin.x + g.x_of(cl, c), y),
+                width: 1.0,
+                color,
+            });
+        }
         if state.focused() {
             let x = (origin.x + g.x_of(cl, c)).floor() + 0.5;
             let y = origin.y + cl as f32 * g.lh;
+            self.caret_rect.set(Some(Rect::new(x, y, 1.0, g.lh)));
             out.push(DrawCmd::Line { a: Point::new(x, y), b: Point::new(x, y + g.lh), width: 1.0, color: p.text });
         }
         out.push(DrawCmd::ClipPop);
@@ -302,7 +326,16 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
         self.changed(&before, sink);
         true
     }
+    fn ime_area(&self) -> Option<Rect> {
+        self.caret_rect.get()
+    }
+    fn preedit(&mut self, text: &str) -> bool {
+        self.preedit = text.to_string();
+        self.follow.set(true);
+        true
+    }
     fn text(&mut self, text: &str, sink: &MsgSink<Msg>) -> bool {
+        self.preedit.clear();
         let before = self.edit.text().to_string();
         self.edit.insert(text);
         self.changed(&before, sink);

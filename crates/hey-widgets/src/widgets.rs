@@ -303,6 +303,10 @@ pub struct TextInput<Msg> {
     on_change: Callback<Msg, String>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
+    /// IME composition shown at the caret (not part of the text until committed).
+    preedit: String,
+    /// Caret rectangle at the last paint (for the IME candidate window).
+    caret_rect: Cell<Option<Rect>>,
 }
 
 impl<Msg: 'static> TextInput<Msg> {
@@ -318,6 +322,8 @@ impl<Msg: 'static> TextInput<Msg> {
             on_change,
             scroll: Cell::new(0.0),
             follow: Cell::new(true),
+            preedit: String::new(),
+            caret_rect: Cell::new(None),
         };
         ui.add_widget(parent, Style::leaf(), w, measure_fn)
     }
@@ -382,9 +388,16 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
             chamfer: t.chamfer_small(),
             shadow: None,
         });
-        let l = layout(&env.fonts, self.edit.text(), &text_style(env, None, false));
+        let pre_at = self.edit.caret();
+        let shown = if self.preedit.is_empty() {
+            self.edit.text().to_string()
+        } else {
+            let t = self.edit.text();
+            format!("{}{}{}", &t[..pre_at], self.preedit, &t[pre_at..])
+        };
+        let l = layout(&env.fonts, &shown, &text_style(env, None, false));
         let inner = (rect.w - 2.0 * Self::pad(env)).max(1.0);
-        let caret_x = self.x_of(env, self.edit.caret());
+        let caret_x = measure(&env.fonts, &shown[..pre_at + self.preedit.len()], &env.chain, env.font_px);
         let mut sc = self.scroll.get();
         if self.follow.replace(false) {
             if caret_x - sc > inner {
@@ -397,7 +410,7 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
         self.scroll.set(sc);
         out.push(DrawCmd::ClipPush(Rect::new(rect.x + Self::pad(env) - 1.0, rect.y, inner + 2.0, rect.h)));
         let origin = Point::new(rect.x + Self::pad(env) - sc, rect.y + (rect.h - l.height) / 2.0);
-        if self.edit.has_selection() && state.focused() {
+        if self.edit.has_selection() && state.focused() && self.preedit.is_empty() {
             let r = self.edit.selection();
             let (a, b) = (self.x_of(env, r.start), self.x_of(env, r.end));
             out.push(DrawCmd::fill(Rect::new(origin.x + a, origin.y, b - a, l.height), p.selection));
@@ -406,13 +419,27 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
         for run in l.to_runs(origin, color) {
             out.push(DrawCmd::Text(run));
         }
+        if !self.preedit.is_empty() {
+            let x0 = measure(&env.fonts, &shown[..pre_at], &env.chain, env.font_px);
+            let y = (origin.y + l.height).floor() - 0.5;
+            out.push(DrawCmd::Line { a: Point::new(origin.x + x0, y), b: Point::new(origin.x + caret_x, y), width: 1.0, color });
+        }
         if state.focused() {
             let x = (origin.x + caret_x).floor() + 0.5;
+            self.caret_rect.set(Some(Rect::new(x, origin.y, 1.0, l.height)));
             out.push(DrawCmd::Line { a: Point::new(x, origin.y), b: Point::new(x, origin.y + l.height), width: 1.0, color: p.text });
         }
         out.push(DrawCmd::ClipPop);
     }
     fn focusable(&self) -> bool {
+        true
+    }
+    fn ime_area(&self) -> Option<Rect> {
+        self.caret_rect.get()
+    }
+    fn preedit(&mut self, text: &str) -> bool {
+        self.preedit = text.to_string();
+        self.follow.set(true);
         true
     }
     fn click(&mut self, _env: &Env, _rect: Rect, _pos: Point, _sink: &MsgSink<Msg>) {}
@@ -462,6 +489,7 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
         true
     }
     fn text(&mut self, text: &str, sink: &MsgSink<Msg>) -> bool {
+        self.preedit.clear();
         let before = self.edit.text().to_string();
         self.edit.insert(text);
         self.changed(&before, sink);

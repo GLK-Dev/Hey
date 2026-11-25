@@ -67,6 +67,8 @@ pub enum UiEvent {
     },
     /// Entered text (already accounting for keyboard layout/IME).
     Text(String),
+    /// IME composition in progress (not committed); an empty string clears it.
+    Preedit(String),
     FocusChanged(bool),
     Resize {
         width: u32,
