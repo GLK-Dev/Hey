@@ -165,7 +165,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 2. [x] Panel / WindowFrame (рамка не «съедает» контент: `border_width` входит в padding).
 3. [x] Tabs (слияние активного таба с рамкой панели, навигация ←/→/Home/End, фокус-рамка).
 4. [x] TextInput + TextArea (скролл, drag, двойной клик, Esc)
-5. List/ScrollView с ключами (сохранение скролла/фокуса при вставке/удалении) и виртуализацией для больших списков.
+5. [~] List (виртуализация, выбор, клавиши, колесо, индикатор — готово; TODO: ScrollView-контейнер, ключи элементов, drag скроллбара)
 6. Checkbox, Radio, Toggle, Slider, ProgressBar.
 7. Dropdown/ComboBox, Menu/ContextMenu, Tooltip, Modal — через отдельный **overlay-слой** (z-порядок, закрытие по Esc/клику вне).
 8. Реализовать **focus manager** на уровне фреймворка: порядок фокуса строится из дерева (замена ручного `focus_order`), focus trap для модалок.
