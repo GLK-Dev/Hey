@@ -5,6 +5,7 @@ use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
 use hey_style::{Theme, WidgetState};
 use hey_text::{FontId, Fonts};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -43,8 +44,71 @@ pub trait Widget<Msg> {
         false
     }
     /// Печатный текст (клавиатура/IME) на сфокусированном виджете; `true` — обработан.
+    /// Движение указателя над оверлеем (для подсветки строк). `true` — нужна перерисовка.
+    fn pointer_move(&mut self, _env: &Env, _rect: Rect, _pos: Point) -> bool {
+        false
+    }
     fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
+    }
+}
+
+/// Вид оверлея: всплывающее окно (закрывается кликом снаружи), модальное
+/// (затемнение, блокирует всё остальное) или подсказка (не принимает ввод).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OverlayKind {
+    Popup,
+    Modal,
+    Tooltip,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct OverlayId(u32);
+
+struct Overlay<Msg> {
+    id: OverlayId,
+    widget: Box<dyn Widget<Msg>>,
+    rect: Rect,
+    kind: OverlayKind,
+    hover: bool,
+    pressed: bool,
+}
+
+struct Queue<Msg> {
+    next: u32,
+    open: Vec<Overlay<Msg>>,
+    /// `None` — закрыть верхний интерактивный оверлей.
+    close: Vec<Option<OverlayId>>,
+    viewport: Size,
+}
+
+/// Общий дескриптор оверлеев: виджеты открывают/закрывают оверлеи через него,
+/// `Ui` применяет запросы после обработки события.
+pub struct Overlays<Msg>(Rc<RefCell<Queue<Msg>>>);
+
+impl<Msg> Clone for Overlays<Msg> {
+    fn clone(&self) -> Self {
+        Overlays(self.0.clone())
+    }
+}
+
+impl<Msg> Overlays<Msg> {
+    pub fn open(&self, rect: Rect, widget: impl Widget<Msg> + 'static, kind: OverlayKind) -> OverlayId {
+        let mut q = self.0.borrow_mut();
+        let id = OverlayId(q.next);
+        q.next += 1;
+        q.open.push(Overlay { id, widget: Box::new(widget), rect, kind, hover: false, pressed: false });
+        id
+    }
+    pub fn close(&self, id: OverlayId) {
+        self.0.borrow_mut().close.push(Some(id));
+    }
+    pub fn close_top(&self) {
+        self.0.borrow_mut().close.push(None);
+    }
+    /// Размер окна при последней отрисовке.
+    pub fn viewport(&self) -> Size {
+        self.0.borrow().viewport
     }
 }
 
@@ -62,6 +126,8 @@ pub struct Ui<Msg> {
     pressed: Option<NodeId>,
     focus: Option<NodeId>,
     last_click: Option<(NodeId, Instant, u32)>,
+    overlays: Vec<Overlay<Msg>>,
+    queue: Overlays<Msg>,
 }
 
 const MULTI_CLICK: Duration = Duration::from_millis(500);
@@ -78,7 +144,108 @@ impl<Msg: 'static> Ui<Msg> {
             pressed: None,
             focus: None,
             last_click: None,
+            overlays: Vec::new(),
+            queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
+    }
+
+    /// Дескриптор для открытия оверлеев из виджетов.
+    pub fn overlays(&self) -> Overlays<Msg> {
+        self.queue.clone()
+    }
+
+    pub fn open_overlay(&mut self, rect: Rect, widget: impl Widget<Msg> + 'static, kind: OverlayKind) -> OverlayId {
+        let id = self.queue.open(rect, widget, kind);
+        self.apply_queue();
+        id
+    }
+
+    pub fn close_overlay(&mut self, id: OverlayId) {
+        self.queue.close(id);
+        self.apply_queue();
+    }
+
+    pub fn overlay_count(&self) -> usize {
+        self.overlays.len()
+    }
+
+    fn top_interactive(&self) -> Option<usize> {
+        self.overlays.iter().rposition(|o| o.kind != OverlayKind::Tooltip)
+    }
+
+    /// Применяет запросы открытия/закрытия; `true`, если набор оверлеев изменился.
+    fn apply_queue(&mut self) -> bool {
+        let (closes, opens) = {
+            let mut q = self.queue.0.borrow_mut();
+            (std::mem::take(&mut q.close), std::mem::take(&mut q.open))
+        };
+        let changed = !closes.is_empty() || !opens.is_empty();
+        for c in closes {
+            let pos = match c {
+                Some(id) => self.overlays.iter().position(|o| o.id == id),
+                None => self.top_interactive(),
+            };
+            if let Some(i) = pos {
+                self.overlays.remove(i);
+            }
+        }
+        self.overlays.extend(opens);
+        changed
+    }
+
+    /// Ввод для верхнего интерактивного оверлея; `None` — событие идёт в дерево.
+    fn event_overlay(&mut self, ev: &UiEvent) -> Option<bool> {
+        let idx = self.top_interactive()?;
+        let env = self.env.clone();
+        let sink = self.sink.clone();
+        let o = &mut self.overlays[idx];
+        let rect = o.rect;
+        Some(match ev {
+            UiEvent::PointerMove { pos } => {
+                let inside = rect.contains(*pos);
+                let mut ch = o.hover != inside;
+                o.hover = inside;
+                if inside {
+                    ch |= o.widget.pointer_move(&env, rect, *pos);
+                }
+                if o.pressed {
+                    o.widget.drag(&env, rect, *pos, &sink);
+                    ch = true;
+                }
+                ch
+            }
+            UiEvent::PointerLeave => {
+                o.hover = false;
+                o.pressed = false;
+                return None;
+            }
+            UiEvent::Wheel { pos, dx, dy } => rect.contains(*pos) && o.widget.wheel(&env, rect, *dx, *dy),
+            UiEvent::PointerDown { pos, button: MouseButton::Left } => {
+                if rect.contains(*pos) {
+                    o.pressed = true;
+                    o.widget.press(&env, rect, *pos, 1, &sink);
+                } else {
+                    self.overlays.remove(idx);
+                }
+                true
+            }
+            UiEvent::PointerUp { pos, button: MouseButton::Left } => {
+                if std::mem::take(&mut o.pressed) && rect.contains(*pos) {
+                    o.widget.click(&env, rect, *pos, &sink);
+                }
+                true
+            }
+            UiEvent::KeyDown { code, mods } => {
+                if code == "Escape" {
+                    self.overlays.remove(idx);
+                } else if !o.widget.key(code, *mods, &sink) && (code == "Enter" || code == " ") {
+                    o.widget.activate(&sink);
+                }
+                true
+            }
+            UiEvent::Text(t) => o.widget.text(t, &sink),
+            _ => return None,
+        })
     }
 
     pub fn root(&self) -> NodeId {
@@ -216,6 +383,14 @@ impl<Msg: 'static> Ui<Msg> {
 
     /// Обрабатывает событие. Возвращает `true`, если нужна перерисовка.
     pub fn event(&mut self, ev: &UiEvent) -> bool {
+        let r = match self.event_overlay(ev) {
+            Some(r) => r,
+            None => self.event_tree(ev),
+        };
+        self.apply_queue() | r
+    }
+
+    fn event_tree(&mut self, ev: &UiEvent) -> bool {
         match ev {
             UiEvent::PointerMove { pos } => {
                 let a = self.set_hover(self.tree.hit_test(*pos));
@@ -316,6 +491,19 @@ impl<Msg: 'static> Ui<Msg> {
                 }
             }
             stack.extend(self.tree.children(id).iter().rev().copied());
+        }
+        self.queue.0.borrow_mut().viewport = viewport;
+        self.apply_queue();
+        let top = self.top_interactive();
+        for (i, o) in self.overlays.iter().enumerate() {
+            if o.kind == OverlayKind::Modal {
+                out.push(DrawCmd::fill(Rect::new(0.0, 0.0, viewport.w, viewport.h), hey_core::Color::rgba(0, 0, 0, 150)));
+            }
+            let mut st = WidgetState::NORMAL;
+            st.set(WidgetState::HOVERED, o.hover);
+            st.set(WidgetState::PRESSED, o.pressed && o.hover);
+            st.set(WidgetState::FOCUSED, top == Some(i));
+            o.widget.paint(&self.env, o.rect, st, &mut out);
         }
         out
     }
