@@ -92,3 +92,51 @@ impl<Msg> Widget<Msg> for Button<Msg> {
         self.on_click.emit(sink, ());
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PanelKind {
+    /// Обычная панель.
+    Panel,
+    /// Поле документа (светлее/глубже панели).
+    Document,
+    /// Рамка окна: крупная фаска.
+    Window,
+}
+
+/// Панель/рамка окна: фон + рамка. Ширина рамки добавляется к padding,
+/// поэтому контент не перекрывает рамку.
+pub struct Panel {
+    kind: PanelKind,
+}
+
+impl Panel {
+    pub const BORDER: f32 = 1.0;
+
+    pub fn add<Msg: 'static>(ui: &mut Ui<Msg>, parent: NodeId, mut style: Style, kind: PanelKind) -> NodeId {
+        let b = Self::BORDER;
+        let p = &mut style.padding;
+        p.left += b;
+        p.top += b;
+        p.right += b;
+        p.bottom += b;
+        ui.add_container_widget(parent, style, Panel { kind })
+    }
+}
+
+impl<Msg> Widget<Msg> for Panel {
+    fn paint(&self, env: &Env, rect: Rect, _state: WidgetState, out: &mut DisplayList) {
+        let t = &env.theme;
+        let (fill, chamfer) = match self.kind {
+            PanelKind::Panel => (t.palette.panel, t.chamfer_medium()),
+            PanelKind::Document => (t.palette.document, 0.0),
+            PanelKind::Window => (t.palette.panel, t.chamfer_large()),
+        };
+        out.push(DrawCmd::Rect {
+            rect,
+            fill,
+            border: Some(Border { width: Self::BORDER, color: t.palette.line }),
+            chamfer,
+            shadow: None,
+        });
+    }
+}

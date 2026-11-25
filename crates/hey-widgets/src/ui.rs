@@ -79,6 +79,13 @@ impl<Msg: 'static> Ui<Msg> {
         id
     }
 
+    /// Контейнер с виджетом (без собственного измерения): размер задают стиль и дети.
+    pub fn add_container_widget(&mut self, parent: NodeId, style: Style, widget: impl Widget<Msg> + 'static) -> NodeId {
+        let id = self.tree.add(parent, style).expect("родитель существует");
+        self.nodes.insert(id, Node { widget: Box::new(widget), disabled: false });
+        id
+    }
+
     pub fn set_disabled(&mut self, id: NodeId, disabled: bool) {
         if let Some(n) = self.nodes.get_mut(&id) {
             n.disabled = disabled;
