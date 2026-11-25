@@ -94,7 +94,7 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 | ADR-7 | Layout: свой минимальный flex → миграция на `taffy` при росте требований | Не блокировать ранние этапы |
 | ADR-8 | Текст: `fontdue` для старта → `cosmic-text`/`parley` (shaping, bidi, fallback, IME) | Кириллица ок, но сложные скрипты требуют shaping |
 
-### 3.4 Дизайн HeOS и влияние на архитектуру
+### 3.4 Дизайн (заимствован из другого проекта) и влияние на архитектуру
 Источник истины — `design/tokens/*.json` (`tokens.json`, `themes.json`, `charts.json`); инструкция — `design/themes/README.md`.
 - **Срез вместо скругления.** `DrawCmd::Rect` получает `chamfer` (срез 45° сверху-слева и снизу-справа; размеры small/medium/large) вместо `radii`. Нужны поддержка в SDF-шейдере (GPU) и в CPU-растеризаторе (многоугольник из 6 точек, как `ChamferedRect` в `heos_design.h`).
 - **Три темы:** `industrial-dark` (flat), `night-ops` (outline, свечение ≤ 8 px), `zeta-remastered` (bevel). `Theme` содержит `ControlStyle {Flat, Outline, Bevel}`, `WindowEffect`, `chamfer`, `motion_ms`, `bevel`, ANSI-палитру. Размеры и отступы общие, отличается только отрисовка виджета.

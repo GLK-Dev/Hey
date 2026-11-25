@@ -84,7 +84,7 @@ fn golden_text() {
     let mono = f.add_file(format!("{root}/jetbrainsmono/JetBrainsMono[wght].ttf")).unwrap();
     let mut st = TextStyle::new(vec![onest, mono], 18.0);
     st.max_width = Some(220.0);
-    let l = layout(&f, "Привет, HeOS! Текст переносится по словам и обрезается.", &st);
+    let l = layout(&f, "Привет, Hey! Текст переносится по словам и обрезается.", &st);
     let mut cmds: Vec<DrawCmd> = l.to_runs(Point::new(10.0, 10.0), Color::hex(0xE6E8EE)).into_iter().map(DrawCmd::Text).collect();
     let mut st2 = TextStyle::new(vec![mono], 14.0);
     st2.max_width = Some(220.0);

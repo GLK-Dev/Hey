@@ -45,7 +45,7 @@ impl ShellApp for Demo {
         });
         let pad = 24.0 * s;
         let w = r.w - 2.0 * pad;
-        self.text(list, "HeOS", &[self.onest], 28.0 * s, w, Point::new(r.x + pad, r.y + pad), Color::hex(0xE6E8EE));
+        self.text(list, "Hey", &[self.onest], 28.0 * s, w, Point::new(r.x + pad, r.y + pad), Color::hex(0xE6E8EE));
         self.text(
             list,
             "Текст на fontdue: перенос по словам, fallback-цепочка шрифтов и обрезка по ширине.",

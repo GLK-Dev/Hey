@@ -36,7 +36,7 @@ pub struct GlyphRun {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DrawCmd {
-    /// `chamfer` — срез 45° (px) только у верхнего-левого и нижнего-правого углов (дизайн HeOS).
+    /// `chamfer` — срез 45° (px) только у верхнего-левого и нижнего-правого углов (дизайн из design/).
     Rect {
         rect: Rect,
         fill: Color,
