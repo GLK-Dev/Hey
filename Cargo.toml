@@ -28,3 +28,4 @@ accesskit_winit = "0.34"
 fluent-bundle = "0.16"
 unic-langid = "0.9"
 proptest = "1"
+criterion = { version = "0.5", default-features = false }

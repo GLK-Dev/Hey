@@ -9,3 +9,8 @@ hey-core = { path = "../hey-core" }
 
 [dev-dependencies]
 taffy = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "layout"
+harness = false
