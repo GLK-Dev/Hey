@@ -39,6 +39,9 @@ impl<T> TaskState<T> {
     }
 }
 
+/// Шрифт по умолчанию (Onest, SIL OFL 1.1).
+const DEFAULT_FONT: &[u8] = include_bytes!("../../../design/fonts/onest/Onest[wght].ttf");
+
 type Job<Msg> = Box<dyn FnOnce() -> Msg + Send>;
 
 /// Побочный эффект, возвращаемый из `update`.
@@ -142,6 +145,10 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         let mut chain: Vec<FontId> = Vec::new();
         for p in &self.fonts {
             chain.push(fonts.add_file(p).map_err(|e| format!("шрифт {}: {e:?}", p.display()))?);
+        }
+        if chain.is_empty() {
+            // Шрифт по умолчанию — Onest (OFL, кириллица), вшит в бинарник.
+            chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| format!("шрифт по умолчанию: {e:?}"))?);
         }
         let sink = MsgSink::new();
         let ui = Ui::new(self.theme, Arc::new(fonts), chain, sink.clone());
