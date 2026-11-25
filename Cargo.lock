@@ -1596,6 +1596,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hey-test"
+version = "0.1.0"
+dependencies = [
+ "hey-core",
+ "hey-draw",
+ "hey-render-cpu",
+ "hey-style",
+ "hey-text",
+ "hey-widgets",
+]
+
+[[package]]
 name = "hey-text"
 version = "0.1.0"
 dependencies = [

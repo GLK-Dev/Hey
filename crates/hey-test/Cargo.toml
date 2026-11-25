@@ -1,0 +1,14 @@
+[package]
+name = "hey-test"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+description = "Headless input simulation and golden screenshots for Hey UIs"
+
+[dependencies]
+hey-core = { path = "../hey-core" }
+hey-style = { path = "../hey-style" }
+hey-text = { path = "../hey-text" }
+hey-draw = { path = "../hey-draw" }
+hey-widgets = { path = "../hey-widgets" }
+hey-render-cpu = { path = "../hey-render-cpu" }
