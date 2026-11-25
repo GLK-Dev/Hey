@@ -1,5 +1,7 @@
 use crate::style::{Align, Axis, Dim, Justify, Kind, Style};
 use hey_core::{NodeId, Point, Rect, Size, Tree};
+use std::cell::RefCell;
+use std::collections::HashMap;
 
 type MeasureFn = Box<dyn Fn(Option<f32>) -> Size>;
 
@@ -15,6 +17,10 @@ struct Node {
 pub struct LayoutTree {
     tree: Tree<Node>,
     root: NodeId,
+    /// Память измерений в пределах одного прохода: (узел, доступная ширина) → размер.
+    cache: RefCell<HashMap<(NodeId, Option<u32>), Size>>,
+    dirty: bool,
+    viewport: Option<Size>,
 }
 
 fn clamp(v: f32, min: f32, max: f32) -> f32 {
@@ -38,7 +44,7 @@ impl LayoutTree {
     pub fn new(root: Style) -> Self {
         let mut tree = Tree::new();
         let root = tree.add(Node { style: root, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, None).expect("корень");
-        Self { tree, root }
+        Self { tree, root, cache: RefCell::new(HashMap::new()), dirty: true, viewport: None }
     }
 
     pub fn root(&self) -> NodeId {
@@ -46,14 +52,22 @@ impl LayoutTree {
     }
 
     pub fn add(&mut self, parent: NodeId, style: Style) -> Option<NodeId> {
+        self.dirty = true;
         self.tree.add(Node { style, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, Some(parent))
     }
 
+    /// Пометить раскладку устаревшей (например, изменился текст, который измеряет замыкание листа).
+    pub fn invalidate(&mut self) {
+        self.dirty = true;
+    }
+
     pub fn remove(&mut self, id: NodeId) {
+        self.dirty = true;
         self.tree.remove_subtree(id);
     }
 
     pub fn set_style(&mut self, id: NodeId, style: Style) {
+        self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {
             n.style = style;
         }
@@ -65,6 +79,7 @@ impl LayoutTree {
 
     /// Замыкание измерения листа: принимает доступную внутреннюю ширину (если известна).
     pub fn set_measure(&mut self, id: NodeId, f: impl Fn(Option<f32>) -> Size + 'static) {
+        self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {
             n.measure = Some(Box::new(f));
         }
@@ -84,6 +99,7 @@ impl LayoutTree {
 
     /// Задать сдвиг (зажимается при следующем `compute`).
     pub fn set_scroll(&mut self, id: NodeId, p: Point) {
+        self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {
             n.scroll = p;
         }
@@ -96,6 +112,7 @@ impl LayoutTree {
         let to = Point::new((n.scroll.x + dx).clamp(0.0, max.x), (n.scroll.y + dy).clamp(0.0, max.y));
         let changed = to != n.scroll;
         n.scroll = to;
+        self.dirty |= changed;
         changed
     }
 
@@ -159,8 +176,15 @@ impl LayoutTree {
     }
 
     pub fn compute(&mut self, viewport: Size) {
+        if !self.dirty && self.viewport == Some(viewport) {
+            return;
+        }
+        self.cache.borrow_mut().clear();
         let r = Rect::new(0.0, 0.0, viewport.w.round(), viewport.h.round());
         self.arrange(self.root, r);
+        self.cache.borrow_mut().clear();
+        self.dirty = false;
+        self.viewport = Some(viewport);
     }
 
     fn visible(&self, id: NodeId) -> Vec<NodeId> {
@@ -174,6 +198,16 @@ impl LayoutTree {
 
     /// Размер border-box узла (без внешних отступов). `avail` — доступная ширина border-box.
     fn measure(&self, id: NodeId, avail: Option<f32>) -> Size {
+        let key = (id, avail.map(f32::to_bits));
+        if let Some(&s) = self.cache.borrow().get(&key) {
+            return s;
+        }
+        let s = self.measure_uncached(id, avail);
+        self.cache.borrow_mut().insert(key, s);
+        s
+    }
+
+    fn measure_uncached(&self, id: NodeId, avail: Option<f32>) -> Size {
         let Some(n) = self.tree.get(id) else { return Size::default() };
         let st = n.style;
         if st.hidden {

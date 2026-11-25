@@ -181,3 +181,49 @@ mod hit {
         let _ = other;
     }
 }
+
+mod cache {
+    use super::*;
+    use std::{cell::Cell, rc::Rc};
+
+    #[test]
+    fn clean_tree_skips_recompute_and_invalidate_forces_it() {
+        let calls = Rc::new(Cell::new(0));
+        let mut t = LayoutTree::new(Style::column());
+        let leaf = t.add(t.root(), Style::leaf()).unwrap();
+        let c = calls.clone();
+        t.set_measure(leaf, move |_| {
+            c.set(c.get() + 1);
+            Size::new(10.0, 10.0)
+        });
+        t.compute(Size::new(100.0, 100.0));
+        let first = calls.get();
+        assert!(first > 0);
+        t.compute(Size::new(100.0, 100.0));
+        assert_eq!(calls.get(), first);
+        t.invalidate();
+        t.compute(Size::new(100.0, 100.0));
+        assert!(calls.get() > first);
+        let n = calls.get();
+        t.compute(Size::new(120.0, 100.0)); // другой viewport
+        assert!(calls.get() > n);
+    }
+
+    #[test]
+    fn repeated_measures_within_pass_are_memoized() {
+        let calls = Rc::new(Cell::new(0));
+        let mut t = LayoutTree::new(Style::column());
+        let mut p = t.root();
+        for _ in 0..6 {
+            p = t.add(p, Style::column()).unwrap();
+        }
+        let leaf = t.add(p, Style::leaf()).unwrap();
+        let c = calls.clone();
+        t.set_measure(leaf, move |_| {
+            c.set(c.get() + 1);
+            Size::new(10.0, 10.0)
+        });
+        t.compute(Size::new(100.0, 100.0));
+        assert!(calls.get() <= 20, "{}", calls.get());
+    }
+}

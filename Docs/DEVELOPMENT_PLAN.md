@@ -147,7 +147,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 
 ### Фаза 4. Layout и hit-test (`hey-layout`) (3 Н)
 - [x] Контейнеры: `Row`, `Column`, `Stack`, `Spacer`; `gap`, `padding`, `margin`, `align`, `justify`, `flex-grow/shrink`, min/max size.
-- [ ] Двухпроходный алгоритм (measure → arrange), кэш по dirty-флагам. (measure→arrange готов; dirty-кэш — позже)
+- [x] Двухпроходный алгоритм (measure → arrange), кэш по dirty-флагам. (measure→arrange готов; dirty-кэш — позже)
 - [x] Hit-test по дереву с учётом clip и скролла (вместо ручных `HitBox`), z-порядок, popup-слои.
 - [x] Скролл-контейнеры (вертикальный/горизонтальный): сдвиг, кламп, `scroll_by`. [ ] инерция, скроллбар-виджет — позже.
 - [ ] Спайк интеграции `taffy` и сравнение на бенчмарке (ADR-7).
