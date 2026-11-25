@@ -136,13 +136,13 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
 - [x] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`.
 - [x] Экспорт кадра в PNG; **headless-рендер без окна** для тестов.
-- [x] Golden-тесты: набор эталонных кадров (rect, chamfer, border, shadow, clip; text — в фазе 3).
+- [x] Golden-тесты: набор эталонных кадров (rect, chamfer, border, shadow, clip; text).
 
 ### Фаза 3. Текст (`hey-text`) (3–4 Н)
-- [ ] Загрузка шрифтов, fallback-цепочка, кэш метрик.
-- [ ] Layout текста: измерение, перенос строк, выравнивание, многострочность, обрезка с «…».
-- [ ] Выделить **чистую модель редактирования** `TextEditState` (текст, каретка, выделение, границы слов/графем, undo/redo с коалесингом, clipboard-trait) из прототипа — без зависимостей от UI. Покрыть property-тестами (Unicode, кириллица, эмодзи, комбинируемые символы).
-- [ ] Курсор по графемам (`unicode-segmentation`), границы слов (`unicode-segmentation`/UAX#29) вместо самодельных.
+- [x] Загрузка шрифтов, fallback-цепочка, кэш метрик.
+- [x] Layout текста: измерение, перенос строк, выравнивание, многострочность, обрезка с «…».
+- [x] Выделить **чистую модель редактирования** `TextEditState` (текст, каретка, выделение, границы слов/графем, undo/redo с коалесингом, clipboard-trait) из прототипа — без зависимостей от UI. Покрыть property-тестами (Unicode, кириллица, эмодзи, комбинируемые символы).
+- [x] Курсор по графемам (`unicode-segmentation`), границы слов (`unicode-segmentation`/UAX#29) вместо самодельных.
 - [ ] Спайк: `cosmic-text`/`parley` как замена fontdue (shaping, bidi) — решение по ADR-8.
 
 ### Фаза 4. Layout и hit-test (`hey-layout`) (3 Н)
