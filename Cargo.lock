@@ -873,6 +873,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hey-render-gpu"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "hey-core",
+ "hey-draw",
+ "hey-render-cpu",
+ "pollster",
+ "wgpu",
+]
+
+[[package]]
 name = "hey-shell"
 version = "0.1.0"
 dependencies = [
