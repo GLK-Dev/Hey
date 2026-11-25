@@ -5,7 +5,6 @@ use hey_layout::Style;
 use hey_style::{Theme, Variant};
 use hey_text::Fonts;
 use hey_widgets::{Button, Ui};
-use std::rc::Rc;
 
 fn tab(shift: bool) -> UiEvent {
     UiEvent::KeyDown { code: "Tab".into(), mods: Modifiers { shift, ..Modifiers::default() } }
@@ -15,7 +14,7 @@ fn tab(shift: bool) -> UiEvent {
 fn focus_trap_and_programmatic_focus() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
-    let mut ui: Ui<u8> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], MsgSink::new());
+    let mut ui: Ui<u8> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], MsgSink::new());
     let root = ui.root();
     let a = Button::add(&mut ui, root, "A", Variant::Secondary, Callback::new(|_| 0));
     let scope = ui.add_container(root, Style::column());

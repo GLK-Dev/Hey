@@ -4,7 +4,6 @@ use hey_core::{Callback, Modifiers, MouseButton, MsgSink, Point, Size, UiEvent};
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{TextInput, Ui};
-use std::rc::Rc;
 
 fn key(c: &str, shift: bool, ctrl: bool) -> UiEvent {
     UiEvent::KeyDown { code: c.into(), mods: Modifiers { shift, ctrl, ..Default::default() } }
@@ -15,7 +14,7 @@ fn typing_selection_clipboard_undo() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    let mut ui: Ui<String> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone());
+    let mut ui: Ui<String> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
     let root = ui.root();
     let input = TextInput::add(&mut ui, root, "", 200.0, Callback::new(|s| s));
     let vp = Size::new(400.0, 100.0);

@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 /// Контекст отрисовки/измерения, общий для всех виджетов.
 pub struct Env {
     pub theme: Theme,
-    pub fonts: Rc<Fonts>,
+    pub fonts: std::sync::Arc<Fonts>,
     pub chain: Vec<FontId>,
     /// Базовый размер шрифта (физ. px).
     pub font_px: f32,
@@ -142,7 +142,7 @@ pub struct Ui<Msg> {
 const MULTI_CLICK: Duration = Duration::from_millis(500);
 
 impl<Msg: 'static> Ui<Msg> {
-    pub fn new(theme: Theme, fonts: Rc<Fonts>, chain: Vec<FontId>, sink: MsgSink<Msg>) -> Self {
+    pub fn new(theme: Theme, fonts: std::sync::Arc<Fonts>, chain: Vec<FontId>, sink: MsgSink<Msg>) -> Self {
         let font_px = theme.space(14.0);
         Ui {
             tree: LayoutTree::new(Style::column()),

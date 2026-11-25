@@ -6,7 +6,6 @@ use hey_layout::Style;
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{Panel, PanelKind, Tabs, Ui};
-use std::rc::Rc;
 
 fn key(c: &str) -> UiEvent {
     UiEvent::KeyDown { code: c.into(), mods: Modifiers::default() }
@@ -17,7 +16,7 @@ fn tabs_keyboard_click_and_merge() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    let mut ui: Ui<usize> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone());
+    let mut ui: Ui<usize> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
     let root = ui.root();
     let tabs = Tabs::add(&mut ui, root, &["Один", "Два", "Три"], 0, Callback::new(|i| i));
     Panel::add_attached(&mut ui, root, Style::column().grow(1.0), PanelKind::Panel);

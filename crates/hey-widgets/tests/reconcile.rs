@@ -5,7 +5,6 @@ use hey_layout::Style;
 use hey_style::{Theme, Variant};
 use hey_text::Fonts;
 use hey_widgets::{Button, TextInput, Ui, View};
-use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 enum M {
@@ -16,7 +15,7 @@ enum M {
 fn setup() -> Ui<M> {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
-    Ui::new(Theme::dark(), Rc::new(f), vec![onest], MsgSink::new())
+    Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], MsgSink::new())
 }
 
 fn btn(key: &'static str, label: &'static str) -> View<M> {

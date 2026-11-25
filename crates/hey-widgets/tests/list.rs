@@ -5,7 +5,6 @@ use hey_draw::DrawCmd;
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{List, Ui};
-use std::rc::Rc;
 
 fn key(c: &str) -> UiEvent {
     UiEvent::KeyDown { code: c.into(), mods: Modifiers::default() }
@@ -16,7 +15,7 @@ fn list_select_keys_wheel() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    let mut ui: Ui<usize> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone());
+    let mut ui: Ui<usize> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
     let root = ui.root();
     let items: Vec<String> = (0..50).map(|i| format!("Строка {i}")).collect();
     let l = List::add(&mut ui, root, items, 200.0, 5, Callback::new(|i| i));

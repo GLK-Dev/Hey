@@ -24,7 +24,7 @@ fn controls_basic() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    let mut ui: Ui<M> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone());
+    let mut ui: Ui<M> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
     let root = ui.root();
     let cb = Checkbox::add(&mut ui, root, "Флажок", false, Callback::new(M::Check));
     let _tg = Toggle::add(&mut ui, root, "Тумблер", false, Callback::new(M::Tog));

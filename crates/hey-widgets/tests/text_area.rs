@@ -5,7 +5,6 @@ use hey_draw::DrawCmd;
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{TextArea, TextInput, Ui};
-use std::rc::Rc;
 
 fn key(c: &str, shift: bool, ctrl: bool) -> UiEvent {
     UiEvent::KeyDown { code: c.into(), mods: Modifiers { shift, ctrl, ..Default::default() } }
@@ -15,7 +14,7 @@ fn ui() -> (Ui<String>, MsgSink<String>) {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    (Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone()), sink)
+    (Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone()), sink)
 }
 
 fn down(ui: &mut Ui<String>, p: Point) {

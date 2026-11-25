@@ -6,13 +6,12 @@ use hey_layout::Style;
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{Label, Panel, PanelKind, Ui};
-use std::rc::Rc;
 
 #[test]
 fn border_is_part_of_padding_and_paints_before_children() {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
-    let mut ui: Ui<()> = Ui::new(Theme::dark(), Rc::new(f), vec![onest], MsgSink::new());
+    let mut ui: Ui<()> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], MsgSink::new());
     let root = ui.root();
     let style = Style::column().padding(Insets::symmetric(4.0, 4.0));
     let panel = Panel::add(&mut ui, root, style, PanelKind::Window);

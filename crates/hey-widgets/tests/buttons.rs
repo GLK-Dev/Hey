@@ -6,7 +6,6 @@ use hey_layout::Style;
 use hey_style::{Theme, Variant};
 use hey_text::Fonts;
 use hey_widgets::{Button, Label, Ui};
-use std::rc::Rc;
 
 #[derive(Clone, Debug, PartialEq)]
 enum Msg {
@@ -20,7 +19,7 @@ fn setup() -> (Ui<Msg>, MsgSink<Msg>, NodeId, NodeId, NodeId) {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    let mut ui = Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone());
+    let mut ui = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
     let root = ui.root();
     let row = ui.add_container(root, Style::row().gap(10.0));
     let label = Label::add(&mut ui, row, "Привет");

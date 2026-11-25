@@ -9,5 +9,8 @@ hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
 hey-render-cpu = { path = "../hey-render-cpu" }
 hey-text = { path = "../hey-text" }
+hey-layout = { path = "../hey-layout" }
+hey-style = { path = "../hey-style" }
+hey-widgets = { path = "../hey-widgets" }
 winit = "0.30"
 softbuffer = "0.4"

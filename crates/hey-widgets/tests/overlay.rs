@@ -4,7 +4,6 @@ use hey_core::{Callback, Modifiers, MouseButton, MsgSink, Point, Rect, Size, UiE
 use hey_style::Theme;
 use hey_text::Fonts;
 use hey_widgets::{Dropdown, Menu, Modal, Tooltip, Ui};
-use std::rc::Rc;
 
 #[derive(Debug, PartialEq)]
 enum M {
@@ -25,7 +24,7 @@ fn setup() -> (Ui<M>, MsgSink<M>) {
     let mut f = Fonts::new();
     let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
     let sink = MsgSink::new();
-    (Ui::new(Theme::dark(), Rc::new(f), vec![onest], sink.clone()), sink)
+    (Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone()), sink)
 }
 
 fn items() -> Vec<String> {

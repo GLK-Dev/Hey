@@ -4,7 +4,9 @@
 //!
 //! Все размеры в физических пикселях (ADR-3); `scale` передаётся приложению для справки.
 
+mod app;
 mod input;
+pub use app::{App, Command, TaskState};
 pub use input::{InputState, LINE_PX};
 
 use hey_core::UiEvent;
@@ -31,6 +33,16 @@ pub trait ShellApp {
     /// Реестр шрифтов для отрисовки `DrawCmd::Text`; вызывается при создании окна.
     fn fonts(&self) -> Option<std::sync::Arc<hey_text::Fonts>> {
         None
+    }
+
+    /// Вызывается при пробуждении цикла: забрать результаты фоновых задач; `true` — нужна перерисовка.
+    fn tick(&mut self) -> bool {
+        false
+    }
+
+    /// Есть ли фоновая работа: тогда цикл опрашивает `tick` каждые ~16 мс вместо ожидания событий.
+    fn pending(&self) -> bool {
+        false
     }
 }
 
@@ -69,6 +81,22 @@ struct Shell<A> {
 }
 
 impl<A: ShellApp> ApplicationHandler for Shell<A> {
+    fn about_to_wait(&mut self, el: &ActiveEventLoop) {
+        // pending читаем ДО tick: задача шлёт результат раньше, чем уменьшает счётчик,
+        // поэтому pending == false гарантирует, что tick уже увидит все результаты.
+        let pending = self.app.pending();
+        if self.app.tick() {
+            if let Some(g) = &self.gfx {
+                g.window.request_redraw();
+            }
+        }
+        el.set_control_flow(if pending {
+            ControlFlow::WaitUntil(std::time::Instant::now() + std::time::Duration::from_millis(16))
+        } else {
+            ControlFlow::Wait
+        });
+    }
+
     fn resumed(&mut self, el: &ActiveEventLoop) {
         if self.gfx.is_some() {
             return;
