@@ -475,7 +475,9 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
     }
     fn key(&mut self, code: &str, mods: Modifiers, sink: &MsgSink<Msg>) -> bool {
         let before = self.edit.text().to_string();
-        let (sh, ctrl) = (mods.shift, mods.ctrl);
+        let sh = mods.shift;
+        // Edit shortcuts use the command key (Cmd on macOS); word-wise motion uses Ctrl (Option on macOS).
+        let ctrl = if matches!(code, "a" | "c" | "x" | "v" | "z" | "y") { mods.command() } else { mods.word() };
         let e = &mut self.edit;
         match (code, ctrl) {
             ("ArrowLeft", false) => e.move_left(sh),
@@ -494,7 +496,11 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
             ("x", true) => e.cut(&mut self.clipboard),
             ("v", true) => e.paste(&mut self.clipboard),
             ("z", true) => {
-                e.undo();
+                if sh {
+                    e.redo();
+                } else {
+                    e.undo();
+                }
             }
             ("y", true) => {
                 e.redo();

@@ -280,7 +280,9 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
     }
     fn key(&mut self, code: &str, mods: Modifiers, sink: &MsgSink<Msg>) -> bool {
         let before = self.edit.text().to_string();
-        let (sh, ctrl) = (mods.shift, mods.ctrl);
+        let sh = mods.shift;
+        // Edit shortcuts use the command key (Cmd on macOS); word-wise motion uses Ctrl (Option on macOS).
+        let ctrl = if matches!(code, "a" | "c" | "x" | "v" | "z" | "y") { mods.command() } else { mods.word() };
         let page = ((self.size.get().1 - 2.0 * Self::vpad(&self.env)) / self.geo().lh).floor().max(2.0) as isize - 1;
         match (code, ctrl) {
             ("ArrowUp", _) => self.move_lines(-1, sh),
@@ -310,7 +312,11 @@ impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
             ("x", true) => self.edit.cut(&mut self.clipboard),
             ("v", true) => self.edit.paste(&mut self.clipboard),
             ("z", true) => {
-                self.edit.undo();
+                if sh {
+                    self.edit.redo();
+                } else {
+                    self.edit.undo();
+                }
             }
             ("y", true) => {
                 self.edit.redo();

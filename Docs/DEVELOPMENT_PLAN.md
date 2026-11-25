@@ -191,8 +191,8 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Локализация (`fluent`), форматирование чисел/дат — крейт `hey-i18n`.
 - [x] RTL/bidi в `hey-text` (reordering UAX #9, `Align::Start/End`, каретка и hit-test; без зеркалирования глифов и арабского shaping — ждёт cosmic-text; однострочный `TextInput` пока LTR).
 - [x] Системные темы (dark/light auto), High-contrast, `prefers-reduced-motion`. Done: `Appearance`, `Theme::for_appearance`/`high_contrast_*`/`reduced_motion`, `Ui::set_theme`, `App::auto_theme`, winit `ThemeChanged`. High contrast and reduced motion come from `HEY_HIGH_CONTRAST`/`HEY_REDUCE_MOTION` env vars; native OS queries are not wired up yet. Widgets do not animate yet, so reduced motion only zeroes theme durations.
-- [ ] Платформенные нюансы: Windows (DPI awareness, DWM-рамка/кастомный titlebar), macOS (Cmd вместо Ctrl, меню), Linux (Wayland/X11 clipboard, DnD).
-- [ ] Стандартные шорткаты по платформе (Ctrl↔Cmd).
+- [~] Платформенные нюансы: Cmd вместо Ctrl сделан (см. ниже). Deferred, not implemented: Windows DPI awareness manifest and DWM/custom titlebar, macOS native menu, Wayland/X11 clipboard and DnD (need per-OS testing).
+- [x] Стандартные шорткаты по платформе: `Modifiers::command()` (Cmd on macOS, else Ctrl) and `word()` (Option on macOS, else Ctrl) used by `TextInput`/`TextArea`; Shift+Z = redo.
 
 ### Фаза 10. Качество, производительность, документация (3 Н)
 - [ ] Бенчмарки (`criterion`): layout 10k узлов, paint, CPU-растеризация 4K, GPU-кадр; профилирование (`tracing` + Tracy/puffin).

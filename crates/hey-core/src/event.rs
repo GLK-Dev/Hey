@@ -29,6 +29,34 @@ pub struct Modifiers {
     pub logo: bool,
 }
 
+impl Modifiers {
+    /// The platform's command modifier for shortcuts (copy, paste, undo...): Cmd on macOS, Ctrl elsewhere.
+    pub fn command(&self) -> bool {
+        self.command_for(cfg!(target_os = "macos"))
+    }
+
+    /// The platform's word-wise navigation/deletion modifier: Option on macOS, Ctrl elsewhere.
+    pub fn word(&self) -> bool {
+        self.word_for(cfg!(target_os = "macos"))
+    }
+
+    pub fn command_for(&self, mac: bool) -> bool {
+        if mac {
+            self.logo
+        } else {
+            self.ctrl
+        }
+    }
+
+    pub fn word_for(&self, mac: bool) -> bool {
+        if mac {
+            self.alt
+        } else {
+            self.ctrl
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MouseButton {
     Left,
@@ -93,4 +121,25 @@ pub enum CursorIcon {
     NotAllowed,
     ResizeH,
     ResizeV,
+}
+
+#[cfg(test)]
+mod modifier_tests {
+    use super::Modifiers;
+
+    #[test]
+    fn command_key_follows_platform() {
+        let ctrl = Modifiers { ctrl: true, ..Default::default() };
+        let logo = Modifiers { logo: true, ..Default::default() };
+        assert!(ctrl.command_for(false) && !logo.command_for(false));
+        assert!(logo.command_for(true) && !ctrl.command_for(true));
+    }
+
+    #[test]
+    fn word_key_follows_platform() {
+        let ctrl = Modifiers { ctrl: true, ..Default::default() };
+        let alt = Modifiers { alt: true, ..Default::default() };
+        assert!(ctrl.word_for(false) && !alt.word_for(false));
+        assert!(alt.word_for(true) && !ctrl.word_for(true));
+    }
 }
