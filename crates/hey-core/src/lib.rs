@@ -5,8 +5,14 @@ pub mod arena;
 pub mod color;
 pub mod event;
 pub mod geom;
+pub mod msg;
+pub mod state;
+pub mod tree;
 
 pub use arena::{Arena, NodeId};
+pub use msg::{Callback, MsgSink};
+pub use state::WidgetStateStore;
+pub use tree::Tree;
 pub use color::Color;
 pub use event::{Key, Modifiers, MouseButton, UiEvent};
 pub use geom::{Insets, Point, Rect, Size};

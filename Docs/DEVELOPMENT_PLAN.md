@@ -123,12 +123,12 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 **Критерий готовности:** монолит собирается и запускается, CI зелёный.
 
 ### Фаза 1. Ядро: типы, арена, события (2 Н) — `hey-core`
-- [ ] `Rect`, `Size`, `Point`, `Color`, `Insets`, `Edges`.
-- [ ] `Arena<Node>` с `NodeId{index,gen}`, вставка/удаление поддеревьев, free-list, итераторы обхода.
-- [ ] `Key` для узлов; `WidgetStateStore` (локальное состояние по ключу: скролл, каретка).
-- [ ] Нормализованные события `UiEvent` (Pointer{Move,Down,Up,Wheel}, Key, Text, Focus, Resize, ScaleFactor).
-- [ ] Обобщить `Action` → пользовательский `Msg`; `Callback<Msg>`/`MsgSink`.
-- [ ] Unit-тесты арены (удаление, переиспользование слотов, устаревшие ID).
+- [x] `Rect`, `Size`, `Point`, `Color`, `Insets`, `Edges`.
+- [x] `Arena<Node>` с `NodeId{index,gen}`, вставка/удаление поддеревьев, free-list, итераторы обхода.
+- [x] `Key` для узлов; `WidgetStateStore` (локальное состояние по ключу: скролл, каретка).
+- [x] Нормализованные события `UiEvent` (Pointer{Move,Down,Up,Wheel}, Key, Text, Focus, Resize, ScaleFactor).
+- [x] Обобщить `Action` → пользовательский `Msg`; `Callback<Msg>`/`MsgSink`.
+- [x] Unit-тесты арены (удаление, переиспользование слотов, устаревшие ID).
 
 ### Фаза 2. Draw-слой (`hey-draw`) и CPU-бэкенд эталон (3 Н)
 - [ ] `DrawCmd`: `Rect{fill,border,chamfer,shadow}` (срез 45° вместо радиусов, см. 3.4), `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
