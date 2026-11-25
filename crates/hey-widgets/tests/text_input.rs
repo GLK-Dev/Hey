@@ -70,3 +70,20 @@ fn ime_preedit_is_not_committed_until_text() {
     assert_eq!(sink.drain(), ["abни"]);
     assert_eq!(ui.paint(vp).cmds().len(), plain);
 }
+
+#[test]
+fn shift_z_redoes() {
+    let mut f = Fonts::new();
+    let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
+    let sink = MsgSink::new();
+    let mut ui: Ui<String> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
+    let root = ui.root();
+    TextInput::add(&mut ui, root, "", 200.0, Callback::new(|s| s));
+    ui.paint(Size::new(400.0, 100.0));
+    ui.event(&key("Tab", false, false));
+    ui.event(&UiEvent::Text("abc".into()));
+    ui.event(&key("z", false, true));
+    assert_eq!(sink.drain().last().unwrap(), "");
+    ui.event(&key("z", true, true));
+    assert_eq!(sink.drain().last().unwrap(), "abc");
+}

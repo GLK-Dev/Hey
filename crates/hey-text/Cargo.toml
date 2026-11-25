@@ -13,3 +13,4 @@ fontdue = { workspace = true }
 
 [dev-dependencies]
 cosmic-text = { workspace = true }
+proptest = { workspace = true }
