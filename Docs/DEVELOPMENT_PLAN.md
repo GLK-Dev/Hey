@@ -94,6 +94,19 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 | ADR-7 | Layout: свой минимальный flex → миграция на `taffy` при росте требований | Не блокировать ранние этапы |
 | ADR-8 | Текст: `fontdue` для старта → `cosmic-text`/`parley` (shaping, bidi, fallback, IME) | Кириллица ок, но сложные скрипты требуют shaping |
 
+### 3.4 Дизайн HeOS и влияние на архитектуру
+Источник истины — `design/tokens/*.json` (`tokens.json`, `themes.json`, `charts.json`); инструкция — `design/themes/README.md`.
+- **Срез вместо скругления.** `DrawCmd::Rect` получает `chamfer` (срез 45° сверху-слева и снизу-справа; размеры small/medium/large) вместо `radii`. Нужны поддержка в SDF-шейдере (GPU) и в CPU-растеризаторе (многоугольник из 6 точек, как `ChamferedRect` в `heos_design.h`).
+- **Три темы:** `industrial-dark` (flat), `night-ops` (outline, свечение ≤ 8 px), `zeta-remastered` (bevel). `Theme` содержит `ControlStyle {Flat, Outline, Bevel}`, `WindowEffect`, `chamfer`, `motion_ms`, `bevel`, ANSI-палитру. Размеры и отступы общие, отличается только отрисовка виджета.
+- **Тест токенов:** golden-тест сверяет `Theme` всех тем с `themes.json` (по образцу `tests/step1.rs` из дизайна).
+- **Шрифты:** Onest (UI, есть кириллица), JetBrains Mono (моно), Space Grotesk (только латиница, бренд) — `design/fonts`, лицензия OFL.
+- **Анимации:** тайминги и кривые из темы; режим «уменьшить движение» отключает блик/мигание/развёртку; перерисовка только при активной анимации.
+- **Иконки:** SVG из `design/icons` (рендер через `resvg`/`tiny-skia` в атлас), курсоры — `design/cursors` (горячие точки в README).
+- **Слой стыковки окон («нейронная связь»)** — отдельный оверлей поверх окон; задача для фазы 9+.
+
+OPEN QUESTION: размеры срезов расходятся — `tokens.json` и `heos_design.h`: 5/9/18; `themes.json` (industrial-dark, night-ops): 8/16/18, zeta-remastered: 4/8/14, а `themes/README.md` говорит 5/9/18 и 0/0/0. Какие значения считать эталонными (пока берём `tokens.json`: 5/9/18)?
+OPEN QUESTION: фон рабочего стола Industrial Dark: `#0B0C10` (tokens.json) или `#14161B` (отчёт по темам).
+
 ---
 
 ## 4. Дорожная карта по фазам
@@ -101,11 +114,11 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 Оценки — для одного разработчика, ориентировочно (чел.-недели, Н). Итого ≈ 30–38 Н до v1.0.
 
 ### Фаза 0. Подготовка и фиксация базы (1 Н)
-- [ ] Создать workspace, CI (GitHub Actions: `cargo fmt --check`, `clippy -D warnings`, `cargo test`, Windows+Linux).
-- [ ] Перенести прототип из `idea.md` в `examples/prototype_monolith` как референс (скомпилировать, подтвердить, что работает).
+- [x] Создать workspace (корневой `Cargo.toml`). - [ ] CI (GitHub Actions: `cargo fmt --check`, `clippy -D warnings`, `cargo test`, Windows+Linux).
+- [x] Перенести прототип из `idea.md` в `examples/prototype_monolith` (компилируется; запуск не проверен; правки: `CachedGlyph: Clone+Copy`, лишний `&` у bind group).
 - [ ] Зафиксировать версии зависимостей (`winit 0.30`, `wgpu 24`, `softbuffer 0.4`, `fontdue 0.9`, `bytemuck`, `pollster`).
 - [ ] Написать `Docs/ARCHITECTURE.md` и `Docs/ADR/*` по таблице 3.3.
-- [ ] Выбрать шрифт-по-умолчанию с кириллицей и лицензией, допускающей встраивание (например, Inter/Noto Sans) → `assets/`.
+- [ ] Шрифт по умолчанию: Onest (OFL, кириллица) из `design/fonts` — решено дизайном.
 
 **Критерий готовности:** монолит собирается и запускается, CI зелёный.
 
@@ -118,7 +131,7 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 - [ ] Unit-тесты арены (удаление, переиспользование слотов, устаревшие ID).
 
 ### Фаза 2. Draw-слой (`hey-draw`) и CPU-бэкенд эталон (3 Н)
-- [ ] `DrawCmd`: `Rect{fill,border,radii:[f32;4],shadow}`, `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
+- [ ] `DrawCmd`: `Rect{fill,border,chamfer,shadow}` (срез 45° вместо радиусов, см. 3.4), `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
 - [ ] `DisplayList` + clip-stack, валидация парности Push/Pop.
 - [ ] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
 - [ ] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`.
