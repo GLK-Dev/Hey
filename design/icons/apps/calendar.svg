@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="gMetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3C414D"/>
+      <stop offset="1" stop-color="#191C22"/>
+    </linearGradient>
+    <linearGradient id="gHeader" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFD27F"/>
+      <stop offset="0.5" stop-color="#F5A623"/>
+      <stop offset="1" stop-color="#B86E00"/>
+    </linearGradient>
+    <linearGradient id="gPaper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D6D9E0"/>
+    </linearGradient>
+  </defs>
+  <polygon points="24,8 120,8 120,104 104,120 8,120 8,24" fill="url(#gMetal)" stroke="#0A0B0E" stroke-width="2"/>
+  <path d="M24 10H118M10 24L24 10" stroke="#7A8296" stroke-width="2" fill="none"/>
+  <rect x="22" y="24" width="84" height="82" rx="4" fill="url(#gPaper)" stroke="#0A0B0E" stroke-width="2"/>
+  <rect x="22" y="24" width="84" height="22" rx="4" fill="url(#gHeader)"/>
+  <rect x="22" y="38" width="84" height="8" fill="url(#gHeader)"/>
+  <rect x="38" y="16" width="8" height="16" rx="3" fill="#C3C9D4" stroke="#0A0B0E" stroke-width="1.5"/>
+  <rect x="82" y="16" width="8" height="16" rx="3" fill="#C3C9D4" stroke="#0A0B0E" stroke-width="1.5"/>
+  <rect x="32" y="54" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="50" y="54" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="68" y="54" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="86" y="54" width="10" height="12" rx="2" fill="#D07A00"/>
+  <rect x="32" y="70" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="50" y="70" width="14" height="12" rx="2" fill="#00E5FF" stroke="#007A8C" stroke-width="1.5"/>
+  <rect x="68" y="70" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="86" y="70" width="10" height="12" rx="2" fill="#D07A00"/>
+  <rect x="32" y="86" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="50" y="86" width="14" height="12" rx="2" fill="#8F96A3"/>
+  <rect x="68" y="86" width="14" height="12" rx="2" fill="#8F96A3"/>
+</svg>

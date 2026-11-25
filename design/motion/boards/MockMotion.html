@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Загрузка и переходы HeOS</title>
+
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+
+</head>
+<body>
+
+
+<div style="width:1280px;height:1040px;box-sizing:border-box;padding:56px;background:#0B0C10;font-family: 'Space Grotesk', system-ui, sans-serif"><style>
+@keyframes hDash{to{stroke-dashoffset:-100}}
+@keyframes hPulse{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes hBarY{0%{transform:scaleY(0)}18%,78%{transform:scaleY(1)}92%,100%{transform:scaleY(0)}}
+@keyframes hBarX{0%,22%{transform:scaleX(0)}40%,78%{transform:scaleX(1)}92%,100%{transform:scaleX(0)}}
+@keyframes hPop{0%,40%{opacity:0;transform:scale(0)}52%,78%{opacity:1;transform:scale(1)}92%,100%{opacity:0;transform:scale(0)}}
+@keyframes hScan{0%{background:#00E5FF;box-shadow:0 0 14px #00E5FF}12%{background:#F5A623;box-shadow:none}60%,100%{background:#2A2E37;box-shadow:none}}
+@keyframes hCorner{0%{opacity:1}25%{opacity:.18}100%{opacity:.18}}
+@keyframes hNode{0%,100%{fill:#2A2E37;transform:scale(1)}8%{fill:#00E5FF;transform:scale(1.5)}30%{fill:#F5A623;transform:scale(1)}60%{fill:#2A2E37}}
+@keyframes hEdge{0%,6%{stroke-dashoffset:100;stroke:#00E5FF}24%{stroke-dashoffset:0;stroke:#00E5FF}60%,100%{stroke-dashoffset:0;stroke:#3E4350}}
+@keyframes hStripe{to{background-position:32px 0}}
+@keyframes hType{0%,100%{width:0}40%,70%{width:100%}}
+.an *{transform-box:fill-box;transform-origin:center}
+.cell{background:#14161B;border:1px solid #23262E;display:flex;flex-direction:column;align-items:center;gap:18px;padding:26px 20px 22px}
+.stage{height:120px;display:flex;align-items:center;justify-content:center}
+.nm{font-size:19px;font-weight:700;color:#F2F4F7}
+.us{font-size:13px;color:#9AA0AA;text-align:center;line-height:1.45}
+.sp{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#5E6572}
+@media (prefers-reduced-motion:reduce){.an *{animation:none!important}}
+
+@keyframes bT0{0%,0.1%{opacity:0}0.2%,24.0%{opacity:1}24.1%,100%{opacity:0}}
+@keyframes bT1{0%,25.1%{opacity:0}25.2%,49.0%{opacity:1}49.1%,100%{opacity:0}}
+@keyframes bT2{0%,50.1%{opacity:0}50.2%,74.0%{opacity:1}74.1%,100%{opacity:0}}
+@keyframes bT3{0%,75.1%{opacity:0}75.2%,99.0%{opacity:1}99.1%,100%{opacity:0}}
+@keyframes bFill{0%{width:0}100%{width:100%}}
+@keyframes wOpen{0%,8%{opacity:0;transform:scale(.94) translateY(10px)}22%,70%{opacity:1;transform:scale(1) translateY(0)}84%,100%{opacity:0;transform:scale(.94) translateY(10px)}}
+@keyframes wMin{0%,15%{transform:translate(0,0) scale(1);opacity:1}45%,70%{transform:translate(120px,86px) scale(.12);opacity:0}80%,100%{transform:translate(0,0) scale(1);opacity:1}}
+@keyframes tSlide{0%,20%{transform:translateX(0)}30%,70%{transform:translateX(-50%)}80%,100%{transform:translateX(0)}}
+@keyframes tInd{0%,20%{left:0}30%,70%{left:50%}80%,100%{left:0}}
+</style><svg width="0" height="0" style="position: absolute" aria-hidden="true">
+<defs>
+<linearGradient id="gMetal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3C414D"/><stop offset="1" stop-color="#191C22"/></linearGradient>
+<linearGradient id="gMetalDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#272B34"/><stop offset="1" stop-color="#101216"/></linearGradient>
+<linearGradient id="gAmber" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD27F"/><stop offset="0.5" stop-color="#F5A623"/><stop offset="1" stop-color="#B86E00"/></linearGradient>
+<linearGradient id="gCyan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8CF7FF"/><stop offset="0.5" stop-color="#00E5FF"/><stop offset="1" stop-color="#0095AB"/></linearGradient>
+<linearGradient id="gScreen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12161C"/><stop offset="1" stop-color="#06070A"/></linearGradient>
+<linearGradient id="gWhite" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#B9BEC8"/></linearGradient>
+<linearGradient id="gSteel" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C3C9D4"/><stop offset="1" stop-color="#5B6170"/></linearGradient>
+<linearGradient id="gShine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/></linearGradient>
+<filter id="fShadow" filterUnits="userSpaceOnUse" x="-8" y="-8" width="144" height="152"><feDropShadow dx="0" dy="4" stdDeviation="3.5" flood-color="#000000" flood-opacity="0.6"/></filter>
+<filter id="fGlow" filterUnits="userSpaceOnUse" x="-16" y="-16" width="160" height="160"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<g id="fanBlades">
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170"/>
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170" transform="rotate(60)"/>
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170" transform="rotate(120)"/>
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170" transform="rotate(180)"/>
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170" transform="rotate(240)"/>
+<path d="M-3 -6L3 -6L7 -17L-5 -17Z" fill="#5A6170" transform="rotate(300)"/>
+</g>
+</defs>
+</svg><div style="font-size:13px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA;margin-bottom:22px">Загрузка и переходы · в движении</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px"><div style="background:#14161B;border:1px solid #23262E;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:380px"><div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA">Экран загрузки</div><div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div style="width:360px;height:260px;background:#0B0C10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family: 'Space Grotesk', system-ui, sans-serif"><svg class="an" width="92" height="92" viewBox="-6 -6 172 172"><polygon points="36,0 160,0 160,124 124,160 0,160 0,36" fill="none" stroke="#2A2E37" stroke-width="6"/>
+<polygon pathLength="100" points="36,0 160,0 160,124 124,160 0,160 0,36" fill="none" stroke="#F5A623" stroke-width="7" stroke-dasharray="24 76" style="animation:hDash 1.6s linear infinite"/>
+<polygon pathLength="100" points="36,0 160,0 160,124 124,160 0,160 0,36" fill="none" stroke="#00E5FF" stroke-width="7" stroke-dasharray="8 92" style="animation:hDash 1.6s linear infinite;animation-delay:-.8s"/>
+<polygon points="42,52 54,40 66,40 66,68 94,68 94,40 118,40 118,108 106,120 94,120 94,92 66,92 66,120 42,120" fill="#2A2E37"/>
+<rect x="75" y="75" width="10" height="10" fill="#00E5FF" style="animation:hPulse 1.6s ease-in-out infinite"/></svg><div style="position:relative;width:240px;height:18px"><div style="position:absolute;inset:0;text-align:center;font-size:13px;color:#9AA0AA;opacity:0;animation:bT0 6s linear infinite">Запуск ядра…</div><div style="position:absolute;inset:0;text-align:center;font-size:13px;color:#9AA0AA;opacity:0;animation:bT1 6s linear infinite">Подключение дисков…</div><div style="position:absolute;inset:0;text-align:center;font-size:13px;color:#9AA0AA;opacity:0;animation:bT2 6s linear infinite">Запуск служб…</div><div style="position:absolute;inset:0;text-align:center;font-size:13px;color:#9AA0AA;opacity:0;animation:bT3 6s linear infinite">Загрузка рабочего стола…</div></div><div style="width:240px;height:4px;background:#23262E"><div style="height:100%;background:#F5A623;animation:bFill 6s linear infinite"></div></div></div></div><div style="font-size:12px;color:#9AA0AA;line-height:1.45;text-align:center">Знак бежит по контуру, шаги меняются каждые 1,5 с, полоса идёт 6 с. В макете всё по кругу.</div></div><div style="background:#14161B;border:1px solid #23262E;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:380px"><div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA">Открытие и закрытие окна</div><div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div style="width:340px;height:210px;background:#0F1115;display:flex;align-items:center;justify-content:center"><div style="width:220px;height:130px;background:#181A20;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);position:relative;animation:wOpen 3s cubic-bezier(.3,.7,.2,1) infinite"><div style="height:16px;width:90px;background:#F5A623;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 100%,0 100%)"></div><div style="padding:14px"><div style="height:8px;width:120px;background:#2A2E37"></div><div style="height:8px;width:160px;background:#2A2E37;margin-top:8px"></div><div style="height:8px;width:100px;background:#2A2E37;margin-top:8px"></div></div></div></div></div><div style="font-size:12px;color:#9AA0AA;line-height:1.45;text-align:center">Масштаб 94 → 100% и сдвиг на 10 px, 0,3 с, ease-out. Закрытие — обратно, быстрее.</div></div><div style="background:#14161B;border:1px solid #23262E;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:380px"><div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA">Сворачивание в Deskbar</div><div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div style="width:340px;height:210px;background:#0F1115;position:relative"><div style="position:absolute;left:60px;top:30px"><div style="width:220px;height:130px;background:#181A20;clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);position:relative;animation:wMin 3s cubic-bezier(.5,0,.3,1) infinite"><div style="height:16px;width:90px;background:#F5A623;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 100%,0 100%)"></div><div style="padding:14px"><div style="height:8px;width:120px;background:#2A2E37"></div><div style="height:8px;width:160px;background:#2A2E37;margin-top:8px"></div><div style="height:8px;width:100px;background:#2A2E37;margin-top:8px"></div></div></div></div><div style="position:absolute;right:14px;bottom:10px;width:44px;height:12px;background:#1A1D23;border-bottom:3px solid #F5A623"></div></div></div><div style="font-size:12px;color:#9AA0AA;line-height:1.45;text-align:center">Окно уходит к своему значку: сжимается до 12% и гаснет, 0,45 с.</div></div><div style="background:#14161B;border:1px solid #23262E;padding:18px;display:flex;flex-direction:column;gap:12px;min-height:380px"><div style="font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:#9AA0AA">Переключение вкладок</div><div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden"><div style="width:340px;height:210px;background:#0F1115;padding:20px 22px;box-sizing:border-box"><div style="position:relative;display:flex;font-size:13px;font-weight:700;color:#F2F4F7;border-bottom:1px solid #2C303A"><div style="width:50%;padding:8px 0">Темы</div><div style="width:50%;padding:8px 0;color:#9AA0AA">Экран</div><div style="position:absolute;bottom:-2px;width:50%;height:3px;background:#F5A623;animation:tInd 3s cubic-bezier(.5,0,.3,1) infinite"></div></div><div style="overflow:hidden;margin-top:14px"><div style="display:flex;width:200%;animation:tSlide 3s cubic-bezier(.5,0,.3,1) infinite"><div style="width:50%;font-size:13px;color:#9AA0AA;line-height:1.6">Industrial Dark<br>Night Ops<br>ZETA Remastered</div><div style="width:50%;font-size:13px;color:#9AA0AA;line-height:1.6">Разрешение<br>Частота обновления<br>Масштаб</div></div></div></div></div><div style="font-size:12px;color:#9AA0AA;line-height:1.45;text-align:center">Содержимое сдвигается на ширину вкладки, янтарная полоса едет под названиями, 0,25 с.</div></div></div><div class="us" style="text-align:left;margin-top:18px">Время и кривые — спецификация макета. На системе их ещё нужно подобрать и проверить. «Уменьшить движение» отключает все переходы, кроме смены состояния.</div></div>
+
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+/* HeOS — generated from tokens.json (дизайн-система главнее). Не править вручную. */
+:root, [data-theme="industrial-dark"] {
+  --bg: #14161B; /* Фон окон и страниц. */
+  --surface: #181A20; /* Панели, боковые списки, строка Deskbar. */
+  --surface-raised: #20232B; /* Карточки, поля ввода, поднятые элементы. */
+  --line: #2C303A; /* Разделители и рамки в 1px. */
+  --ink: #F2F4F8; /* Основной текст на bg и surface. */
+  --ink-muted: #9AA3B2; /* Подписи, вторичный текст. */
+  --accent: #F5A623; /* Главный акцент темы: выбранный элемент, главная кнопка, вкладка окна. */
+  --accent-ink: #14161B; /* Текст и значки поверх accent. */
+  --signal: #00E5FF; /* Второй акцент: ссылки, фокус, индикатор активности. */
+  --desktop: #14161B; /* Цвет рабочего стола под обоями. */
+  --success: #00FF66; /* Успех (всегда со значком). */
+  --warning: #F5A623; /* Внимание. */
+  --error: #FF3366; /* Ошибка и необратимые действия. Красный не используется ни для чего другого. */
+  --media: #B026FF; /* Медиа и ИИ. */
+  --accent-amber: #f5a623; /* Набор акцентов Accent Engine: янтарь (по умолчанию). */
+  --accent-cyan: #00e5ff; /* Набор акцентов: неоновый циан. */
+  --accent-green: #00ff66; /* Набор акцентов: зелёный. */
+  --accent-crimson: #ff3366; /* Набор акцентов: малиновый; также цвет ошибки. */
+  --accent-purple: #b026ff; /* Набор акцентов: фиолетовый. */
+  --motion-fast: 120ms; --motion-base: 200ms; --motion-window: 280ms; --motion-curve: cubic-bezier(.2,.8,.2,1);
+  --chamfer-sm: 8px; --chamfer-md: 16px; --chamfer-lg: 18px;
+  --font-sans: "Space Grotesk", "Onest", system-ui, sans-serif; --font-mono: "JetBrains Mono", ui-monospace, "DejaVu Sans Mono", monospace;
+}
+[data-theme="night-ops"] {
+  --bg: #0E1210; /* Фон окон и страниц. */
+  --surface: #141916; /* Панели, боковые списки, строка Deskbar. */
+  --surface-raised: #1B221D; /* Карточки, поля ввода, поднятые элементы. */
+  --line: #243028; /* Разделители и рамки в 1px. */
+  --ink: #E6F2E9; /* Основной текст на bg и surface. */
+  --ink-muted: #8FA394; /* Подписи, вторичный текст. */
+  --accent: #00FF66; /* Главный акцент темы: выбранный элемент, главная кнопка, вкладка окна. */
+  --accent-ink: #0E1210; /* Текст и значки поверх accent. */
+  --signal: #00E5FF; /* Второй акцент: ссылки, фокус, индикатор активности. */
+  --desktop: #0E1210; /* Цвет рабочего стола под обоями. */
+  --success: #7CFFB0; /* Успех (всегда со значком). */
+  --warning: #FFB000; /* Внимание. */
+  --error: #FF4D6D; /* Ошибка и необратимые действия. Красный не используется ни для чего другого. */
+  --media: #C77DFF; /* Медиа и ИИ. */
+  --motion-fast: 90ms; --motion-base: 160ms; --motion-window: 220ms; --motion-curve: steps(6,end);
+  --chamfer-sm: 8px; --chamfer-md: 16px; --chamfer-lg: 18px;
+  --font-sans: "Space Grotesk", "Onest", system-ui, sans-serif; --font-mono: "JetBrains Mono", ui-monospace, "DejaVu Sans Mono", monospace;
+}
+[data-theme="zeta"] {
+  --bg: #2A323D; /* Фон окон и страниц. */
+  --surface: #343E4B; /* Панели, боковые списки, строка Deskbar. */
+  --surface-raised: #3E4958; /* Карточки, поля ввода, поднятые элементы. */
+  --line: #4A5666; /* Разделители и рамки в 1px. */
+  --ink: #F2F5F9; /* Основной текст на bg и surface. */
+  --ink-muted: #B4C0CE; /* Подписи, вторичный текст. */
+  --accent: #FFCC00; /* Главный акцент темы: выбранный элемент, главная кнопка, вкладка окна. */
+  --accent-ink: #1E242C; /* Текст и значки поверх accent. */
+  --signal: #98B4D1; /* Второй акцент: ссылки, фокус, индикатор активности. */
+  --desktop: #98B4D1; /* Цвет рабочего стола под обоями. */
+  --success: #5BE37D; /* Успех (всегда со значком). */
+  --warning: #FF9F1A; /* Внимание. */
+  --error: #FF7070; /* Ошибка и необратимые действия. Красный не используется ни для чего другого. */
+  --media: #C79BFF; /* Медиа и ИИ. */
+  --motion-fast: 80ms; --motion-base: 120ms; --motion-window: 160ms; --motion-curve: linear;
+  --chamfer-sm: 0px; --chamfer-md: 0px; --chamfer-lg: 0px;
+  --font-sans: "Space Grotesk", "Onest", system-ui, sans-serif; --font-mono: "JetBrains Mono", ui-monospace, "DejaVu Sans Mono", monospace;
+}
+:root{--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;--radius-0:0;}

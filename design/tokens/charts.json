@@ -1,0 +1,227 @@
+{
+  "_note": "Цвета и размеры для графиков, прогресса и графов в трёх темах HeOS. Категориальные палитры проверены: полоса светлоты, насыщенность, различимость соседних рядов при протанопии и дейтеранопии (норма ΔE ≥ 8), контраст с фоном ≥ 3:1.",
+  "marks": {
+    "barMaxWidth": 24,
+    "barGap": 2,
+    "barEnd": {
+      "industrial-dark": "срез 4 px у свободного конца",
+      "night-ops": "прямой",
+      "zeta-remastered": "прямой + фаска 1 px"
+    },
+    "lineWidth": 2,
+    "markerSize": 9,
+    "markerRing": 2,
+    "markerShape": {
+      "industrial-dark": "ромб",
+      "night-ops": "квадрат",
+      "zeta-remastered": "круг"
+    },
+    "areaOpacity": 0.12,
+    "gridWidth": 1,
+    "gridColor": "line",
+    "axisText": {
+      "font": "JetBrains Mono",
+      "size": 10,
+      "color": "textMuted"
+    },
+    "maxSeries": 6,
+    "legendFrom": 2,
+    "directLabelsUpTo": 4
+  },
+  "progress": {
+    "barHeight": 6,
+    "segments": {
+      "night-ops": 24,
+      "zeta-remastered": 20
+    },
+    "indeterminateMs": 1400,
+    "meterThresholds": [
+      70,
+      90
+    ],
+    "ringStroke": 8,
+    "segmentedBarHeight": 28,
+    "segmentedBarGap": 2,
+    "stepSize": 22,
+    "states": [
+      "run",
+      "pause",
+      "error",
+      "done",
+      "wait"
+    ]
+  },
+  "graph": {
+    "nodeSize": 26,
+    "selectedRing": "focus, 3 px, отступ 6",
+    "edgeStrong": 2,
+    "edgeWeak": 1,
+    "arrow": 9,
+    "labelSize": 11,
+    "treeIndent": 22
+  },
+  "themes": {
+    "industrial-dark": {
+      "surface": "#181A20",
+      "plot": "#14161B",
+      "categorical": [
+        "#C28412",
+        "#BC3E79",
+        "#477EE8",
+        "#0BAA92",
+        "#8C54C3",
+        "#68930F"
+      ],
+      "categoricalNames": [
+        "янтарь",
+        "малина",
+        "синий",
+        "бирюза",
+        "фиолет",
+        "лайм"
+      ],
+      "scatterMaxSeries": 3,
+      "sequential": [
+        "#402801",
+        "#5B3B01",
+        "#774F00",
+        "#93640D",
+        "#B17A1B",
+        "#CF9128",
+        "#EEA835",
+        "#FDC678"
+      ],
+      "ordinal": [
+        "#684507",
+        "#8D5E00",
+        "#B37903",
+        "#DA950B",
+        "#FEB43A"
+      ],
+      "diverging": [
+        "#07BFDE",
+        "#1896AD",
+        "#1B6F80",
+        "#3A3E47",
+        "#8A542D",
+        "#C56C21",
+        "#F68C36"
+      ],
+      "status": {
+        "good": "#00FF66",
+        "warning": "#F5A623",
+        "critical": "#FF3366",
+        "noData": "#5E6676"
+      },
+      "validation": "worst adjacent #BC3E79↔#C28412 ΔE 16.8 (deutan) · tritan 6.9"
+    },
+    "night-ops": {
+      "surface": "#141916",
+      "plot": "#0A0D0B",
+      "categorical": [
+        "#24AE56",
+        "#9B63D3",
+        "#996A06",
+        "#0CA3BE",
+        "#CC6004",
+        "#396ED6"
+      ],
+      "categoricalNames": [
+        "зелёный",
+        "фиолет",
+        "охра",
+        "циан",
+        "оранж",
+        "синий"
+      ],
+      "scatterMaxSeries": 3,
+      "sequential": [
+        "#023816",
+        "#075023",
+        "#166933",
+        "#258343",
+        "#349E54",
+        "#42B966",
+        "#52D678",
+        "#61F38B"
+      ],
+      "ordinal": [
+        "#015E28",
+        "#0A7E3A",
+        "#03A14A",
+        "#20C45F",
+        "#51E57E"
+      ],
+      "diverging": [
+        "#25BAF2",
+        "#1292C0",
+        "#296B88",
+        "#2A3530",
+        "#8A542D",
+        "#C56C21",
+        "#F68C36"
+      ],
+      "status": {
+        "good": "#7CFFB0",
+        "warning": "#FFB000",
+        "critical": "#FF4D6D",
+        "noData": "#4F6157"
+      },
+      "validation": "worst adjacent #CC6004↔#0CA3BE ΔE 20.5 (deutan) · tritan 9.2"
+    },
+    "zeta-remastered": {
+      "surface": "#2A323D",
+      "plot": "#1F262F",
+      "categorical": [
+        "#4194F9",
+        "#D56405",
+        "#15A8AE",
+        "#B27F02",
+        "#A577EB",
+        "#0FA44D"
+      ],
+      "categoricalNames": [
+        "синий",
+        "оранж",
+        "бирюза",
+        "охра",
+        "фиолет",
+        "зелёный"
+      ],
+      "scatterMaxSeries": 2,
+      "sequential": [
+        "#4A3D05",
+        "#635203",
+        "#7D690E",
+        "#978019",
+        "#B39824",
+        "#CFB02F",
+        "#ECCA3A",
+        "#FFE585"
+      ],
+      "ordinal": [
+        "#7C6705",
+        "#9E840A",
+        "#C1A210",
+        "#E6C216",
+        "#FFE47F"
+      ],
+      "diverging": [
+        "#63B0FC",
+        "#488ACB",
+        "#3E668F",
+        "#555D68",
+        "#8C5331",
+        "#C7692C",
+        "#F98942"
+      ],
+      "status": {
+        "good": "#5BE37D",
+        "warning": "#FF9F1A",
+        "critical": "#FF7070",
+        "noData": "#7C8794"
+      },
+      "validation": "worst adjacent #B27F02↔#15A8AE ΔE 17.6 (deutan) · tritan 10.8"
+    }
+  }
+}
