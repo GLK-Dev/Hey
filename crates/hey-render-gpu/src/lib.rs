@@ -4,11 +4,17 @@
 //! analytic-coverage instanced pipeline: one quad per primitive, the fragment shader reproduces
 //! the CPU math (box-filter rect coverage, chamfer, centered border, erf shadow, capsule line).
 //!
-//! Text and images are not drawn yet (glyph atlas is the next step).
+//! Text is drawn from an R8 glyph atlas (`atlas.rs`) with whole-pixel placement like the CPU path.
+//! Images are not drawn yet.
+
+mod atlas;
+
+use std::sync::Arc;
 
 use bytemuck::{Pod, Zeroable};
 use hey_core::{Color, Rect};
 use hey_draw::{DisplayList, DrawCmd, UiRenderer, Viewport};
+use hey_text::Fonts;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
@@ -30,6 +36,17 @@ struct Instance {
 }
 
 const _: () = assert!(std::mem::size_of::<Instance>() == 64);
+
+/// One glyph quad. 48 bytes.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Pod, Zeroable)]
+struct GlyphInst {
+    /// Destination `x, y, w, h` in whole pixels.
+    dst: [f32; 4],
+    /// Atlas texel origin `x, y` (z, w unused).
+    src: [f32; 4],
+    color: [f32; 4],
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -55,8 +72,9 @@ impl std::fmt::Display for GpuError {
 
 impl std::error::Error for GpuError {}
 
-/// A run of instances drawn under one scissor rectangle `(x, y, w, h)`.
+/// A run of instances (shapes or glyphs) drawn under one scissor rectangle `(x, y, w, h)`.
 struct Batch {
+    glyph: bool,
     scissor: (u32, u32, u32, u32),
     start: u32,
     end: u32,
@@ -71,6 +89,14 @@ pub struct GpuRenderer {
     bind_group: wgpu::BindGroup,
     instances: wgpu::Buffer,
     instances_cap: u64,
+    text_pipeline: wgpu::RenderPipeline,
+    text_bind: wgpu::BindGroup,
+    glyphs: wgpu::Buffer,
+    glyphs_cap: u64,
+    atlas_tex: wgpu::Texture,
+    atlas: atlas::Atlas,
+    /// Font store used to rasterize glyphs (text is skipped when `None`).
+    pub fonts: Option<Arc<Fonts>>,
     target: wgpu::Texture,
     width: u32,
     height: u32,
@@ -159,6 +185,89 @@ impl GpuRenderer {
         });
         let instances_cap = 1024 * std::mem::size_of::<Instance>() as u64;
         let instances = Self::make_instances(&device, instances_cap);
+
+        // Text pipeline: glyph quads sampling the R8 atlas with `textureLoad`.
+        let text_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("hey-text-shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("text.wgsl").into()),
+        });
+        let text_bgl = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("hey-text-bgl"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        let text_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("hey-text-layout"),
+            bind_group_layouts: &[&text_bgl],
+            push_constant_ranges: &[],
+        });
+        let gattrs = wgpu::vertex_attr_array![0 => Float32x4, 1 => Float32x4, 2 => Float32x4];
+        let text_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("hey-text-pipeline"),
+            layout: Some(&text_layout),
+            vertex: wgpu::VertexState {
+                module: &text_shader,
+                entry_point: Some("vs"),
+                compilation_options: Default::default(),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<GlyphInst>() as u64,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &gattrs,
+                }],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &text_shader,
+                entry_point: Some("fs"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState { format: FORMAT, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+        let atlas_tex = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("hey-atlas"),
+            size: wgpu::Extent3d { width: atlas::PAGE, height: atlas::PAGE, depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let atlas_view = atlas_tex.create_view(&Default::default());
+        let text_bind = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("hey-text-bind"),
+            layout: &text_bgl,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: globals.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(&atlas_view) },
+            ],
+        });
+        let glyphs_cap = 1024 * std::mem::size_of::<GlyphInst>() as u64;
+        let glyphs = Self::make_instances(&device, glyphs_cap);
         let target = Self::make_target(&device, width.max(1), height.max(1));
         Ok(Self {
             device,
@@ -168,6 +277,13 @@ impl GpuRenderer {
             bind_group,
             instances,
             instances_cap,
+            text_pipeline,
+            text_bind,
+            glyphs,
+            glyphs_cap,
+            atlas_tex,
+            atlas: atlas::Atlas::default(),
+            fonts: None,
             target,
             width: width.max(1),
             height: height.max(1),
@@ -238,6 +354,48 @@ impl GpuRenderer {
         drop(data);
         buf.unmap();
         out
+    }
+
+    /// Rasterizes (once) and places the glyphs of a run; mirrors the CPU text path.
+    fn push_text(&mut self, run: &hey_draw::GlyphRun, out: &mut Vec<GlyphInst>) {
+        let Some(fonts) = self.fonts.clone() else { return };
+        let color = rgba(run.color);
+        for g in &run.glyphs {
+            let id = g.id as u16;
+            let key = (run.font, id, run.size_px.to_bits());
+            let bmp = fonts.bitmap(run.font, id, run.size_px);
+            if bmp.w == 0 || bmp.h == 0 {
+                continue;
+            }
+            let slot = match self.atlas.get(key) {
+                Some(s) => s,
+                None => {
+                    let s = self.atlas.alloc(key, bmp.w, bmp.h);
+                    if let Some(s) = s {
+                        self.queue.write_texture(
+                            wgpu::TexelCopyTextureInfo {
+                                texture: &self.atlas_tex,
+                                mip_level: 0,
+                                origin: wgpu::Origin3d { x: s.x, y: s.y, z: 0 },
+                                aspect: wgpu::TextureAspect::All,
+                            },
+                            &bmp.data,
+                            wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(bmp.w), rows_per_image: Some(bmp.h) },
+                            wgpu::Extent3d { width: bmp.w, height: bmp.h, depth_or_array_layers: 1 },
+                        );
+                    }
+                    s
+                }
+            };
+            let Some(slot) = slot else { continue };
+            let x0 = g.x.round() as i32 + bmp.xmin;
+            let y0 = g.y.round() as i32 - bmp.ymin - bmp.h as i32;
+            out.push(GlyphInst {
+                dst: [x0 as f32, y0 as f32, bmp.w as f32, bmp.h as f32],
+                src: [slot.x as f32, slot.y as f32, 0.0, 0.0],
+                color,
+            });
+        }
     }
 
     /// Converts a draw command into instances (in painting order).
@@ -316,20 +474,40 @@ impl UiRenderer for GpuRenderer {
     fn render(&mut self, list: &DisplayList, _viewport: Viewport) {
         debug_assert!(list.validate().is_ok(), "invalid DisplayList");
         let (w, h) = (self.width, self.height);
+        // A page that overflowed last frame is flushed now; its glyphs are re-added on demand.
+        if self.atlas.overflowed {
+            self.atlas.clear();
+        }
         let mut instances: Vec<Instance> = Vec::new();
+        let mut glyphs: Vec<GlyphInst> = Vec::new();
         let mut batches: Vec<Batch> = Vec::new();
         for (cmd, clip) in list.iter_clipped() {
             let Some(sc) = scissor(clip, w, h) else { continue };
-            let start = instances.len() as u32;
-            Self::push_cmd(&mut instances, cmd);
-            let end = instances.len() as u32;
+            let is_text = matches!(cmd, DrawCmd::Text(_));
+            let (start, end) = if let DrawCmd::Text(run) = cmd {
+                let start = glyphs.len() as u32;
+                self.push_text(run, &mut glyphs);
+                (start, glyphs.len() as u32)
+            } else {
+                let start = instances.len() as u32;
+                Self::push_cmd(&mut instances, cmd);
+                (start, instances.len() as u32)
+            };
             if end == start {
                 continue;
             }
             match batches.last_mut() {
-                Some(b) if b.scissor == sc && b.end == start => b.end = end,
-                _ => batches.push(Batch { scissor: sc, start, end }),
+                Some(b) if b.glyph == is_text && b.scissor == sc && b.end == start => b.end = end,
+                _ => batches.push(Batch { glyph: is_text, scissor: sc, start, end }),
             }
+        }
+        let gbytes: &[u8] = bytemuck::cast_slice(&glyphs);
+        if gbytes.len() as u64 > self.glyphs_cap {
+            self.glyphs_cap = (gbytes.len() as u64).next_power_of_two();
+            self.glyphs = Self::make_instances(&self.device, self.glyphs_cap);
+        }
+        if !gbytes.is_empty() {
+            self.queue.write_buffer(&self.glyphs, 0, gbytes);
         }
 
         let bytes: &[u8] = bytemuck::cast_slice(&instances);
@@ -360,10 +538,21 @@ impl UiRenderer for GpuRenderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.set_vertex_buffer(0, self.instances.slice(..));
+            // `None` = nothing bound yet, `Some(true)` = glyph pipeline, `Some(false)` = shape pipeline.
+            let mut bound: Option<bool> = None;
             for b in &batches {
+                if bound != Some(b.glyph) {
+                    if b.glyph {
+                        pass.set_pipeline(&self.text_pipeline);
+                        pass.set_bind_group(0, &self.text_bind, &[]);
+                        pass.set_vertex_buffer(0, self.glyphs.slice(..));
+                    } else {
+                        pass.set_pipeline(&self.pipeline);
+                        pass.set_bind_group(0, &self.bind_group, &[]);
+                        pass.set_vertex_buffer(0, self.instances.slice(..));
+                    }
+                    bound = Some(b.glyph);
+                }
                 let (x, y, sw, sh) = b.scissor;
                 pass.set_scissor_rect(x, y, sw, sh);
                 pass.draw(0..6, b.start..b.end);

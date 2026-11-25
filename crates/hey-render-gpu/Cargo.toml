@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
+hey-text = { path = "../hey-text" }
 bytemuck = { workspace = true }
 wgpu = { workspace = true }
 pollster = { workspace = true }

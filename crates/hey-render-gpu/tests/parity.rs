@@ -3,17 +3,20 @@
 //! GPU <-> CPU parity (ADR-6): the CPU renderer is the reference.
 //! Tests skip (with a note) when the machine has no GPU adapter.
 
+use std::sync::Arc;
+
 use hey_core::{Color, Point, Rect};
 use hey_draw::{Border, DisplayList, DrawCmd, Shadow, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
 use hey_render_gpu::GpuRenderer;
+use hey_text::{layout, Align, Fonts, TextStyle};
 
 struct Diff {
     max: u8,
     bad: usize,
 }
 
-fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8) -> Option<Diff> {
+fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, fonts: Option<Arc<Fonts>>) -> Option<Diff> {
     let mut gpu = match GpuRenderer::new_headless(w, h) {
         Ok(g) => g,
         Err(e) => {
@@ -28,8 +31,10 @@ fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8) -> Option<Di
 
     let mut cpu = CpuRenderer::new(w, h);
     cpu.clear_color = bg;
+    cpu.fonts = fonts.clone();
     cpu.render(&list, vp);
     gpu.clear_color = bg;
+    gpu.fonts = fonts;
     gpu.render(&list, vp);
     let g = gpu.read_pixels();
 
@@ -59,7 +64,11 @@ fn rect(r: Rect, fill: u32, border: Option<(f32, u32)>, chamfer: f32, shadow: Op
 }
 
 fn check(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8) {
-    if let Some(d) = compare(name, w, h, cmds, tol) {
+    check_with(name, w, h, cmds, tol, None);
+}
+
+fn check_with(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, fonts: Option<Arc<Fonts>>) {
+    if let Some(d) = compare(name, w, h, cmds, tol, fonts) {
         assert_eq!(d.bad, 0, "{name}: {} channels differ by more than {tol} (max {})", d.bad, d.max);
     }
 }
@@ -146,4 +155,31 @@ fn parity_line() {
         vec![line((4.0, 4.5), (60.0, 4.5), 1.0), line((6.0, 10.0), (50.0, 58.0), 2.0), line((30.0, 30.0), (30.0, 30.0), 6.0)],
         TOL,
     );
+}
+
+#[test]
+fn parity_text() {
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts");
+    let mut f = Fonts::new();
+    let onest = f.add_file(format!("{root}/onest/Onest[wght].ttf")).unwrap();
+    let mono = f.add_file(format!("{root}/jetbrainsmono/JetBrainsMono[wght].ttf")).unwrap();
+    let mut st = TextStyle::new(vec![onest, mono], 18.0);
+    st.max_width = Some(220.0);
+    let l = layout(&f, "Привет, Hey! Текст переносится по словам и обрезается.", &st);
+    let mut cmds: Vec<DrawCmd> = vec![DrawCmd::fill(Rect::new(0.0, 0.0, 120.0, 60.0), Color::hex(0x2A6FDB))];
+    cmds.extend(l.to_runs(Point::new(10.0, 10.0), Color::hex(0xE6E8EE)).into_iter().map(DrawCmd::Text));
+    let mut st2 = TextStyle::new(vec![mono], 14.0);
+    st2.max_width = Some(220.0);
+    st2.align = Align::Right;
+    let l2 = layout(&f, "fn main() {}", &st2);
+    cmds.extend(l2.to_runs(Point::new(10.0, 110.0), Color::hex(0x4FC3F7)).into_iter().map(DrawCmd::Text));
+    let mut st3 = TextStyle::new(vec![onest], 24.0);
+    st3.wrap = false;
+    let l3 = layout(&f, "Обрезка клипом", &st3);
+    cmds.push(DrawCmd::ClipPush(Rect::new(10.0, 140.0, 80.0, 18.0)));
+    cmds.extend(l3.to_runs(Point::new(10.0, 135.0), Color::hex(0xFFB74D)).into_iter().map(DrawCmd::Text));
+    cmds.push(DrawCmd::ClipPop);
+    // A shape drawn after the text must cover it (painting order is preserved across pipelines).
+    cmds.push(DrawCmd::fill(Rect::new(150.0, 100.0, 60.0, 30.0), Color::rgba(255, 0, 0, 200)));
+    check_with("text", 240, 180, cmds, TOL, Some(Arc::new(f)));
 }

@@ -880,6 +880,7 @@ dependencies = [
  "hey-core",
  "hey-draw",
  "hey-render-cpu",
+ "hey-text",
  "pollster",
  "wgpu",
 ]
