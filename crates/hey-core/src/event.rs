@@ -52,4 +52,22 @@ pub enum UiEvent {
     FocusChanged(bool),
     Resize { width: u32, height: u32 },
     ScaleFactor(f64),
+    /// Файл наведён на окно (drag-and-drop), ещё не отпущен.
+    FileHovered(std::path::PathBuf),
+    FileDropped(std::path::PathBuf),
+    FileHoverCancelled,
+}
+
+/// Вид курсора мыши над элементом.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum CursorIcon {
+    #[default]
+    Default,
+    /// Кликабельный элемент.
+    Pointer,
+    /// Редактируемый текст.
+    Text,
+    NotAllowed,
+    ResizeH,
+    ResizeV,
 }

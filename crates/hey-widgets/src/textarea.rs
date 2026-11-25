@@ -6,7 +6,8 @@ use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::Style;
 use hey_style::WidgetState;
-use hey_text::{layout, Layout, MemoryClipboard, TextEditState};
+use crate::clipboard::SharedClipboard;
+use hey_text::{layout, Layout, TextEditState};
 use std::cell::Cell;
 use std::rc::Rc;
 
@@ -77,7 +78,7 @@ impl Geo {
 pub struct TextArea<Msg> {
     env: Rc<Env>,
     edit: TextEditState,
-    clipboard: MemoryClipboard,
+    clipboard: SharedClipboard,
     on_change: Callback<Msg, String>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
@@ -98,7 +99,7 @@ impl<Msg: 'static> TextArea<Msg> {
         let w = TextArea {
             env,
             edit: TextEditState::new(text),
-            clipboard: MemoryClipboard::default(),
+            clipboard: SharedClipboard,
             on_change,
             scroll: Cell::new(0.0),
             follow: Cell::new(true),
@@ -152,6 +153,9 @@ impl<Msg: 'static> TextArea<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for TextArea<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Text
+    }
     fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
         Some(Box::new((self.scroll.get(), self.edit.anchor(), self.edit.caret())))
     }

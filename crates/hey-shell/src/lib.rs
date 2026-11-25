@@ -5,7 +5,11 @@
 //! Все размеры в физических пикселях (ADR-3); `scale` передаётся приложению для справки.
 
 mod app;
+mod clipboard;
+mod dialog;
 mod input;
+pub use clipboard::{install_system_clipboard, SystemClipboard};
+pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};
 pub use app::{App, Command, TaskState};
 pub use input::{InputState, LINE_PX};
 
@@ -44,6 +48,24 @@ pub trait ShellApp {
     fn pending(&self) -> bool {
         false
     }
+
+    /// Какой курсор показывать сейчас (после обработки событий).
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Default
+    }
+}
+
+fn cursor_icon(c: hey_core::CursorIcon) -> winit::window::CursorIcon {
+    use hey_core::CursorIcon as C;
+    use winit::window::CursorIcon as W;
+    match c {
+        C::Default => W::Default,
+        C::Pointer => W::Pointer,
+        C::Text => W::Text,
+        C::NotAllowed => W::NotAllowed,
+        C::ResizeH => W::EwResize,
+        C::ResizeV => W::NsResize,
+    }
 }
 
 pub struct WindowConfig {
@@ -60,6 +82,7 @@ impl Default for WindowConfig {
 }
 
 pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), winit::error::EventLoopError> {
+    install_system_clipboard();
     let event_loop = EventLoop::new()?;
     event_loop.set_control_flow(ControlFlow::Wait);
     let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default() };
@@ -125,6 +148,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         if redraw {
             g.window.request_redraw();
         }
+        g.window.set_cursor(cursor_icon(self.app.cursor()));
         match event {
             WindowEvent::CloseRequested => el.exit(),
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => g.window.request_redraw(),

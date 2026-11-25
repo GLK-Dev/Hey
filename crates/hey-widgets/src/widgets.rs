@@ -6,7 +6,8 @@ use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::Style;
 use hey_style::{Variant, WidgetState};
-use hey_text::{layout, measure, MemoryClipboard, TextEditState, TextStyle};
+use crate::clipboard::SharedClipboard;
+use hey_text::{layout, measure, TextEditState, TextStyle};
 
 pub(crate) fn text_style(env: &Env, width: Option<f32>, wrap: bool) -> TextStyle {
     let mut st = TextStyle::new(env.chain.clone(), env.font_px);
@@ -71,6 +72,9 @@ impl<Msg: 'static> Button<Msg> {
 }
 
 impl<Msg> Widget<Msg> for Button<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let t = &env.theme;
         out.push(DrawCmd::Rect {
@@ -208,6 +212,9 @@ impl<Msg: 'static> Tabs<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let p = &env.theme.palette;
         let widths = tab_widths(env, &self.labels);
@@ -291,7 +298,7 @@ impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
 /// Esc снимает выделение. Горизонтальная прокрутка с автоследованием за кареткой.
 pub struct TextInput<Msg> {
     edit: TextEditState,
-    clipboard: MemoryClipboard,
+    clipboard: SharedClipboard,
     on_change: Callback<Msg, String>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
@@ -306,7 +313,7 @@ impl<Msg: 'static> TextInput<Msg> {
         };
         let w = TextInput {
             edit: TextEditState::new(text),
-            clipboard: MemoryClipboard::default(),
+            clipboard: SharedClipboard,
             on_change,
             scroll: Cell::new(0.0),
             follow: Cell::new(true),
@@ -345,6 +352,9 @@ impl<Msg: 'static> TextInput<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Text
+    }
     fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
         Some(Box::new((self.scroll.get(), self.edit.anchor(), self.edit.caret())))
     }

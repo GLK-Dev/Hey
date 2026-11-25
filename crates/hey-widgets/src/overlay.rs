@@ -74,6 +74,9 @@ impl<Msg: 'static> Menu<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Menu<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, _state: WidgetState, out: &mut DisplayList) {
         panel(env, rect, out);
         let p = &env.theme.palette;
@@ -166,6 +169,9 @@ impl<Msg: 'static> Dropdown<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Dropdown<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         self.rect.set(rect);
         let p = &env.theme.palette;

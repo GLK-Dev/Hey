@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-use hey_core::{Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
+use hey_core::{Callback, Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
 use hey_style::{Theme, WidgetState};
@@ -25,6 +25,10 @@ pub trait Widget<Msg> {
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList);
     fn focusable(&self) -> bool {
         false
+    }
+    /// Курсор мыши при наведении на виджет.
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Default
     }
     /// Клик мышью или Enter/Space на сфокусированном виджете.
     fn activate(&mut self, _sink: &MsgSink<Msg>) {}
@@ -137,6 +141,8 @@ pub struct Ui<Msg> {
     last_click: Option<(NodeId, Instant, u32)>,
     overlays: Vec<Overlay<Msg>>,
     queue: Overlays<Msg>,
+    file_drop: Option<Callback<Msg, std::path::PathBuf>>,
+    file_hover: bool,
 }
 
 const MULTI_CLICK: Duration = Duration::from_millis(500);
@@ -156,6 +162,8 @@ impl<Msg: 'static> Ui<Msg> {
             trap: None,
             last_click: None,
             overlays: Vec::new(),
+            file_drop: None,
+            file_hover: false,
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -457,6 +465,15 @@ impl<Msg: 'static> Ui<Msg> {
 
     fn event_tree(&mut self, ev: &UiEvent) -> bool {
         match ev {
+            UiEvent::FileHovered(_) => !std::mem::replace(&mut self.file_hover, true),
+            UiEvent::FileHoverCancelled => std::mem::replace(&mut self.file_hover, false),
+            UiEvent::FileDropped(p) => {
+                self.file_hover = false;
+                if let Some(cb) = &self.file_drop {
+                    cb.emit(&self.sink, p.clone());
+                }
+                true
+            }
             UiEvent::PointerMove { pos } => {
                 let a = self.set_hover(self.tree.hit_test(*pos));
                 let b = match self.pressed {
@@ -531,6 +548,25 @@ impl<Msg: 'static> Ui<Msg> {
             },
             _ => false,
         }
+    }
+
+    /// Курсор для текущей позиции указателя (по виджету под ним).
+    pub fn cursor(&self) -> hey_core::CursorIcon {
+        match self.hover.and_then(|h| self.nodes.get(&h).map(|n| (n.disabled, n.widget.cursor()))) {
+            Some((true, _)) => hey_core::CursorIcon::NotAllowed,
+            Some((false, c)) => c,
+            None => hey_core::CursorIcon::Default,
+        }
+    }
+
+    /// Сообщение при сбросе файла на окно (drag-and-drop).
+    pub fn on_file_drop(&mut self, cb: Callback<Msg, std::path::PathBuf>) {
+        self.file_drop = Some(cb);
+    }
+
+    /// Файл сейчас наведён на окно (для подсветки зоны сброса).
+    pub fn file_hovering(&self) -> bool {
+        self.file_hover
     }
 
     fn set_hover(&mut self, h: Option<NodeId>) -> bool {

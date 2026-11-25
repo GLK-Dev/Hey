@@ -258,4 +258,8 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     fn pending(&self) -> bool {
         self.in_flight.load(Ordering::SeqCst) > 0
     }
+
+    fn cursor(&self) -> hey_core::CursorIcon {
+        self.ui.cursor()
+    }
 }

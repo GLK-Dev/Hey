@@ -95,6 +95,9 @@ impl InputState {
             WindowEvent::Focused(f) => vec![UiEvent::FocusChanged(*f)],
             WindowEvent::Resized(s) => vec![UiEvent::Resize { width: s.width, height: s.height }],
             WindowEvent::ScaleFactorChanged { scale_factor, .. } => vec![UiEvent::ScaleFactor(*scale_factor)],
+            WindowEvent::HoveredFile(p) => vec![UiEvent::FileHovered(p.clone())],
+            WindowEvent::DroppedFile(p) => vec![UiEvent::FileDropped(p.clone())],
+            WindowEvent::HoveredFileCancelled => vec![UiEvent::FileHoverCancelled],
             _ => vec![],
         }
     }

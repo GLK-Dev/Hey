@@ -16,5 +16,5 @@ pub use msg::{Callback, MsgSink};
 pub use state::WidgetStateStore;
 pub use tree::Tree;
 pub use color::Color;
-pub use event::{Key, Modifiers, MouseButton, UiEvent};
+pub use event::{CursorIcon, Key, Modifiers, MouseButton, UiEvent};
 pub use geom::{Insets, Point, Rect, Size};

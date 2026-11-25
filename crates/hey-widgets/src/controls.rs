@@ -66,6 +66,9 @@ impl<Msg: 'static> Checkbox<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Checkbox<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let s = box_size(env);
         let r = icon_rect(env, rect, s);
@@ -112,6 +115,9 @@ impl<Msg: 'static> Toggle<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Toggle<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let w = box_size(env) * 2.0;
         let r = icon_rect(env, rect, w);
@@ -160,6 +166,9 @@ impl<Msg: 'static> Radio<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Radio<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let s = box_size(env);
         let r = icon_rect(env, rect, s);
@@ -226,6 +235,9 @@ impl<Msg: 'static> Slider<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for Slider<Msg> {
+    fn cursor(&self) -> hey_core::CursorIcon {
+        hey_core::CursorIcon::Pointer
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let p = &env.theme.palette;
         let th = Self::thumb(env);
