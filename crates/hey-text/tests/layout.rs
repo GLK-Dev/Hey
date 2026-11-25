@@ -100,3 +100,78 @@ fn bitmap_is_cached_and_nonempty() {
     assert!(std::sync::Arc::ptr_eq(&a, &b));
     assert!(a.w > 0 && a.h > 0 && a.data.iter().any(|&v| v > 200));
 }
+
+// An RLO override makes Latin text behave as right-to-left without needing an Arabic/Hebrew font.
+const RLO: &str = "\u{202E}";
+const PDF: &str = "\u{202C}";
+
+#[test]
+fn rtl_run_is_laid_out_visually_reversed() {
+    let (f, onest, _) = fonts();
+    let text = format!("{RLO}abc def{PDF}");
+    let mut st = TextStyle::new(vec![onest], 16.0);
+    st.wrap = false;
+    let l = layout(&f, &text, &st);
+    let ln = &l.lines[0];
+    let glyphs: Vec<_> = ln.glyphs.iter().filter(|g| g.advance > 0.0).collect();
+    assert_eq!(glyphs.len(), 7);
+    assert!(glyphs.iter().all(|g| g.rtl));
+    // Logical order is reversed on screen: the last character is leftmost.
+    assert!(glyphs.windows(2).all(|w| w[0].byte > w[1].byte && w[0].x < w[1].x));
+}
+
+#[test]
+fn rtl_paragraph_keeps_ltr_words_readable() {
+    let (f, onest, _) = fonts();
+    let mut st = TextStyle::new(vec![onest], 16.0);
+    st.wrap = false;
+    st.rtl = Some(true);
+    let l = layout(&f, "один два", &st);
+    // The neutral space between two LTR words resolves to LTR (UAX #9 N1): one LTR run in an RTL line.
+    assert!(l.lines[0].rtl);
+    assert!(l.lines[0].glyphs.windows(2).all(|w| w[0].byte < w[1].byte));
+}
+
+#[test]
+fn ltr_text_is_untouched_by_bidi() {
+    let (f, onest, _) = fonts();
+    let mut st = TextStyle::new(vec![onest], 16.0);
+    st.wrap = false;
+    let l = layout(&f, "один два", &st);
+    assert!(!l.lines[0].rtl);
+    assert!(l.lines[0].glyphs.windows(2).all(|w| w[0].byte < w[1].byte));
+}
+
+#[test]
+fn start_and_end_alignment_follow_direction() {
+    let (f, onest, _) = fonts();
+    let mut st = TextStyle::new(vec![onest], 16.0);
+    st.max_width = Some(300.0);
+    st.align = Align::Start;
+    let ltr = layout(&f, "abc", &st);
+    assert_eq!(ltr.lines[0].glyphs[0].x, 0.0);
+    st.rtl = Some(true);
+    let rtl = layout(&f, "abc", &st);
+    let w = rtl.lines[0].width;
+    assert!((rtl.lines[0].glyphs[0].x - (300.0 - w)).abs() < 0.01);
+    st.align = Align::End;
+    assert_eq!(layout(&f, "abc", &st).lines[0].glyphs[0].x, 0.0);
+}
+
+#[test]
+fn caret_and_hit_test_roundtrip_in_rtl_run() {
+    let (f, onest, _) = fonts();
+    let text = format!("{RLO}abc def{PDF}");
+    let mut st = TextStyle::new(vec![onest], 16.0);
+    st.wrap = false;
+    let l = layout(&f, &text, &st);
+    let start = RLO.len();
+    for b in start..start + 7 {
+        let x = l.caret_x(0, b).unwrap();
+        assert_eq!(l.byte_at_x(&text, 0, x - 0.01), Some(b), "byte {b}");
+    }
+    // Logical end of an RTL run is its visual left edge; the start is the right edge.
+    assert_eq!(l.caret_x(0, start + 7), Some(0.0));
+    assert!((l.caret_x(0, start).unwrap() - l.lines[0].width).abs() < 0.01);
+    assert_eq!(l.caret_x(5, 0), None);
+}

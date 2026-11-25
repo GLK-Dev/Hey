@@ -8,6 +8,7 @@ license.workspace = true
 hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
 unicode-segmentation = { workspace = true }
+unicode-bidi = { workspace = true }
 fontdue = { workspace = true }
 
 [dev-dependencies]

@@ -52,21 +52,11 @@ impl Geo {
     }
 
     fn x_of(&self, line: usize, byte: usize) -> f32 {
-        let ln = &self.l.lines[line];
-        ln.glyphs.iter().find(|g| g.byte >= byte).map_or(ln.width, |g| g.x)
+        self.l.caret_x(line, byte).unwrap_or(self.l.lines[line].width)
     }
 
     fn byte_at(&self, text: &str, line: usize, x: f32) -> usize {
-        let ln = &self.l.lines[line];
-        for g in &ln.glyphs {
-            if x < g.x + g.advance / 2.0 {
-                return g.byte;
-            }
-        }
-        match ln.glyphs.last() {
-            Some(g) => g.byte + text[g.byte..].chars().next().map_or(0, char::len_utf8),
-            None => self.starts[line],
-        }
+        self.l.byte_at_x(text, line, x).unwrap_or(self.starts[line])
     }
 
     fn line_at_y(&self, y: f32) -> usize {

@@ -1387,6 +1387,7 @@ dependencies = [
  "fontdue",
  "hey-core",
  "hey-draw",
+ "unicode-bidi",
  "unicode-segmentation",
 ]
 
