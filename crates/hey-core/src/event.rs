@@ -2,7 +2,7 @@
 
 use crate::geom::Point;
 
-/// Идентификатор узла для диффинга между кадрами (локальное состояние переносится по ключу).
+/// Node identifier for diffing between frames (local state is carried over by key).
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Key {
     Index(u64),
@@ -36,7 +36,7 @@ pub enum MouseButton {
     Middle,
 }
 
-/// Нормализованные события, не зависящие от winit (позиции — в физических пикселях).
+/// Normalized events independent of winit (positions are in physical pixels).
 #[derive(Clone, Debug, PartialEq)]
 pub enum UiEvent {
     PointerMove {
@@ -56,7 +56,7 @@ pub enum UiEvent {
         dx: f32,
         dy: f32,
     },
-    /// `code` — логическое имя клавиши («Enter», «ArrowLeft», «a»).
+    /// `code` is the logical key name ("Enter", "ArrowLeft", "a").
     KeyDown {
         code: String,
         mods: Modifiers,
@@ -65,7 +65,7 @@ pub enum UiEvent {
         code: String,
         mods: Modifiers,
     },
-    /// Введённый текст (уже с учётом раскладки/IME).
+    /// Entered text (already accounting for keyboard layout/IME).
     Text(String),
     FocusChanged(bool),
     Resize {
@@ -73,20 +73,20 @@ pub enum UiEvent {
         height: u32,
     },
     ScaleFactor(f64),
-    /// Файл наведён на окно (drag-and-drop), ещё не отпущен.
+    /// A file is hovering over the window (drag-and-drop), not yet dropped.
     FileHovered(std::path::PathBuf),
     FileDropped(std::path::PathBuf),
     FileHoverCancelled,
 }
 
-/// Вид курсора мыши над элементом.
+/// Mouse cursor shape over an element.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum CursorIcon {
     #[default]
     Default,
-    /// Кликабельный элемент.
+    /// Clickable element.
     Pointer,
-    /// Редактируемый текст.
+    /// Editable text.
     Text,
     NotAllowed,
     ResizeH,

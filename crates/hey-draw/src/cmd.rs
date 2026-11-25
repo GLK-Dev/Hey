@@ -2,14 +2,14 @@
 
 use hey_core::{Color, Point, Rect};
 
-/// Рамка; центрируется на границе прямоугольника (правило ADR).
+/// Border; centered on the rectangle edge (ADR rule).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Border {
     pub width: f32,
     pub color: Color,
 }
 
-/// Тень: смещение, радиус размытия, цвет.
+/// Shadow: offset, blur radius, color.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Shadow {
     pub offset: Point,
@@ -20,7 +20,7 @@ pub struct Shadow {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ImageId(pub u32);
 
-/// Один глиф: идентификатор в шрифте и позиция базовой линии (физические пиксели).
+/// A single glyph: font-local identifier and baseline position (physical pixels).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Glyph {
     pub id: u32,
@@ -38,7 +38,7 @@ pub struct GlyphRun {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum DrawCmd {
-    /// `chamfer` — срез 45° (px) только у верхнего-левого и нижнего-правого углов (дизайн из design/).
+    /// `chamfer` is a 45° cut (px) on the top-left and bottom-right corners only (design from design/).
     Rect {
         rect: Rect,
         fill: Color,
@@ -62,7 +62,7 @@ pub enum DrawCmd {
 }
 
 impl DrawCmd {
-    /// Простой залитый прямоугольник без рамки, среза и тени.
+    /// A plain filled rectangle without border, chamfer or shadow.
     pub fn fill(rect: Rect, color: Color) -> Self {
         DrawCmd::Rect { rect, fill: color, border: None, chamfer: 0.0, shadow: None }
     }

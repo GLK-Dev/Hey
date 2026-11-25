@@ -1,7 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Golden-тесты: кадр сравнивается с `tests/golden/<имя>.png`.
-//! Нет эталона или `HEY_UPDATE_GOLDEN=1` — эталон (пере)записывается.
+//! Golden tests: the frame is compared with `tests/golden/<name>.png`.
+//! No reference or `HEY_UPDATE_GOLDEN=1` — the reference is (re)written.
 
 use hey_core::{Color, Point, Rect};
 use hey_draw::{Border, DisplayList, DrawCmd, Shadow, UiRenderer, Viewport};
@@ -26,8 +26,8 @@ fn check_with(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, fonts: Option<std:
         return;
     }
     let want = Framebuffer::decode_png(&std::fs::read(&path).unwrap()).unwrap();
-    assert_eq!((want.width, want.height), (w, h), "{name}: размер");
-    assert!(want.data == r.fb.data, "{name}: кадр отличается от эталона (HEY_UPDATE_GOLDEN=1 для обновления)");
+    assert_eq!((want.width, want.height), (w, h), "{name}: size");
+    assert!(want.data == r.fb.data, "{name}: frame differs from the reference (HEY_UPDATE_GOLDEN=1 to update)");
 }
 
 fn rect(r: Rect, fill: u32, border: Option<(f32, u32)>, chamfer: f32, shadow: Option<Shadow>) -> DrawCmd {
@@ -101,7 +101,7 @@ fn golden_text() {
     st2.align = Align::Right;
     let l2 = layout(&f, "fn main() {}", &st2);
     cmds.extend(l2.to_runs(Point::new(10.0, 110.0), Color::hex(0x4FC3F7)).into_iter().map(DrawCmd::Text));
-    // Клип: текст обрезается по прямоугольнику.
+    // Clip: the text is clipped by the rectangle.
     let mut st3 = TextStyle::new(vec![onest], 24.0);
     st3.wrap = false;
     let l3 = layout(&f, "Обрезка клипом", &st3);

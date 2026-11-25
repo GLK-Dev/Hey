@@ -1,8 +1,8 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-shell: окно (winit) и вывод кадра `CpuRenderer` через softbuffer.
+//! hey-shell: window (winit) and `CpuRenderer` frame output through softbuffer.
 //!
-//! Все размеры в физических пикселях (ADR-3); `scale` передаётся приложению для справки.
+//! All sizes are in physical pixels (ADR-3); `scale` is passed to the app for reference.
 
 mod app;
 mod clipboard;
@@ -25,31 +25,31 @@ use winit::{
     window::{Window, WindowId},
 };
 
-/// Приложение для оболочки: строит display list на каждый кадр.
+/// App for the shell: builds a display list for every frame.
 pub trait ShellApp {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList);
 
-    /// Нормализованное событие ввода; вернуть `true`, чтобы запросить перерисовку.
+    /// Normalized input event; return `true` to request a redraw.
     fn event(&mut self, _ev: UiEvent) -> bool {
         false
     }
 
-    /// Реестр шрифтов для отрисовки `DrawCmd::Text`; вызывается при создании окна.
+    /// Font registry for rendering `DrawCmd::Text`; called when the window is created.
     fn fonts(&self) -> Option<std::sync::Arc<hey_text::Fonts>> {
         None
     }
 
-    /// Вызывается при пробуждении цикла: забрать результаты фоновых задач; `true` — нужна перерисовка.
+    /// Called when the loop wakes up: collect background task results; `true` means a redraw is needed.
     fn tick(&mut self) -> bool {
         false
     }
 
-    /// Есть ли фоновая работа: тогда цикл опрашивает `tick` каждые ~16 мс вместо ожидания событий.
+    /// Whether background work is running: then the loop polls `tick` every ~16 ms instead of waiting for events.
     fn pending(&self) -> bool {
         false
     }
 
-    /// Какой курсор показывать сейчас (после обработки событий).
+    /// Which cursor to show now (after events are processed).
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Default
     }
@@ -70,7 +70,7 @@ fn cursor_icon(c: hey_core::CursorIcon) -> winit::window::CursorIcon {
 
 pub struct WindowConfig {
     pub title: String,
-    /// Логический размер при создании.
+    /// Logical size at creation.
     pub size: (f64, f64),
     pub clear: hey_core::Color,
 }
@@ -105,8 +105,8 @@ struct Shell<A> {
 
 impl<A: ShellApp> ApplicationHandler for Shell<A> {
     fn about_to_wait(&mut self, el: &ActiveEventLoop) {
-        // pending читаем ДО tick: задача шлёт результат раньше, чем уменьшает счётчик,
-        // поэтому pending == false гарантирует, что tick уже увидит все результаты.
+        // Read pending BEFORE tick: a task sends its result before it decrements the counter,
+        // so pending == false guarantees that tick has already seen all results.
         let pending = self.app.pending();
         if self.app.tick() {
             if let Some(g) = &self.gfx {
@@ -127,7 +127,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let attrs = Window::default_attributes()
             .with_title(self.cfg.title.clone())
             .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1));
-        let window = Rc::new(el.create_window(attrs).expect("создание окна"));
+        let window = Rc::new(el.create_window(attrs).expect("create window"));
         let ctx = softbuffer::Context::new(window.clone()).expect("softbuffer context");
         let surface = softbuffer::Surface::new(&ctx, window.clone()).expect("softbuffer surface");
         let sz = window.inner_size();
@@ -155,7 +155,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
             WindowEvent::RedrawRequested => {
                 let sz = g.window.inner_size();
                 let (Some(w), Some(h)) = (NonZeroU32::new(sz.width), NonZeroU32::new(sz.height)) else {
-                    return; // свёрнуто
+                    return; // minimized
                 };
                 if (g.renderer.fb.width, g.renderer.fb.height) != (sz.width, sz.height) {
                     g.renderer.resize(sz.width, sz.height);

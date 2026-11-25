@@ -1,15 +1,15 @@
 # ADR-2: `NodeId { index, generation }`
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-Узлы адресуются парой индекса и поколения.
+Nodes are addressed by a pair of index and generation.
 
-## Обоснование
+## Rationale
 
-Безопасное удаление поддеревьев: устаревший `NodeId` не указывает на чужой узел, переиспользованный арены.
+Safe removal of subtrees: a stale `NodeId` does not point to a foreign node that reused the arena slot.
 
-## Последствия
+## Consequences
 
-Каждый доступ проверяет поколение; ссылки на удалённые узлы дают `None`, а не панику.
+Every access checks the generation; references to removed nodes yield `None` instead of a panic.

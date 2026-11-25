@@ -16,7 +16,7 @@ pub(crate) fn text_style(env: &Env, width: Option<f32>, wrap: bool) -> TextStyle
     st
 }
 
-/// Статический текст.
+/// Static text.
 pub struct Label {
     text: String,
 }
@@ -43,7 +43,7 @@ impl<Msg> Widget<Msg> for Label {
     }
 }
 
-/// Кнопка с подписью; по активации (клик, Enter, Space) шлёт сообщение.
+/// Button with a label; sends a message on activation (click, Enter, Space).
 pub struct Button<Msg> {
     label: String,
     variant: Variant,
@@ -91,19 +91,19 @@ impl<Msg> Widget<Msg> for Button<Msg> {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PanelKind {
-    /// Обычная панель.
+    /// Regular panel.
     Panel,
-    /// Поле документа (светлее/глубже панели).
+    /// Document field (lighter/deeper than the panel).
     Document,
-    /// Рамка окна: крупная фаска.
+    /// Window frame: a large bevel.
     Window,
 }
 
-/// Панель/рамка окна: фон + рамка. Ширина рамки добавляется к padding,
-/// поэтому контент не перекрывает рамку.
+/// Panel/window frame: background + border. The border width is added to the padding,
+/// so the content does not overlap the border.
 pub struct Panel {
     kind: PanelKind,
-    /// Без верхней рамки: панель стыкуется с полосой `Tabs`, её базовая линия заменяет границу.
+    /// No top border: the panel joins the `Tabs` strip, whose baseline replaces the border.
     open_top: bool,
 }
 
@@ -120,7 +120,7 @@ impl Panel {
         ui.add_container_widget(parent, style, Panel { kind, open_top: false })
     }
 
-    /// Панель под полосой `Tabs` (без верхней рамки).
+    /// Panel under the `Tabs` strip (no top border).
     pub fn add_attached<Msg: 'static>(ui: &mut Ui<Msg>, parent: NodeId, style: Style, kind: PanelKind) -> NodeId {
         let id = Self::add(ui, parent, style, kind);
         ui.replace_widget(id, Panel { kind, open_top: true });
@@ -152,8 +152,8 @@ impl<Msg> Widget<Msg> for Panel {
     }
 }
 
-/// Полоса вкладок. Активная вкладка сливается с панелью под ней (`Panel::add_attached`):
-/// базовая линия полосы прерывается под активной вкладкой. ←/→/Home/End меняют вкладку.
+/// Tab strip. The active tab merges with the panel below it (`Panel::add_attached`):
+/// the strip baseline breaks under the active tab. ←/→/Home/End switch tabs.
 pub struct Tabs<Msg> {
     labels: Vec<String>,
     active: usize,
@@ -228,7 +228,7 @@ impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
             }
             x += w;
         }
-        // Базовая линия: слева и справа от активной вкладки.
+        // Baseline: left and right of the active tab.
         let y = rect.bottom() - 0.5;
         for (a, b) in [(rect.x, gap.0), (gap.1, rect.right().max(x))] {
             if b > a {
@@ -266,10 +266,10 @@ impl<Msg: 'static> Widget<Msg> for Tabs<Msg> {
     }
 }
 
-/// Однострочное поле ввода на `TextEditState`: каретка, выделение (Shift+стрелки),
-/// Ctrl+A/C/X/V/Z/Y, слова (Ctrl+←/→), Backspace/Delete. Буфер обмена пока внутренний.
-/// Мышь: клик, перетаскивание (выделение), двойной клик — слово, тройной — всё.
-/// Esc снимает выделение. Горизонтальная прокрутка с автоследованием за кареткой.
+/// Single-line input field on `TextEditState`: caret, selection (Shift+arrows),
+/// Ctrl+A/C/X/V/Z/Y, words (Ctrl+←/→), Backspace/Delete. The clipboard is internal for now.
+/// Mouse: click, drag (selection), double click selects a word, triple click selects all.
+/// Esc clears the selection. Horizontal scrolling auto-follows the caret.
 pub struct TextInput<Msg> {
     edit: TextEditState,
     clipboard: SharedClipboard,
@@ -310,7 +310,7 @@ impl<Msg: 'static> TextInput<Msg> {
         }
     }
 
-    /// Байтовая позиция ближайшей границы символа к точке `pos` (с учётом прокрутки).
+    /// Byte position of the character boundary nearest to point `pos` (accounting for scroll).
     fn byte_at(&self, env: &Env, rect: Rect, pos: Point) -> usize {
         let rel = pos.x - rect.x - Self::pad(env) + self.scroll.get();
         let text = self.edit.text();

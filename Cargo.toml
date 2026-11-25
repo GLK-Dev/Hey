@@ -6,7 +6,7 @@ members = ["crates/*", "examples/*"]
 edition = "2021"
 license = "MIT"
 
-# Версии внешних зависимостей фиксируются здесь; крейты ссылаются через `workspace = true`.
+# Versions of external dependencies are pinned here; crates refer to them via `workspace = true`.
 [workspace.dependencies]
 arboard = { version = "3", default-features = false }
 bytemuck = { version = "1", features = ["derive"] }

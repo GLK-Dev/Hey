@@ -60,7 +60,7 @@ fn easing_and_transition() {
     assert_eq!(Easing::parse("bogus"), None);
     let e = Easing::THEME;
     assert!(e.apply(0.0).abs() < 1e-3 && (e.apply(1.0) - 1.0).abs() < 1e-3);
-    assert!(e.apply(0.3) > 0.3, "ease-out быстрее линейной");
+    assert!(e.apply(0.3) > 0.3, "ease-out is faster than linear");
 
     let mut t = Transition::new(0.0f32, 100.0, Easing::Linear);
     assert!(!t.is_running());

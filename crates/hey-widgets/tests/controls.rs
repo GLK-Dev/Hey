@@ -36,7 +36,7 @@ fn controls_basic() {
     let vp = Size::new(400.0, 400.0);
     ui.paint(vp);
 
-    // флажок: клик
+    // checkbox: click
     let r = ui.tree.rect(cb);
     let p = Point::new(r.x + 3.0, r.y + 3.0);
     ui.event(&UiEvent::PointerDown { pos: p, button: MouseButton::Left });
@@ -45,12 +45,12 @@ fn controls_basic() {
     ui.event(&key(" "));
     assert_eq!(sink.drain(), [M::Check(false)]);
 
-    // тумблер: Tab, Space
+    // toggle: Tab, Space
     ui.event(&key("Tab"));
     ui.event(&key(" "));
     assert_eq!(sink.drain(), [M::Tog(true)]);
 
-    // радио: выбор и повторный выбор того же — без сообщения
+    // radio: choosing, and choosing the same one again sends no message
     ui.event(&key("Tab"));
     ui.event(&key(" "));
     assert_eq!(sink.drain(), [M::Radio(0)]);
@@ -63,7 +63,7 @@ fn controls_basic() {
     assert_eq!(sink.drain(), [M::Radio(1)]);
     assert_eq!(group.get(), Some(1));
 
-    // слайдер: клик в середину, drag до конца, клавиши
+    // slider: click in the middle, drag to the end, keys
     let r = ui.tree.rect(sl);
     let mid = Point::new(r.x + r.w / 2.0, r.y + r.h / 2.0);
     ui.event(&UiEvent::PointerDown { pos: mid, button: MouseButton::Left });

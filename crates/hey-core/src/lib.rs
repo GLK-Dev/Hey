@@ -1,7 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-core: базовые типы без зависимостей от ОС и GPU.
-//! Координаты — физические пиксели (ADR-3).
+//! hey-core: base types with no OS or GPU dependencies.
+//! Coordinates are physical pixels (ADR-3).
 
 pub mod arena;
 pub mod color;

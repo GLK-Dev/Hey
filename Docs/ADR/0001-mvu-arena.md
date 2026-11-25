@@ -1,15 +1,15 @@
-# ADR-1: MVU + арена; сигналы — опциональный слой позже
+# ADR-1: MVU + arena; signals are an optional layer later
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-UI-дерево хранится в арене, состояние приложения — в `Model`, изменения идут через `Msg` и `update`.
+The UI tree is stored in an arena, application state lives in `Model`, and changes flow through `Msg` and `update`.
 
-## Обоснование
+## Rationale
 
-Дружелюбно к borrow checker (нет `Rc<RefCell>` в модели), проще отлаживать и тестировать: `update` — чистая функция над моделью. Реактивные сигналы можно добавить поверх без смены ядра.
+Borrow-checker friendly (no `Rc<RefCell>` in the model), easier to debug and test: `update` is a pure function over the model. Reactive signals can be added on top without changing the core.
 
-## Последствия
+## Consequences
 
-Нужен diff (`Ui::reconcile`) и перенос локального состояния виджетов между кадрами.
+A diff (`Ui::reconcile`) is needed, along with carrying widget-local state across frames.

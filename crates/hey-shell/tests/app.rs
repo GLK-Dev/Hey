@@ -20,9 +20,9 @@ struct Model {
 }
 
 fn view(m: &Model) -> Vec<View<Msg>> {
-    let mut v = vec![View::leaf("inc", m.n, |ui, p| Button::add(ui, p, "Плюс", Variant::Primary, Callback::new(|_| Msg::Inc)))];
+    let mut v = vec![View::leaf("inc", m.n, |ui, p| Button::add(ui, p, "Plus", Variant::Primary, Callback::new(|_| Msg::Inc)))];
     if !m.task.is_loading() {
-        v.push(View::leaf("load", (), |ui, p| Button::add(ui, p, "Загрузить", Variant::Primary, Callback::new(|_| Msg::Load))));
+        v.push(View::leaf("load", (), |ui, p| Button::add(ui, p, "Load", Variant::Primary, Callback::new(|_| Msg::Load))));
     }
     v
 }
@@ -62,14 +62,14 @@ fn mvu_and_background_task() {
     let vp = Size::new(400.0, 300.0);
     rt.frame(vp);
 
-    // клик по первой кнопке (левый верхний угол контента)
+    // click on the first button (top-left corner of the content)
     let ids: Vec<_> = rt.ui.tree.children(rt.ui.root()).to_vec();
     let r = rt.ui.tree.rect(ids[0]);
     click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
     assert_eq!(rt.model().n, 1);
     rt.frame(vp);
 
-    // Load → Loading → кнопка исчезает из view → Success
+    // Load → Loading → the button disappears from view → Success
     let r = rt.ui.tree.rect(rt.ui.tree.children(rt.ui.root())[1]);
     click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
     assert!(rt.model().task.is_loading());

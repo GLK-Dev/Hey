@@ -1,10 +1,10 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Публичный API приложения (MVU): `App::new(model).update(f).view(f).theme(t).run()`.
+//! Public application API (MVU): `App::new(model).update(f).view(f).theme(t).run()`.
 //!
-//! Цикл: событие → `Ui` кладёт `Msg` в `MsgSink` → `update(&mut model, msg) -> Command` →
-//! `view(&model)` → `Ui::reconcile`. Фоновые задачи (`Command::perform`) выполняются в потоках,
-//! результаты возвращаются через `mpsc` и опрашиваются в `tick()`.
+//! Loop: event → `Ui` puts `Msg` into `MsgSink` → `update(&mut model, msg) -> Command` →
+//! `view(&model)` → `Ui::reconcile`. Background tasks (`Command::perform`) run on threads,
+//! results come back via `mpsc` and are polled in `tick()`.
 
 use crate::{ShellApp, WindowConfig};
 use hey_core::{MsgSink, Size, UiEvent};
@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
 
-/// Состояние фоновой операции для отображения idle/loading/success/error.
+/// State of a background operation for displaying idle/loading/success/error.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub enum TaskState<T> {
     #[default]
@@ -39,17 +39,17 @@ impl<T> TaskState<T> {
     }
 }
 
-/// Шрифт по умолчанию (Onest, SIL OFL 1.1).
+/// Default font (Onest, SIL OFL 1.1).
 const DEFAULT_FONT: &[u8] = include_bytes!("../../../design/fonts/onest/Onest[wght].ttf");
 
 type Job<Msg> = Box<dyn FnOnce() -> Msg + Send>;
 
-/// Побочный эффект, возвращаемый из `update`.
+/// Side effect returned from `update`.
 pub enum Command<Msg> {
     None,
-    /// Сразу отправить сообщение (после текущего прохода).
+    /// Send a message right away (after the current pass).
     Msg(Msg),
-    /// Выполнить работу в фоновом потоке; результат превращается в `Msg`.
+    /// Run work on a background thread; the result is turned into a `Msg`.
     Task(Job<Msg>),
     Batch(Vec<Command<Msg>>),
 }
@@ -63,7 +63,7 @@ impl<Msg: Send + 'static> Command<Msg> {
         Command::Msg(m)
     }
 
-    /// `work` выполняется в отдельном потоке, `map` превращает результат в `Msg`.
+    /// `work` runs on a separate thread, `map` turns the result into a `Msg`.
     pub fn perform<T: Send + 'static>(work: impl FnOnce() -> T + Send + 'static, map: impl FnOnce(T) -> Msg + Send + 'static) -> Self {
         Command::Task(Box::new(move || map(work())))
     }
@@ -76,7 +76,7 @@ impl<Msg: Send + 'static> Command<Msg> {
 type UpdateFn<M, Msg> = Box<dyn FnMut(&mut M, Msg) -> Command<Msg>>;
 type ViewFn<M, Msg> = Box<dyn Fn(&M) -> Vec<View<Msg>>>;
 
-/// Построитель приложения.
+/// Application builder.
 pub struct App<M, Msg: Send + 'static> {
     model: M,
     update: Option<UpdateFn<M, Msg>>,
@@ -115,7 +115,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         self
     }
 
-    /// Добавить файл шрифта; порядок задаёт цепочку fallback.
+    /// Add a font file; the order defines the fallback chain.
     pub fn font(mut self, path: impl Into<PathBuf>) -> Self {
         self.fonts.push(path.into());
         self
@@ -131,24 +131,24 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         self
     }
 
-    /// Команда, выполняемая при старте (например, начальная загрузка).
+    /// Command run at startup (e.g. the initial load).
     pub fn init(mut self, cmd: Command<Msg>) -> Self {
         self.init = cmd;
         self
     }
 
-    /// Собрать рантайм без окна (для тестов и встраивания).
+    /// Build the runtime without a window (for tests and embedding).
     pub fn build(self) -> Result<Runtime<M, Msg>, String> {
-        let update = self.update.ok_or("App: не задан update")?;
-        let view = self.view.ok_or("App: не задан view")?;
+        let update = self.update.ok_or("App: update is not set")?;
+        let view = self.view.ok_or("App: view is not set")?;
         let mut fonts = Fonts::new();
         let mut chain: Vec<FontId> = Vec::new();
         for p in &self.fonts {
-            chain.push(fonts.add_file(p).map_err(|e| format!("шрифт {}: {e:?}", p.display()))?);
+            chain.push(fonts.add_file(p).map_err(|e| format!("font {}: {e:?}", p.display()))?);
         }
         if chain.is_empty() {
-            // Шрифт по умолчанию — Onest (OFL, кириллица), вшит в бинарник.
-            chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| format!("шрифт по умолчанию: {e:?}"))?);
+            // Default font is Onest (OFL, Cyrillic), embedded into the binary.
+            chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| format!("default font: {e:?}"))?);
         }
         let sink = MsgSink::new();
         let ui = Ui::new(self.theme, Arc::new(fonts), chain, sink.clone());
@@ -178,7 +178,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     }
 }
 
-/// Рантайм приложения: реализует `ShellApp`.
+/// App runtime: implements `ShellApp`.
 pub struct Runtime<M, Msg: Send + 'static> {
     model: M,
     update: UpdateFn<M, Msg>,
@@ -224,7 +224,7 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
         }
     }
 
-    /// Прогнать все ожидающие сообщения через `update`; `true`, если что-то обработано.
+    /// Run all pending messages through `update`; `true` if anything was processed.
     pub fn pump(&mut self) -> bool {
         let mut any = false;
         loop {
@@ -244,7 +244,7 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
         any
     }
 
-    /// Построить кадр для области `size` (физические пиксели).
+    /// Build a frame for the `size` area (physical pixels).
     pub fn frame(&mut self, size: Size) -> DisplayList {
         self.size = size;
         if self.dirty {
@@ -253,7 +253,7 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
         self.ui.paint(size)
     }
 
-    /// Забрать результаты фоновых задач.
+    /// Collect the results of background tasks.
     pub fn poll(&mut self) -> bool {
         let mut got = false;
         while let Ok(m) = self.rx.try_recv() {

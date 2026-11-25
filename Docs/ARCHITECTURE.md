@@ -1,59 +1,63 @@
-# Архитектура Hey
+# Hey architecture
 
-Hey — UI-фреймворк на Rust: декларативный MVU-слой поверх арены виджетов, единый список команд рисования (`DisplayList`) и сменные бэкенды рендера. Подробный план — `DEVELOPMENT_PLAN.md`, обоснования решений — `ADR/`.
+Hey is a Rust UI framework: a declarative MVU layer on top of a widget arena, a single list of draw commands (`DisplayList`) and swappable render backends. See `DEVELOPMENT_PLAN.md` for the detailed plan and `ADR/` for the rationale behind decisions.
 
-## Крейты и зависимости
+## Crates and dependencies
 
 ```
 hey-core ← hey-layout, hey-style, hey-text, hey-draw ← hey-widgets ← hey-shell
                                       hey-draw ← hey-render-cpu
 ```
 
-| Крейт | Назначение |
-|-------|------------|
-| `hey-core` | Арена `Tree<T>` с `NodeId { index, generation }`, геометрия, `Color`, `UiEvent`, `Callback`/`MsgSink`, `CursorIcon` |
-| `hey-layout` | Flex-раскладка (`Style::row/column/stack`, padding, gap, grow) в физических пикселях |
-| `hey-style` | `Theme` и токены, `WidgetState`, `Variant`, переходы (`transition`) |
-| `hey-text` | Реестр шрифтов (fontdue), раскладка строк, `TextEditState` (каретка, выделение, undo) |
-| `hey-draw` | `DrawCmd`, `DisplayList` (с clip-стеком и валидацией), `trait UiRenderer` |
-| `hey-widgets` | `Ui<Msg>`, виджеты, `View` + reconcile, фокус, overlay (Menu/Modal/Tooltip/Dropdown), clipboard |
-| `hey-render-cpu` | `CpuRenderer`: растеризация `DisplayList` в `Framebuffer`, эталон для golden-тестов |
-| `hey-shell` | Окно winit + softbuffer, нормализация ввода, `App`/`Command`/`TaskState`, диалоги (rfd), системный clipboard |
+| Crate | Purpose |
+|-------|---------|
+| `hey-core` | `Tree<T>` arena with `NodeId { index, generation }`, geometry, `Color`, `UiEvent`, `Callback`/`MsgSink`, `CursorIcon` |
+| `hey-layout` | Flex layout (`Style::row/column/stack`, padding, gap, grow) in physical pixels |
+| `hey-style` | `Theme` and tokens, `WidgetState`, `Variant`, transitions (`transition`) |
+| `hey-text` | Font registry (fontdue), line layout, `TextEditState` (caret, selection, undo) |
+| `hey-draw` | `DrawCmd`, `DisplayList` (with clip stack and validation), `trait UiRenderer` |
+| `hey-widgets` | `Ui<Msg>`, widgets, `View` + reconcile, focus, overlays (Menu/Modal/Tooltip/Dropdown), clipboard |
+| `hey-render-cpu` | `CpuRenderer`: rasterizes a `DisplayList` into a `Framebuffer`, the reference for golden tests |
+| `hey-shell` | winit + softbuffer window, input normalization, `App`/`Command`/`TaskState`, dialogs (rfd), system clipboard |
 
-Правило: `core`, `layout`, `draw`, `widgets` не зависят от `winit`, `wgpu`, растеризаторов. Платформа подключается только в `hey-shell`.
+Rule: `core`, `layout`, `draw` and `widgets` do not depend on `winit`, `wgpu` or rasterizers. The platform is attached only in `hey-shell`.
 
-## Конвейер кадра
+## Frame pipeline
 
 ```
 winit WindowEvent → InputState::translate → UiEvent
-  → Ui::event (hit-test, фокус, overlay) → Msg в MsgSink
+  → Ui::event (hit-test, focus, overlays) → Msg into MsgSink
   → update(&mut Model, Msg) -> Command
-  → view(&Model) -> Vec<View<Msg>> → Ui::reconcile (diff по Key, перенос состояния виджетов)
-  → layout (Rect для каждого узла) → paint (Theme × WidgetState) → DisplayList
+  → view(&Model) -> Vec<View<Msg>> → Ui::reconcile (diff by Key, widget state carried over)
+  → layout (a Rect for every node) → paint (Theme × WidgetState) → DisplayList
   → UiRenderer::render → softbuffer
 ```
 
-Перерисовка запрашивается только после обработанного события, результата фоновой задачи или ресайза; в простое цикл спит (`ControlFlow::Wait`).
+A redraw is requested only after a handled event, a background task result or a resize; when idle, the loop sleeps (`ControlFlow::Wait`).
 
 ## MVU
 
-- Приложение определяет `Model`, `Msg: Send + 'static`, `update`, `view`.
+- The application defines `Model`, `Msg: Send + 'static`, `update` and `view`.
 - `App::new(model).update(f).view(f).theme(t).font(path).run()`.
-- `Command::{none, msg, perform, batch}`: `perform` выполняет блокирующую работу в потоке и возвращает результат сообщением; `TaskState` описывает idle/loading/success/error.
-- Виджеты сообщают о событиях через `Callback<Msg, A>`, которые кладут `Msg` в `MsgSink`; фреймворк не знает типа `Msg`.
+- `Command::{none, msg, perform, batch}`: `perform` runs blocking work on a thread and returns the result as a message; `TaskState` describes idle/loading/success/error.
+- Widgets report events through `Callback<Msg, A>`, which put a `Msg` into `MsgSink`; the framework does not know the `Msg` type.
 
-## Модель отрисовки
+## Rendering model
 
-- Все координаты — физические пиксели (ADR-3); масштаб задаётся через `Theme.density`.
-- Текст раскладывается один раз в `hey-text`; рендереры получают готовые глифы (ADR-5).
-- CPU-рендерер — эталон; будущий GPU-бэкенд сверяется с ним golden-тестами (ADR-6).
+- All coordinates are physical pixels (ADR-3); scale is set via `Theme.density`.
+- Text is laid out once in `hey-text`; renderers receive ready-made glyphs (ADR-5).
+- The CPU renderer is the reference; the future GPU backend is checked against it with golden tests (ADR-6).
 
-## Тесты
+## Tests
 
-- Юнит-тесты в крейтах, интеграционные — `crates/*/tests` (виджеты, overlay, фокус, reconcile, платформа).
-- Golden-снимки CPU-рендерера: `crates/hey-render-cpu/tests/golden.rs`.
+- Unit tests live in the crates; integration tests are in `crates/*/tests` (widgets, overlays, focus, reconcile, platform).
+- Golden snapshots of the CPU renderer: `crates/hey-render-cpu/tests/golden.rs`.
 - CI: `fmt --check`, `clippy -D warnings`, `cargo test --workspace` (Linux + Windows).
 
-## Примеры
+## Examples
 
-`examples/counter`, `todo`, `gallery` — на публичном API; `prototype_monolith` — исторический монолит для сверки, не развивается.
+`examples/counter`, `todo` and `gallery` use the public API; `prototype_monolith` is a historical monolith kept for comparison and is not developed further.
+
+## Language policy
+
+All development is in English: identifiers, comments, docs, commit messages and UI strings. Russian is used only for chatting with the maintainer. Localization may be added later, with English as the primary language.

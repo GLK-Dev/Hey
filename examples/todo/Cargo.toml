@@ -3,7 +3,7 @@ name = "todo"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Список задач: ввод, флажки, фильтр, фоновое сохранение"
+description = "Task list: input, checkboxes, filter, background saving"
 
 [dependencies]
 hey-core = { path = "../../crates/hey-core" }

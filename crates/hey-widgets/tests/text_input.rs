@@ -20,7 +20,7 @@ fn typing_selection_clipboard_undo() {
     let vp = Size::new(400.0, 100.0);
     ui.paint(vp);
 
-    assert!(!ui.event(&UiEvent::Text("x".into())), "без фокуса текст игнорируется");
+    assert!(!ui.event(&UiEvent::Text("x".into())), "text is ignored without focus");
     ui.event(&key("Tab", false, false));
     assert_eq!(ui.focused(), Some(input));
     ui.event(&UiEvent::Text("Привет".into()));
@@ -36,7 +36,7 @@ fn typing_selection_clipboard_undo() {
     ui.event(&UiEvent::Text("Я".into()));
     assert_eq!(sink.drain(), ["Я"]);
     ui.event(&key("ArrowLeft", false, false));
-    assert!(sink.is_empty(), "движение каретки не шлёт сообщений");
+    assert!(sink.is_empty(), "caret movement sends no messages");
 
     ui.paint(vp);
     let r = ui.tree.rect(input);

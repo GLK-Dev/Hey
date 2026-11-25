@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Список задач: ввод текста, флажки, фильтр, фоновая загрузка/сохранение (`Command::perform`).
+//! Task list: text input, checkboxes, filter, background load/save (`Command::perform`).
 
 use hey_core::{Callback, Insets};
 use hey_layout::Style;
@@ -37,7 +37,7 @@ enum Msg {
 struct Model {
     items: Vec<Item>,
     input: String,
-    /// Меняется после добавления: пересоздаёт поле ввода пустым.
+    /// Changes after adding: recreates the input field empty.
     input_gen: u32,
     next_id: u32,
     filter: Filter,
@@ -136,35 +136,35 @@ fn row(i: &Item) -> View<Msg> {
         Style::row().gap(8.0),
         vec![
             View::leaf("check", (done, t2), move |ui, p| Checkbox::add(ui, p, &text, done, Callback::new(move |v| Msg::Toggle(id, v)))),
-            View::leaf("del", (), move |ui, p| Button::add(ui, p, "Удалить", Variant::Secondary, Callback::new(move |_| Msg::Remove(id)))),
+            View::leaf("del", (), move |ui, p| Button::add(ui, p, "Delete", Variant::Secondary, Callback::new(move |_| Msg::Remove(id)))),
         ],
     )
 }
 
 fn view(m: &Model) -> Vec<View<Msg>> {
     let status = match &m.io {
-        TaskState::Loading => "Сохранение…".to_string(),
-        TaskState::Error(e) => format!("Ошибка: {e}"),
-        _ => format!("Задач: {}, выполнено: {}", m.items.len(), m.items.iter().filter(|i| i.done).count()),
+        TaskState::Loading => "Saving…".to_string(),
+        TaskState::Error(e) => format!("Error: {e}"),
+        _ => format!("Tasks: {}, done: {}", m.items.len(), m.items.iter().filter(|i| i.done).count()),
     };
     let gen = m.input_gen;
     let mut children = vec![
-        View::leaf("title", (), |ui, p| Label::add(ui, p, "Список задач")),
+        View::leaf("title", (), |ui, p| Label::add(ui, p, "Task list")),
         View::container(
             "add",
             Style::row().gap(8.0),
             vec![
                 View::leaf("input", gen, |ui, p| TextInput::add(ui, p, "", 320.0, Callback::new(Msg::Input))),
-                View::leaf("add", (), |ui, p| Button::add(ui, p, "Добавить", Variant::Primary, Callback::new(|_| Msg::Add))),
+                View::leaf("add", (), |ui, p| Button::add(ui, p, "Add", Variant::Primary, Callback::new(|_| Msg::Add))),
             ],
         ),
         View::container(
             "filters",
             Style::row().gap(8.0),
             vec![
-                filter_button(m, "all", "Все", Filter::All),
-                filter_button(m, "active", "Активные", Filter::Active),
-                filter_button(m, "done", "Готовые", Filter::Done),
+                filter_button(m, "all", "All", Filter::All),
+                filter_button(m, "active", "Active", Filter::Active),
+                filter_button(m, "done", "Done", Filter::Done),
             ],
         ),
     ];
@@ -187,6 +187,6 @@ fn main() {
     let model = Model { items: vec![], input: String::new(), input_gen: 0, next_id: 0, filter: Filter::All, io: TaskState::Loading };
     let app = App::new(model).update(update).view(view).font(font).title("Hey — todo").init(Command::perform(load, Msg::Loaded));
     if let Err(e) = app.run() {
-        eprintln!("ошибка: {e}");
+        eprintln!("error: {e}");
     }
 }

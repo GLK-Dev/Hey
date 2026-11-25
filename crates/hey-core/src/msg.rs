@@ -1,12 +1,12 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! MVU-связка (ADR-4): виджеты порождают сообщения приложения через `Callback`, `MsgSink` их копит.
+//! MVU glue (ADR-4): widgets produce app messages via `Callback`, `MsgSink` accumulates them.
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
 
-/// Очередь сообщений приложения; клонируется дёшево (общая очередь).
+/// Queue of app messages; cheap to clone (shared queue).
 pub struct MsgSink<Msg> {
     queue: Rc<RefCell<VecDeque<Msg>>>,
 }
@@ -30,7 +30,7 @@ impl<Msg> MsgSink<Msg> {
     pub fn send(&self, m: Msg) {
         self.queue.borrow_mut().push_back(m);
     }
-    /// Забирает все накопленные сообщения в порядке отправки.
+    /// Takes all accumulated messages in send order.
     pub fn drain(&self) -> Vec<Msg> {
         self.queue.borrow_mut().drain(..).collect()
     }
@@ -39,7 +39,7 @@ impl<Msg> MsgSink<Msg> {
     }
 }
 
-/// Преобразует аргумент события виджета (`A`) в сообщение приложения.
+/// Converts a widget event argument (`A`) into an app message.
 pub struct Callback<Msg, A = ()> {
     f: Rc<dyn Fn(A) -> Msg>,
 }
@@ -63,7 +63,7 @@ impl<Msg, A> Callback<Msg, A> {
 }
 
 impl<Msg: Clone + 'static> Callback<Msg, ()> {
-    /// Колбэк без аргументов, всегда выдающий одно и то же сообщение.
+    /// Callback without arguments that always yields the same message.
     pub fn constant(m: Msg) -> Self {
         Self::new(move |()| m.clone())
     }

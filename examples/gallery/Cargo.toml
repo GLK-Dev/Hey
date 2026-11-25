@@ -3,7 +3,7 @@ name = "gallery"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Витрина виджетов Hey"
+description = "Hey widget showcase"
 
 [dependencies]
 hey-core = { path = "../../crates/hey-core" }

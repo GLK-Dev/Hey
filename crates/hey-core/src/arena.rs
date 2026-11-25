@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Арена с поколениями (ADR-1, ADR-2): устаревший `NodeId` никогда не попадает в чужой слот.
+//! Generational arena (ADR-1, ADR-2): a stale `NodeId` never lands in someone else's slot.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct NodeId {
@@ -42,7 +42,7 @@ impl<T> Arena<T> {
         self.len += 1;
         if let Some(index) = self.free_head {
             let Slot::Free { generation, next_free } = self.slots[index as usize] else {
-                unreachable!("free list указывает на занятый слот");
+                unreachable!("free list points at an occupied slot");
             };
             self.free_head = next_free;
             self.slots[index as usize] = Slot::Occupied { generation, value };
@@ -98,13 +98,13 @@ impl<T> Arena<T> {
 impl<T> std::ops::Index<NodeId> for Arena<T> {
     type Output = T;
     fn index(&self, id: NodeId) -> &T {
-        self.get(id).expect("устаревший или неверный NodeId")
+        self.get(id).expect("stale or invalid NodeId")
     }
 }
 
 impl<T> std::ops::IndexMut<NodeId> for Arena<T> {
     fn index_mut(&mut self, id: NodeId) -> &mut T {
-        self.get_mut(id).expect("устаревший или неверный NodeId")
+        self.get_mut(id).expect("stale or invalid NodeId")
     }
 }
 
@@ -133,7 +133,7 @@ mod tests {
         assert_ne!(new.generation, old.generation);
         assert!(a.get(old).is_none());
         assert_eq!(a[new], 2);
-        assert_eq!(a.remove(old), None, "двойное удаление по старому id запрещено");
+        assert_eq!(a.remove(old), None, "double removal by a stale id is forbidden");
     }
 
     #[test]

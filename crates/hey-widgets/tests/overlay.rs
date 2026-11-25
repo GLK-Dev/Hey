@@ -41,16 +41,16 @@ fn dropdown_menu_select() {
     let r: Rect = ui.tree.rect(dd);
 
     click(&mut ui, Point::new(r.x + 5.0, r.y + 5.0));
-    assert_eq!(ui.overlay_count(), 1, "клик открывает меню");
+    assert_eq!(ui.overlay_count(), 1, "click opens the menu");
     ui.paint(vp);
 
-    // стрелка вниз + Enter
+    // arrow down + Enter
     ui.event(&key("ArrowDown"));
     ui.event(&key("Enter"));
     assert_eq!(sink.drain(), [M::Pick(1)]);
     assert_eq!(ui.overlay_count(), 0);
 
-    // клик снаружи закрывает без выбора
+    // click outside closes without a choice
     click(&mut ui, Point::new(r.x + 5.0, r.y + 5.0));
     assert_eq!(ui.overlay_count(), 1);
     click(&mut ui, Point::new(390.0, 290.0));
@@ -71,7 +71,7 @@ fn menu_click_and_tooltip() {
     ui.paint(vp);
     Menu::open(&mut ui, Point::new(10.0, 10.0), items(), Callback::new(M::Pick));
     ui.paint(vp);
-    // третья строка
+    // third row
     click(&mut ui, Point::new(20.0, 10.0 + 1.0 + 2.5 * 24.0));
     let got = sink.drain();
     assert_eq!(got.len(), 1, "{got:?}");
@@ -95,7 +95,7 @@ fn modal_traps_input() {
     assert_eq!(ui.overlay_count(), 1);
 
     ui.event(&key("Tab"));
-    assert_eq!(ui.overlay_count(), 1, "Tab заперт");
+    assert_eq!(ui.overlay_count(), 1, "Tab is trapped");
     ui.event(&key("ArrowRight"));
     ui.event(&key("Enter"));
     assert_eq!(sink.drain(), [M::Modal(1)]);

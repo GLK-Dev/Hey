@@ -11,7 +11,7 @@ use hey_text::{layout, Layout, TextEditState};
 use std::cell::Cell;
 use std::rc::Rc;
 
-/// Раскладка текста с таблицей начал строк (байтовые смещения).
+/// Text layout with a table of line starts (byte offsets).
 struct Geo {
     l: Layout,
     starts: Vec<usize>,
@@ -45,7 +45,7 @@ impl Geo {
         self.starts.partition_point(|&s| s <= byte).saturating_sub(1)
     }
 
-    /// Конец строки в тексте (начало следующей или конец текста).
+    /// End of the line in the text (start of the next one or end of the text).
     fn line_end(&self, i: usize, len: usize) -> usize {
         self.starts.get(i + 1).copied().unwrap_or(len)
     }
@@ -73,8 +73,8 @@ impl Geo {
     }
 }
 
-/// Многострочное поле ввода: перенос по ширине, Enter, Up/Down/PageUp/PageDown,
-/// вертикальная прокрутка (колесо и автоследование за кареткой), выделение мышью.
+/// Multiline input field: wrapping by width, Enter, Up/Down/PageUp/PageDown,
+/// vertical scrolling (wheel and auto-follow of the caret), mouse selection.
 pub struct TextArea<Msg> {
     env: Rc<Env>,
     edit: TextEditState,
@@ -82,12 +82,12 @@ pub struct TextArea<Msg> {
     on_change: Callback<Msg, String>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
-    /// Размер прямоугольника при последней отрисовке (для клавиш без `rect`).
+    /// Rectangle size at the last paint (for keys without `rect`).
     size: Cell<(f32, f32)>,
 }
 
 impl<Msg: 'static> TextArea<Msg> {
-    /// `rows` — высота в строках.
+    /// `rows` is the height in rows.
     pub fn add(ui: &mut Ui<Msg>, parent: NodeId, text: &str, width: f32, rows: usize, on_change: Callback<Msg, String>) -> NodeId {
         let env = ui.env.clone();
         let e2 = env.clone();

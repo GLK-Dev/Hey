@@ -1,7 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-widgets: виджеты поверх дерева раскладки. Без привязки к окну/GPU:
-//! вход — `UiEvent`, выход — `DisplayList` и сообщения приложения (MVU).
+//! hey-widgets: widgets on top of the layout tree. Independent of window/GPU:
+//! input is `UiEvent`, output is `DisplayList` and app messages (MVU).
 
 mod clipboard;
 mod controls;

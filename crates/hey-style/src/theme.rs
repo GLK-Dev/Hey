@@ -18,8 +18,8 @@ impl std::fmt::Display for ThemeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Json(e) => write!(f, "JSON: {e}"),
-            Self::Missing(k) => write!(f, "нет поля `{k}`"),
-            Self::BadColor(k) => write!(f, "неверный цвет `{k}`"),
+            Self::Missing(k) => write!(f, "missing field `{k}`"),
+            Self::BadColor(k) => write!(f, "invalid color `{k}`"),
         }
     }
 }
@@ -41,8 +41,8 @@ impl Density {
     }
 }
 
-/// Цвета темы. Общие токены — полями, специфичные для темы
-/// (`primaryFill`, `bevelLight`, …) — в `extra`.
+/// Theme colors. Common tokens are fields; theme-specific ones
+/// (`primaryFill`, `bevelLight`, …) live in `extra`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Palette {
     pub desktop: Color,
@@ -73,10 +73,10 @@ pub struct Palette {
 pub struct Theme {
     pub id: String,
     pub name: String,
-    /// `flat` / `outline` / `bevel` — стиль контролов.
+    /// `flat` / `outline` / `bevel` — control style.
     pub control_style: String,
     pub palette: Palette,
-    /// Размеры фасок (small, medium, large) в физ. px при плотности Normal.
+    /// Bevel sizes (small, medium, large) in physical px at Normal density.
     pub chamfer: [f32; 3],
     pub focus_width: f32,
     pub focus_offset: f32,
@@ -127,7 +127,7 @@ const KNOWN: [&str; 21] = [
 ];
 
 impl Theme {
-    /// Разбор одной темы (объект `themes.<id>` из `design/tokens/themes.json`).
+    /// Parses a single theme (the `themes.<id>` object from `design/tokens/themes.json`).
     pub fn from_value(id: &str, t: &Value) -> Result<Theme, ThemeError> {
         let c = get(t, "color")?;
         let mut extra = HashMap::new();
@@ -196,23 +196,23 @@ impl Theme {
         })
     }
 
-    /// Загрузка из JSON в формате `themes.json` (`{"themes": {id: …}}`).
-    /// Основа для загрузки с диска и hot-reload.
+    /// Loads from JSON in the `themes.json` format (`{"themes": {id: …}}`).
+    /// Basis for loading from disk and hot-reload.
     pub fn from_json(json: &str, id: &str) -> Result<Theme, ThemeError> {
         let root: Value = serde_json::from_str(json).map_err(|e| ThemeError::Json(e.to_string()))?;
         let t = root.get("themes").and_then(|t| t.get(id)).ok_or_else(|| ThemeError::Missing(id.into()))?;
         Self::from_value(id, t)
     }
 
-    /// Встроенная тема из `design/tokens/themes.json`: `industrial-dark`, `night-ops`, `zeta-remastered`.
+    /// Built-in theme from `design/tokens/themes.json`: `industrial-dark`, `night-ops`, `zeta-remastered`.
     pub fn builtin(id: &str) -> Option<Theme> {
         Self::from_json(THEMES_JSON, id).ok()
     }
-    /// Основная тёмная тема (Industrial Dark; фон рабочего стола #0B0C10 — `desktop_deep`).
+    /// Main dark theme (Industrial Dark; desktop background #0B0C10 is `desktop_deep`).
     pub fn dark() -> Theme {
-        Self::builtin("industrial-dark").expect("встроенная тема валидна")
+        Self::builtin("industrial-dark").expect("built-in theme is valid")
     }
-    /// Светлая тема на основе `lightBg` (#F4F1EA) из tokens.json; акцент сохранён.
+    /// Light theme based on `lightBg` (#F4F1EA) from tokens.json; the accent is kept.
     pub fn light() -> Theme {
         let mut t = Self::dark();
         let p = &mut t.palette;
@@ -249,12 +249,12 @@ impl Theme {
     pub fn chamfer_large(&self) -> f32 {
         self.chamfer[2] * self.density.scale()
     }
-    /// Базовый отступ/высота, масштабируется плотностью.
+    /// Base padding/height, scaled by density.
     pub fn space(&self, px: f32) -> f32 {
         (px * self.density.scale()).round()
     }
 
-    /// Фон кнопки для варианта и состояния.
+    /// Button background for a variant and state.
     pub fn button_bg(&self, v: Variant, s: WidgetState) -> Color {
         let p = &self.palette;
         if s.disabled() {
@@ -275,7 +275,7 @@ impl Theme {
             base
         }
     }
-    /// Цвет текста на кнопке.
+    /// Text color on a button.
     pub fn button_fg(&self, v: Variant, s: WidgetState) -> Color {
         let p = &self.palette;
         if s.disabled() {

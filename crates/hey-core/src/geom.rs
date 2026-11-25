@@ -20,7 +20,7 @@ pub struct Rect {
     pub h: f32,
 }
 
-/// Отступы по сторонам.
+/// Insets on each side.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Insets {
     pub left: f32,
@@ -69,11 +69,11 @@ impl Rect {
     pub fn size(&self) -> Size {
         Size::new(self.w, self.h)
     }
-    /// Полуоткрытый интервал: правая и нижняя границы не входят.
+    /// Half-open interval: the right and bottom edges are excluded.
     pub fn contains(&self, p: Point) -> bool {
         p.x >= self.x && p.x < self.right() && p.y >= self.y && p.y < self.bottom()
     }
-    /// Пересечение; `None`, если площадь нулевая.
+    /// Intersection; `None` if the area is zero.
     pub fn intersect(&self, o: &Rect) -> Option<Rect> {
         let x = self.x.max(o.x);
         let y = self.y.max(o.y);
@@ -86,7 +86,7 @@ impl Rect {
         let y = self.y.min(o.y);
         Rect::new(x, y, self.right().max(o.right()) - x, self.bottom().max(o.bottom()) - y)
     }
-    /// Сжать на отступы (размер не опускается ниже нуля).
+    /// Shrink by insets (the size never drops below zero).
     pub fn deflate(&self, i: Insets) -> Rect {
         Rect::new(self.x + i.left, self.y + i.top, (self.w - i.horizontal()).max(0.0), (self.h - i.vertical()).max(0.0))
     }

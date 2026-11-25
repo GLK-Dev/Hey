@@ -23,7 +23,7 @@ fn list_select_keys_wheel() {
     ui.paint(vp);
     let r = ui.tree.rect(l);
 
-    // клик по первой строке
+    // click on the first row
     let p = Point::new(r.x + 20.0, r.y + 5.0);
     ui.event(&UiEvent::PointerDown { pos: p, button: MouseButton::Left });
     ui.event(&UiEvent::PointerUp { pos: p, button: MouseButton::Left });
@@ -35,12 +35,12 @@ fn list_select_keys_wheel() {
     ui.event(&key("End"));
     assert_eq!(sink.drain(), [49]);
     ui.event(&key("ArrowDown"));
-    assert!(sink.is_empty(), "на последней строке выбор не меняется");
+    assert!(sink.is_empty(), "selection does not change on the last row");
 
-    // выбранная строка прокручена в поле зрения: рисуются не все 50 строк
+    // the selected row is scrolled into view: not all 50 rows are drawn
     let list = ui.paint(vp);
     let texts = list.cmds().iter().filter(|c| matches!(c, DrawCmd::Text(_))).count();
-    assert!(texts > 0 && texts <= 7, "рисуются только видимые строки: {texts}");
+    assert!(texts > 0 && texts <= 7, "only visible rows are drawn: {texts}");
 
     ui.event(&UiEvent::Wheel { pos: p, dx: 0.0, dy: 100000.0 });
     ui.event(&key("Home"));

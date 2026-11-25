@@ -16,7 +16,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{Window, WindowId};
 
 // ============================================================================
-// 1. ТЕМА И ВИЗУАЛЬНЫЕ ТОКЕНЫ (КАСТОМНЫЙ ДИЗАЙН)
+// 1. THEME AND VISUAL TOKENS (CUSTOM DESIGN)
 // ============================================================================
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -120,7 +120,7 @@ impl Default for Theme {
 }
 
 // ============================================================================
-// 2. ЕДИНЫЙ СПИСОК КОМАНД ОТРИСОВКИ (DRAW COMMANDS)
+// 2. SINGLE LIST OF DRAW COMMANDS
 // ============================================================================
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -169,7 +169,7 @@ enum DrawCmd {
 }
 
 // ============================================================================
-// 3. СОСТОЯНИЕ ПРИЛОЖЕНИЯ, СОБЫТИЯ И HIT-TARGETS
+// 3. APPLICATION STATE, EVENTS AND HIT TARGETS
 // ============================================================================
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -245,9 +245,9 @@ impl AppState {
             count: 3,
             next_todo_id: 4,
             todos: vec![
-                TodoItem { id: 1, title: "Единый DrawCmd для CPU и GPU".into(), done: true },
-                TodoItem { id: 2, title: "SDF-шейдер рамок и скруглений на WGSL".into(), done: true },
-                TodoItem { id: 3, title: "Кастомные табы и панели состояния".into(), done: false },
+                TodoItem { id: 1, title: "Single DrawCmd for CPU and GPU".into(), done: true },
+                TodoItem { id: 2, title: "SDF shader for borders and rounded corners in WGSL".into(), done: true },
+                TodoItem { id: 3, title: "Custom tabs and status panels".into(), done: false },
             ],
             hovered_id: None,
             pressed_id: None,
@@ -304,7 +304,7 @@ impl AppState {
 }
 
 // ============================================================================
-// 4. ПОСТРОЕНИЕ КАСТОМНОГО UI (РАМКИ, ТАБЫ, КНОПКИ, ПАНЕЛИ)
+// 4. CUSTOM UI CONSTRUCTION (BORDERS, TABS, BUTTONS, PANELS)
 // ============================================================================
 
 struct UiContext<'a> {
@@ -405,7 +405,7 @@ impl<'a> UiContext<'a> {
 
         let border_col = if active { self.theme.accent } else { self.theme.tab_border };
 
-        // Рисуем корпус таба; если активен — добавляем акцентную полосу сверху
+        // Draw the tab body; if active, add an accent stripe on top
         self.draw_box(
             rect,
             fill,
@@ -440,20 +440,20 @@ impl<'a> UiContext<'a> {
 fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Font) -> (Vec<DrawCmd>, Vec<HitBox>) {
     let mut ui = UiContext::new(theme, state, font);
 
-    // Фон окна
+    // Window background
     ui.draw_box(Rect { x: 0.0, y: 0.0, w: width, h: height }, theme.window_bg, Color::rgba(0, 0, 0, 0), 0.0, 0.0, None);
 
-    // Внешняя рамка окна / контейнера
+    // Outer border of the window / container
     let margin = 16.0;
     let frame = Rect { x: margin, y: margin, w: (width - margin * 2.0).max(200.0), h: (height - margin * 2.0).max(160.0) };
 
     ui.draw_box(frame, theme.frame_bg, theme.frame_border, theme.border_width, theme.frame_radius, Some(([0.0, 6.0], 14.0, theme.shadow)));
 
-    // Шапка рамки + переключатель CPU / GPU
+    // Border header + CPU / GPU switch
     let header_y = frame.y + 14.0;
     ui.draw_text(frame.x + 20.0, header_y + 4.0, "CUSTOM RUST UI ENGINE", 18.0, theme.text_primary);
 
-    let status_text = format!("Режим: {}  |  Кадр: {:.2} ms  |  [Tab] переключить", state.backend.label(), state.last_frame_ms);
+    let status_text = format!("Mode: {}  |  Frame: {:.2} ms  |  [Tab] switch", state.backend.label(), state.last_frame_ms);
     ui.draw_text(frame.x + 20.0, header_y + 28.0, status_text, 13.0, theme.text_muted);
 
     let toggle_w = 190.0;
@@ -461,21 +461,21 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
     ui.button(
         "btn_toggle_backend",
         Rect { x: frame.x + frame.w - toggle_w - 20.0, y: header_y + 4.0, w: toggle_w, h: toggle_h },
-        "Переключить CPU / GPU",
+        "Switch CPU / GPU",
         Action::ToggleBackend,
         true,
         false,
     );
 
-    // Панель табов
+    // Tab bar
     let tab_bar_y = frame.y + 68.0;
     let tab_h = 38.0;
     let tab_w = 156.0;
     let tab_gap = 8.0;
     let tabs = [
-        (TabId::Overview, "tab_overview", "Обзор и счётчик"),
-        (TabId::Todos, "tab_todos", "Список задач"),
-        (TabId::ThemeInfo, "tab_theme", "Стиль и рендер"),
+        (TabId::Overview, "tab_overview", "Overview and counter"),
+        (TabId::Todos, "tab_todos", "Task list"),
+        (TabId::ThemeInfo, "tab_theme", "Style and render"),
     ];
 
     for (idx, (tid, hid, title)) in tabs.iter().enumerate() {
@@ -483,7 +483,7 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
         ui.tab(hid, Rect { x: tx, y: tab_bar_y, w: tab_w, h: tab_h }, title, state.active_tab == *tid, *tid);
     }
 
-    // Контентная панель с рамкой
+    // Content panel with a border
     let content_y = tab_bar_y + tab_h + 6.0;
     let content_rect =
         Rect { x: frame.x + 18.0, y: content_y, w: (frame.w - 36.0).max(120.0), h: (frame.y + frame.h - content_y - 18.0).max(80.0) };
@@ -502,28 +502,22 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
 
     match state.active_tab {
         TabId::Overview => {
-            ui.draw_text(inner_x, cursor_y, "Интерактивный счётчик", 18.0, theme.text_primary);
+            ui.draw_text(inner_x, cursor_y, "Interactive counter", 18.0, theme.text_primary);
             cursor_y += 34.0;
 
             ui.button("btn_dec", Rect { x: inner_x, y: cursor_y, w: 54.0, h: 40.0 }, "-1", Action::Decrement, false, false);
 
-            ui.draw_text(inner_x + 74.0, cursor_y + 9.0, format!("Значение: {}", state.count), 20.0, theme.accent_hover);
+            ui.draw_text(inner_x + 74.0, cursor_y + 9.0, format!("Value: {}", state.count), 20.0, theme.accent_hover);
 
             ui.button("btn_inc", Rect { x: inner_x + 230.0, y: cursor_y, w: 54.0, h: 40.0 }, "+1", Action::Increment, true, false);
 
             cursor_y += 66.0;
-            ui.draw_text(
-                inner_x,
-                cursor_y,
-                "Наведите курсор на кнопки и вкладки — состояния обновляются в реальном времени.",
-                14.0,
-                theme.text_muted,
-            );
+            ui.draw_text(inner_x, cursor_y, "Hover over buttons and tabs — states update in real time.", 14.0, theme.text_muted);
             cursor_y += 24.0;
             ui.draw_text(
                 inner_x,
                 cursor_y,
-                "Оба бэкенда читают один и тот же вектор DrawCmd: прямоугольники, рамки, скругления и текст.",
+                "Both backends read the same DrawCmd vector: rectangles, borders, rounded corners and text.",
                 14.0,
                 theme.text_muted,
             );
@@ -532,8 +526,8 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
             ui.button(
                 "btn_add_todo",
                 Rect { x: inner_x, y: cursor_y, w: 190.0, h: 36.0 },
-                "+ Добавить задачу",
-                Action::AddTodo(format!("Задача #{}", state.next_todo_id)),
+                "+ Add task",
+                Action::AddTodo(format!("Task #{}", state.next_todo_id)),
                 true,
                 false,
             );
@@ -565,7 +559,7 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
                 ui.button(
                     &format!("btn_del_{}", todo.id),
                     Rect { x: row_rect.x + row_rect.w - 86.0, y: row_rect.y + 5.0, w: 78.0, h: 28.0 },
-                    "Удалить",
+                    "Delete",
                     Action::RemoveTodo(todo.id),
                     false,
                     true,
@@ -576,11 +570,11 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
         }
         TabId::ThemeInfo => {
             let lines = [
-                "Кастомизация внешнего вида через Theme + DrawCmd:",
-                "1. Вся геометрия, скругления, рамки и тени описаны в едином DrawCmd::Box.",
-                "2. CPU-бэкенд считает SDF/покрытие пикселей и смешивает в ARGB-буфер (softbuffer).",
-                "3. GPU-бэкенд (wgpu) рендерит инстансы через SDF + fwidth в WGSL и атлас глифов.",
-                "4. Стек ClipPush / ClipPop задаёт области отсечения для панелей и списков.",
+                "Customizing the look via Theme + DrawCmd:",
+                "1. All geometry, rounded corners, borders and shadows are described by a single DrawCmd::Box.",
+                "2. The CPU backend computes SDF/pixel coverage and blends into an ARGB buffer (softbuffer).",
+                "3. The GPU backend (wgpu) renders instances via SDF + fwidth in WGSL and a glyph atlas.",
+                "4. The ClipPush / ClipPop stack defines clip regions for panels and lists.",
             ];
             for line in lines {
                 ui.draw_text(inner_x, cursor_y, line, 14.5, theme.text_primary);
@@ -595,7 +589,7 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
 }
 
 // ============================================================================
-// 5. CPU-БЭКЕНД (SDF ДЛЯ СКРУГЛЁННЫХ РАМОК + FONT DUE ДЛЯ ТЕКСТА)
+// 5. CPU BACKEND (SDF FOR ROUNDED BORDERS + FONTDUE FOR TEXT)
 // ============================================================================
 
 fn sdf_round_box(px: f32, py: f32, rect: Rect, radius: f32) -> f32 {
@@ -745,14 +739,14 @@ impl CpuBackend {
                 let cx = px as f32 + 0.5;
                 let d = sdf_round_box(cx, cy, rect, radius);
 
-                // Заливка внутри контура (d < 0)
+                // Fill inside the contour (d < 0)
                 let fill_cov = (0.5 - d / aa_px).clamp(0.0, 1.0);
                 let mut pixel = buf[row_offset + px];
                 if fill.a > 0.001 && fill_cov > 0.0 {
                     pixel = blend_argb(pixel, fill, fill_cov);
                 }
 
-                // Рамка шириной border_width вдоль края d = 0
+                // Border of width border_width along the edge d = 0
                 if border_width > 0.0 && border_color.a > 0.001 {
                     let half_b = border_width * 0.5;
                     let border_dist = (d.abs() - half_b).abs();
@@ -769,7 +763,7 @@ impl CpuBackend {
 }
 
 // ============================================================================
-// 6. GPU-БЭКЕНД (WGPU + SDF-ШЕЙДЕР + ДИНАМИЧЕСКИЙ АТЛАС ГЛИФОВ + SCISSOR)
+// 6. GPU BACKEND (WGPU + SDF SHADER + DYNAMIC GLYPH ATLAS + SCISSOR)
 // ============================================================================
 
 #[repr(C)]
@@ -999,14 +993,14 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
 impl GpuBackend {
     fn new(window: Arc<Window>, width: u32, height: u32, font: Font) -> Result<Self, String> {
         let instance = wgpu::Instance::default();
-        let surface = instance.create_surface(window).map_err(|e| format!("Не удалось создать wgpu Surface: {e}"))?;
+        let surface = instance.create_surface(window).map_err(|e| format!("Failed to create wgpu Surface: {e}"))?;
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
         }))
-        .ok_or_else(|| "Не найден подходящий GPU-адаптер wgpu".to_string())?;
+        .ok_or_else(|| "No suitable wgpu GPU adapter found".to_string())?;
 
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
@@ -1017,7 +1011,7 @@ impl GpuBackend {
             },
             None,
         ))
-        .map_err(|e| format!("Ошибка создания wgpu Device: {e}"))?;
+        .map_err(|e| format!("Failed to create wgpu Device: {e}"))?;
 
         let caps = surface.get_capabilities(&adapter);
         let format = caps.formats.iter().copied().find(|f| !f.is_srgb()).unwrap_or(caps.formats[0]);
@@ -1276,7 +1270,7 @@ impl GpuBackend {
         }
 
         if self.atlas_cursor_y + gh + 2 > ATLAS_SIZE {
-            // Простой сброс атласа при переполнении
+            // Simple atlas reset on overflow
             self.atlas_cursor_x = 1;
             self.atlas_cursor_y = 1;
             self.atlas_row_h = 0;
@@ -1410,7 +1404,7 @@ impl GpuBackend {
             self.queue.write_buffer(&self.glyph_buffer, 0, bytemuck::cast_slice(&glyphs));
         }
 
-        let frame = self.surface.get_current_texture().map_err(|e| format!("Ошибка получения SurfaceTexture: {e}"))?;
+        let frame = self.surface.get_current_texture().map_err(|e| format!("Failed to get SurfaceTexture: {e}"))?;
         let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("ui_frame_encoder") });
@@ -1498,7 +1492,7 @@ fn to_scissor_rect(clip: Rect, surface_w: u32, surface_h: u32) -> Option<(u32, u
 }
 
 // ============================================================================
-// 7. ЗАГРУЗКА ШРИФТА И ГЛАВНЫЙ ЦИКЛ ПРИЛОЖЕНИЯ (WINIT)
+// 7. FONT LOADING AND MAIN APPLICATION LOOP (WINIT)
 // ============================================================================
 
 fn load_system_or_local_font() -> Result<Font, String> {
@@ -1518,7 +1512,7 @@ fn load_system_or_local_font() -> Result<Font, String> {
         }
     }
 
-    Err("Не найден TTF-шрифт. Положите любой .ttf файл (с поддержкой кириллицы) в assets/font.ttf.".to_string())
+    Err("No TTF font found. Put any .ttf file (with Cyrillic support) at assets/font.ttf.".to_string())
 }
 
 struct App {
@@ -1587,7 +1581,7 @@ impl App {
             BackendKind::Gpu => {
                 if let Some(gpu) = &mut self.gpu_backend {
                     if let Err(err) = gpu.render(&cmds) {
-                        eprintln!("Ошибка GPU-рендера ({err}), переключаюсь на CPU.");
+                        eprintln!("GPU render error ({err}), falling back to CPU.");
                         self.state.backend = BackendKind::Cpu;
                     }
                 } else {
@@ -1620,7 +1614,7 @@ impl ApplicationHandler for App {
         let attrs =
             Window::default_attributes().with_title("Custom Rust UI Engine — CPU + GPU").with_inner_size(LogicalSize::new(920.0, 560.0));
 
-        let window = Arc::new(event_loop.create_window(attrs).expect("Ошибка создания окна"));
+        let window = Arc::new(event_loop.create_window(attrs).expect("Failed to create window"));
         let size = window.inner_size();
 
         let soft_context = SoftContext::new(window.clone()).ok();
@@ -1633,7 +1627,7 @@ impl ApplicationHandler for App {
                 self.state.backend = BackendKind::Gpu;
             }
             Err(e) => {
-                eprintln!("{e}. Запуск на CPU-бэкенде.");
+                eprintln!("{e}. Starting on the CPU backend.");
                 self.state.backend = BackendKind::Cpu;
             }
         }
@@ -1716,9 +1710,9 @@ fn main() {
         std::process::exit(1);
     });
 
-    let event_loop = EventLoop::new().expect("Ошибка создания EventLoop");
+    let event_loop = EventLoop::new().expect("Failed to create EventLoop");
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
 
     let mut app = App::new(font);
-    event_loop.run_app(&mut app).expect("Ошибка цикла событий");
+    event_loop.run_app(&mut app).expect("Event loop error");
 }

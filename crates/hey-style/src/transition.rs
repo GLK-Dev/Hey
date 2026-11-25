@@ -7,12 +7,12 @@ pub enum Easing {
     Linear,
     EaseOut,
     EaseInOut,
-    /// CSS-совместимая кубическая кривая Безье `cubic-bezier(x1,y1,x2,y2)`.
+    /// CSS-compatible cubic Bezier curve `cubic-bezier(x1,y1,x2,y2)`.
     Bezier(f32, f32, f32, f32),
 }
 
 impl Easing {
-    /// Тема использует `cubic-bezier(.2,.8,.2,1)`.
+    /// The theme uses `cubic-bezier(.2,.8,.2,1)`.
     pub const THEME: Easing = Easing::Bezier(0.2, 0.8, 0.2, 1.0);
 
     pub fn parse(s: &str) -> Option<Easing> {
@@ -28,7 +28,7 @@ impl Easing {
         (v.len() == 4).then(|| Easing::Bezier(v[0], v[1], v[2], v[3]))
     }
 
-    /// Прогресс `t` (0..=1) → значение кривой.
+    /// Progress `t` (0..=1) → curve value.
     pub fn apply(self, t: f32) -> f32 {
         let t = t.clamp(0.0, 1.0);
         match self {
@@ -40,7 +40,7 @@ impl Easing {
                     let u = 1.0 - s;
                     3.0 * u * u * s * a + 3.0 * u * s * s * c + s * s * s
                 };
-                // Бинарный поиск параметра s по x(s) = t.
+                // Binary search for parameter s by x(s) = t.
                 let (mut lo, mut hi) = (0.0f32, 1.0f32);
                 for _ in 0..24 {
                     let mid = (lo + hi) / 2.0;
@@ -56,7 +56,7 @@ impl Easing {
     }
 }
 
-/// Значения, между которыми можно интерполировать.
+/// Values that can be interpolated between.
 pub trait Lerp: Copy {
     fn lerp(self, to: Self, t: f32) -> Self;
 }
@@ -71,8 +71,8 @@ impl Lerp for Color {
     }
 }
 
-/// Анимированное значение: `set` запускает переход от текущего к новому,
-/// `tick(dt)` двигает время (кадр-независимо, время передаёт вызывающий).
+/// Animated value: `set` starts a transition from the current value to the new one,
+/// `tick(dt)` advances time (frame-independent; the caller supplies the time).
 #[derive(Clone, Copy, Debug)]
 pub struct Transition<T: Lerp> {
     from: T,
@@ -95,13 +95,13 @@ impl<T: Lerp> Transition<T> {
     pub fn target(&self) -> T {
         self.to
     }
-    /// Новая цель; старт — из текущего значения (без скачка при прерывании).
+    /// New target; starts from the current value (no jump when interrupted).
     pub fn set(&mut self, to: T) {
         self.from = self.value();
         self.to = to;
         self.elapsed_ms = 0.0;
     }
-    /// Мгновенно, без анимации.
+    /// Instantly, without animation.
     pub fn jump(&mut self, v: T) {
         self.from = v;
         self.to = v;

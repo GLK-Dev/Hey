@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-/// Цвет RGBA, 8 бит на канал, не премультиплицированный.
+/// RGBA color, 8 bits per channel, not premultiplied.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Color {
     pub r: u8,
@@ -18,11 +18,11 @@ impl Color {
     pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
         Self { r, g, b, a }
     }
-    /// `0xRRGGBB`, непрозрачный. Удобно для токенов: `Color::hex(0xF5A623)`.
+    /// `0xRRGGBB`, opaque. Handy for tokens: `Color::hex(0xF5A623)`.
     pub const fn hex(v: u32) -> Self {
         Self::rgb((v >> 16) as u8, (v >> 8) as u8, v as u8)
     }
-    /// Разбор `#RRGGBB` или `#RRGGBBAA` (решётка необязательна).
+    /// Parses `#RRGGBB` or `#RRGGBBAA` (the leading `#` is optional).
     pub fn parse(s: &str) -> Option<Self> {
         let s = s.strip_prefix('#').unwrap_or(s);
         if !s.is_ascii() || (s.len() != 6 && s.len() != 8) {
@@ -35,13 +35,13 @@ impl Color {
     pub const fn with_alpha(self, a: u8) -> Self {
         Self { a, ..self }
     }
-    /// Линейная интерполяция по каналам в sRGB-пространстве, `t` в 0..=1.
+    /// Per-channel linear interpolation in sRGB space, `t` in 0..=1.
     pub fn lerp(self, o: Color, t: f32) -> Color {
         let t = t.clamp(0.0, 1.0);
         let m = |a: u8, b: u8| (a as f32 + (b as f32 - a as f32) * t).round() as u8;
         Color::rgba(m(self.r, o.r), m(self.g, o.g), m(self.b, o.b), m(self.a, o.a))
     }
-    /// Относительная яркость по WCAG.
+    /// Relative luminance per WCAG.
     pub fn luminance(self) -> f32 {
         let f = |c: u8| {
             let c = c as f32 / 255.0;
@@ -53,7 +53,7 @@ impl Color {
         };
         0.2126 * f(self.r) + 0.7152 * f(self.g) + 0.0722 * f(self.b)
     }
-    /// Коэффициент контраста WCAG (1..=21).
+    /// WCAG contrast ratio (1..=21).
     pub fn contrast(self, o: Color) -> f32 {
         let (a, b) = (self.luminance(), o.luminance());
         (a.max(b) + 0.05) / (a.min(b) + 0.05)
@@ -72,7 +72,7 @@ mod tests {
         assert_eq!(Color::parse("#GG0000"), None);
     }
 
-    /// Сверка с таблицей контраста из design/themes/README.md.
+    /// Check against the contrast table from design/themes/README.md.
     #[test]
     fn contrast_matches_design_table() {
         let c = Color::hex(0xF2F4F8).contrast(Color::hex(0x181A20));

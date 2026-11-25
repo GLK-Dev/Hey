@@ -1,15 +1,15 @@
-# ADR-3: Координаты — физические пиксели
+# ADR-3: Coordinates are physical pixels
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-`DrawCmd`, layout и hit-test работают в физических пикселях; масштаб применяется через `Theme.density`.
+`DrawCmd`, layout and hit-testing work in physical pixels; scale is applied via `Theme.density`.
 
-## Обоснование
+## Rationale
 
-Нет расхождения между hit-test и рендером, нет дробных логических координат на границах.
+No mismatch between hit-testing and rendering, and no fractional logical coordinates at boundaries.
 
-## Последствия
+## Consequences
 
-Учёт DPI scale окна пока не сделан (в списке отложенного): размеры тем нужно масштабировать вручную.
+Window DPI scale handling is not done yet (it is on the deferred list): theme sizes must be scaled manually.

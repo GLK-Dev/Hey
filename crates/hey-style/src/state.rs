@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-/// Битовые флаги состояния виджета; пустой набор — `NORMAL`.
+/// Widget state bit flags; the empty set is `NORMAL`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub struct WidgetState(u8);
 
@@ -51,7 +51,7 @@ impl std::ops::BitOr for WidgetState {
     }
 }
 
-/// Вариант оформления кнопок и подобных элементов.
+/// Styling variant of buttons and similar elements.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum Variant {
     #[default]

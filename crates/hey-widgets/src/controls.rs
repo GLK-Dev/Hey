@@ -14,7 +14,7 @@ fn box_size(env: &Env) -> f32 {
     (env.font_px * 1.2).round()
 }
 
-/// Подпись справа от значка; возвращает размер всей строки «значок + подпись».
+/// Label to the right of an icon; returns the size of the whole "icon + label" row.
 fn measure_row(env: &Env, label: &str, icon_w: f32) -> Size {
     let l = layout(&env.fonts, label, &text_style(env, None, false));
     let gap = if label.is_empty() { 0.0 } else { env.theme.space(8.0) };
@@ -55,7 +55,7 @@ fn frame(env: &Env, r: Rect, on: bool, state: WidgetState, out: &mut DisplayList
     });
 }
 
-/// Флажок: активация (клик, Enter, Space) переключает и шлёт новое значение.
+/// Checkbox: activation (click, Enter, Space) toggles it and sends the new value.
 pub struct Checkbox<Msg> {
     label: String,
     checked: bool,
@@ -100,7 +100,7 @@ impl<Msg: 'static> Widget<Msg> for Checkbox<Msg> {
     }
 }
 
-/// Переключатель (тумблер): как флажок, но с «ползунком».
+/// Switch (toggle): like a checkbox, but with a "thumb".
 pub struct Toggle<Msg> {
     label: String,
     on: bool,
@@ -151,10 +151,10 @@ impl<Msg: 'static> Widget<Msg> for Toggle<Msg> {
     }
 }
 
-/// Общее значение группы радиокнопок: индекс выбранной (или `None`).
+/// Shared value of a radio group: index of the selected one (or `None`).
 pub type RadioGroup = Rc<Cell<Option<usize>>>;
 
-/// Радиокнопка: выбор записывается в общую `RadioGroup`, шлётся индекс.
+/// Radio button: the choice is written to the shared `RadioGroup`, the index is sent.
 pub struct Radio<Msg> {
     label: String,
     index: usize,
@@ -203,8 +203,8 @@ impl<Msg: 'static> Widget<Msg> for Radio<Msg> {
     }
 }
 
-/// Ползунок значения `min..=max`: мышь (нажатие и перетаскивание) и клавиши
-/// ←/→ (шаг 5% диапазона), Home/End.
+/// Slider over `min..=max`: mouse (press and drag) and keys
+/// ←/→ (step of 5% of the range), Home/End.
 pub struct Slider<Msg> {
     min: f32,
     max: f32,
@@ -289,7 +289,7 @@ impl<Msg: 'static> Widget<Msg> for Slider<Msg> {
     }
 }
 
-/// Индикатор прогресса `0..=1` (только отображение). Значение меняется через [`ProgressBar::set`].
+/// Progress indicator `0..=1` (display only). The value is changed via [`ProgressBar::set`].
 pub struct ProgressBar {
     value: f32,
 }

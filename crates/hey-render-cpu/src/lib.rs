@@ -1,10 +1,10 @@
 // Copyright (c) Vitaly Golik (mjojo)
-//! hey-render-cpu: эталонный программный рендерер. Работает без окна (headless).
+//! hey-render-cpu: reference software renderer. Works without a window (headless).
 //!
-//! Соглашения: центр пикселя `(i+0.5, j+0.5)`; рамка центрируется на границе
-//! прямоугольника; отсечение округляется до целых пикселей; смешивание — straight alpha «over».
-//! Текст рисуется из растров `hey_text::Fonts` (целые пиксели, без субпиксельного позиционирования).
-//! Изображения пока пропускаются.
+//! Conventions: pixel center is `(i+0.5, j+0.5)`; the border is centered on the edge
+//! of the rectangle; clipping is rounded to whole pixels; blending is straight-alpha "over".
+//! Text is drawn from `hey_text::Fonts` rasters (whole pixels, no subpixel positioning).
+//! Images are skipped for now.
 
 mod raster;
 
@@ -17,7 +17,7 @@ use hey_draw::{DisplayList, UiRenderer, Viewport};
 pub struct Framebuffer {
     pub width: u32,
     pub height: u32,
-    /// RGBA8, построчно сверху вниз.
+    /// RGBA8, row by row, top to bottom.
     pub data: Vec<u8>,
 }
 
@@ -41,7 +41,7 @@ impl Framebuffer {
 pub struct CpuRenderer {
     pub fb: Framebuffer,
     pub clear_color: Color,
-    /// Реестр шрифтов; без него `DrawCmd::Text` пропускается.
+    /// Font registry; without it `DrawCmd::Text` is skipped.
     pub fonts: Option<Arc<Fonts>>,
 }
 
@@ -57,7 +57,7 @@ impl UiRenderer for CpuRenderer {
     }
 
     fn render(&mut self, list: &DisplayList, _viewport: Viewport) {
-        debug_assert!(list.validate().is_ok(), "некорректный DisplayList");
+        debug_assert!(list.validate().is_ok(), "invalid DisplayList");
         self.fb.clear(self.clear_color);
         for (cmd, clip) in list.iter_clipped() {
             raster::draw(&mut self.fb, self.fonts.as_deref(), cmd, clip);
@@ -66,7 +66,7 @@ impl UiRenderer for CpuRenderer {
 }
 
 impl Framebuffer {
-    /// Кодирует кадр в PNG (RGBA8).
+    /// Encodes the frame as PNG (RGBA8).
     pub fn encode_png(&self) -> Vec<u8> {
         let mut out = Vec::new();
         let mut enc = png::Encoder::new(&mut out, self.width, self.height);
@@ -82,7 +82,7 @@ impl Framebuffer {
         std::fs::write(path, self.encode_png())
     }
 
-    /// Декодирует PNG (RGBA8) в кадр.
+    /// Decodes PNG (RGBA8) into a frame.
     pub fn decode_png(bytes: &[u8]) -> Result<Self, png::DecodingError> {
         let mut r = png::Decoder::new(bytes).read_info()?;
         let mut buf = vec![0; r.output_buffer_size()];
@@ -122,10 +122,10 @@ mod tests {
         let cmd = DrawCmd::Rect { rect: Rect::new(0.0, 0.0, 16.0, 16.0), fill: RED, border: None, chamfer: 8.0, shadow: None };
         let fb = render(vec![cmd], 16, 16);
         let bg = Color::rgb(0, 0, 0);
-        assert_eq!(fb.pixel(0, 0), bg, "TL срезан");
-        assert_eq!(fb.pixel(15, 15), bg, "BR срезан");
-        assert_eq!(fb.pixel(15, 0), RED, "TR цел");
-        assert_eq!(fb.pixel(0, 15), RED, "BL цел");
+        assert_eq!(fb.pixel(0, 0), bg, "TL chamfered");
+        assert_eq!(fb.pixel(15, 15), bg, "BR chamfered");
+        assert_eq!(fb.pixel(15, 0), RED, "TR intact");
+        assert_eq!(fb.pixel(0, 15), RED, "BL intact");
         assert_eq!(fb.pixel(8, 8), RED);
     }
 
@@ -150,8 +150,8 @@ mod tests {
             shadow: None,
         };
         let fb = render(vec![cmd], 16, 16);
-        assert_eq!(fb.pixel(3, 8), RED, "наружная половина рамки");
-        assert_eq!(fb.pixel(4, 8), RED, "внутренняя половина рамки");
+        assert_eq!(fb.pixel(3, 8), RED, "outer half of the border");
+        assert_eq!(fb.pixel(4, 8), RED, "inner half of the border");
         assert_eq!(fb.pixel(5, 8), Color::rgb(0, 0, 255));
         assert_eq!(fb.pixel(2, 8), Color::rgb(0, 0, 0));
     }

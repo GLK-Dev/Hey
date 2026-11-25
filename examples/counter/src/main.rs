@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Счётчик: минимальный MVU-пример (`Model` → `view` → `Msg` → `update`).
+//! Counter: a minimal MVU example (`Model` → `view` → `Msg` → `update`).
 
 use hey_core::{Callback, Insets};
 use hey_layout::Style;
@@ -39,15 +39,15 @@ fn view(m: &Model) -> Vec<View<Msg>> {
         "root",
         Style::column().padding(Insets::all(24.0)).gap(16.0),
         vec![
-            View::leaf("title", (), |ui, p| Label::add(ui, p, "Счётчик")),
-            View::leaf("value", n, move |ui, p| Label::add(ui, p, &format!("Значение: {n}"))),
+            View::leaf("title", (), |ui, p| Label::add(ui, p, "Counter")),
+            View::leaf("value", n, move |ui, p| Label::add(ui, p, &format!("Value: {n}"))),
             View::container(
                 "buttons",
                 Style::row().gap(8.0),
                 vec![
                     button("dec", "−", Variant::Secondary, Msg::Dec),
                     button("inc", "+", Variant::Primary, Msg::Inc),
-                    button("reset", "Сброс", Variant::Secondary, Msg::Reset),
+                    button("reset", "Reset", Variant::Secondary, Msg::Reset),
                 ],
             ),
         ],
@@ -57,6 +57,6 @@ fn view(m: &Model) -> Vec<View<Msg>> {
 fn main() {
     let font = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf");
     if let Err(e) = App::new(Model::default()).update(update).view(view).theme(Theme::dark()).font(font).title("Hey — counter").run() {
-        eprintln!("ошибка: {e}");
+        eprintln!("error: {e}");
     }
 }

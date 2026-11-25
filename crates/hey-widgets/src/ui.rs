@@ -11,60 +11,60 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
-/// Контекст отрисовки/измерения, общий для всех виджетов.
+/// Paint/measure context shared by all widgets.
 pub struct Env {
     pub theme: Theme,
     pub fonts: std::sync::Arc<Fonts>,
     pub chain: Vec<FontId>,
-    /// Базовый размер шрифта (физ. px).
+    /// Base font size (physical px).
     pub font_px: f32,
 }
 
-/// Поведение виджета. Состояние (hover/pressed/focus/disabled) хранит `Ui`.
+/// Widget behavior. State (hover/pressed/focus/disabled) is kept by `Ui`.
 pub trait Widget<Msg> {
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList);
     fn focusable(&self) -> bool {
         false
     }
-    /// Курсор мыши при наведении на виджет.
+    /// Mouse cursor when hovering over the widget.
     fn cursor(&self) -> hey_core::CursorIcon {
         hey_core::CursorIcon::Default
     }
-    /// Клик мышью или Enter/Space на сфокусированном виджете.
+    /// Mouse click or Enter/Space on a focused widget.
     fn activate(&mut self, _sink: &MsgSink<Msg>) {}
-    /// Клик по виджету (позиция в абсолютных координатах). По умолчанию — `activate`.
+    /// Click on the widget (position in absolute coordinates). `activate` by default.
     fn click(&mut self, _env: &Env, _rect: Rect, _pos: Point, sink: &MsgSink<Msg>) {
         self.activate(sink);
     }
-    /// Нажатие левой кнопки на виджете; `clicks` — 1, 2, 3… (серия быстрых нажатий).
+    /// Left button press on the widget; `clicks` is 1, 2, 3… (a series of quick presses).
     fn press(&mut self, _env: &Env, _rect: Rect, _pos: Point, _clicks: u32, _sink: &MsgSink<Msg>) {}
-    /// Движение указателя при зажатой кнопке (захват: приходит нажатому виджету, даже вне его).
+    /// Pointer motion with the button held (capture: delivered to the pressed widget even outside it).
     fn drag(&mut self, _env: &Env, _rect: Rect, _pos: Point, _sink: &MsgSink<Msg>) {}
-    /// Колесо мыши (`dy` < 0 — вниз, в физ. px); `true` — обработано.
+    /// Mouse wheel (`dy` < 0 is down, in physical px); `true` means handled.
     fn wheel(&mut self, _env: &Env, _rect: Rect, _dx: f32, _dy: f32) -> bool {
         false
     }
-    /// Клавиша на сфокусированном виджете; `true` — обработана.
+    /// Key on the focused widget; `true` means handled.
     fn key(&mut self, _code: &str, _mods: Modifiers, _sink: &MsgSink<Msg>) -> bool {
         false
     }
-    /// Печатный текст (клавиатура/IME) на сфокусированном виджете; `true` — обработан.
-    /// Движение указателя над оверлеем (для подсветки строк). `true` — нужна перерисовка.
+    /// Printable text (keyboard/IME) on the focused widget; `true` means handled.
+    /// Pointer motion over an overlay (for row highlighting). `true` means a redraw is needed.
     fn pointer_move(&mut self, _env: &Env, _rect: Rect, _pos: Point) -> bool {
         false
     }
     fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
     }
-    /// Локальное состояние (скролл, каретка), которое переживает пересборку виджета.
+    /// Local state (scroll, caret) that survives rebuilding the widget.
     fn save_state(&self) -> Option<Box<dyn Any>> {
         None
     }
     fn load_state(&mut self, _state: Box<dyn Any>) {}
 }
 
-/// Вид оверлея: всплывающее окно (закрывается кликом снаружи), модальное
-/// (затемнение, блокирует всё остальное) или подсказка (не принимает ввод).
+/// Overlay kind: popup (closes on outside click), modal
+/// (dimmed, blocks everything else) or hint (takes no input).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum OverlayKind {
     Popup,
@@ -87,13 +87,13 @@ struct Overlay<Msg> {
 struct Queue<Msg> {
     next: u32,
     open: Vec<Overlay<Msg>>,
-    /// `None` — закрыть верхний интерактивный оверлей.
+    /// `None` closes the topmost interactive overlay.
     close: Vec<Option<OverlayId>>,
     viewport: Size,
 }
 
-/// Общий дескриптор оверлеев: виджеты открывают/закрывают оверлеи через него,
-/// `Ui` применяет запросы после обработки события.
+/// Shared overlay handle: widgets open/close overlays through it,
+/// `Ui` applies the requests after handling an event.
 pub struct Overlays<Msg>(Rc<RefCell<Queue<Msg>>>);
 
 impl<Msg> Clone for Overlays<Msg> {
@@ -116,7 +116,7 @@ impl<Msg> Overlays<Msg> {
     pub fn close_top(&self) {
         self.0.borrow_mut().close.push(None);
     }
-    /// Размер окна при последней отрисовке.
+    /// Window size at the last paint.
     pub fn viewport(&self) -> Size {
         self.0.borrow().viewport
     }
@@ -132,7 +132,7 @@ pub struct Ui<Msg> {
     pub env: Rc<Env>,
     sink: MsgSink<Msg>,
     pub(crate) nodes: HashMap<NodeId, Node<Msg>>,
-    /// Ключ и хэш свойств узлов, созданных через `reconcile`.
+    /// Key and property hash of nodes created via `reconcile`.
     pub(crate) keys: HashMap<NodeId, (hey_core::Key, u64)>,
     hover: Option<NodeId>,
     pressed: Option<NodeId>,
@@ -168,7 +168,7 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Дескриптор для открытия оверлеев из виджетов.
+    /// Handle for opening overlays from widgets.
     pub fn overlays(&self) -> Overlays<Msg> {
         self.queue.clone()
     }
@@ -192,7 +192,7 @@ impl<Msg: 'static> Ui<Msg> {
         self.overlays.iter().rposition(|o| o.kind != OverlayKind::Tooltip)
     }
 
-    /// Применяет запросы открытия/закрытия; `true`, если набор оверлеев изменился.
+    /// Applies open/close requests; `true` if the set of overlays changed.
     fn apply_queue(&mut self) -> bool {
         let (closes, opens) = {
             let mut q = self.queue.0.borrow_mut();
@@ -212,7 +212,7 @@ impl<Msg: 'static> Ui<Msg> {
         changed
     }
 
-    /// Ввод для верхнего интерактивного оверлея; `None` — событие идёт в дерево.
+    /// Input for the topmost interactive overlay; `None` means the event goes to the tree.
     fn event_overlay(&mut self, ev: &UiEvent) -> Option<bool> {
         let idx = self.top_interactive()?;
         let env = self.env.clone();
@@ -271,12 +271,12 @@ impl<Msg: 'static> Ui<Msg> {
         self.tree.root()
     }
 
-    /// Контейнер без виджета (Row/Column/Stack).
+    /// Container without a widget (Row/Column/Stack).
     pub fn add_container(&mut self, parent: NodeId, style: Style) -> NodeId {
-        self.tree.add(parent, style).expect("родитель существует")
+        self.tree.add(parent, style).expect("parent exists")
     }
 
-    /// Листовой виджет; `measure` — внутренний размер по доступной ширине.
+    /// Leaf widget; `measure` returns the inner size for the available width.
     pub fn add_widget(
         &mut self,
         parent: NodeId,
@@ -284,15 +284,15 @@ impl<Msg: 'static> Ui<Msg> {
         widget: impl Widget<Msg> + 'static,
         measure: impl Fn(Option<f32>) -> Size + 'static,
     ) -> NodeId {
-        let id = self.tree.add(parent, style).expect("родитель существует");
+        let id = self.tree.add(parent, style).expect("parent exists");
         self.tree.set_measure(id, measure);
         self.nodes.insert(id, Node { widget: Box::new(widget), disabled: false });
         id
     }
 
-    /// Контейнер с виджетом (без собственного измерения): размер задают стиль и дети.
+    /// Container with a widget (no own measurement): size comes from the style and children.
     pub fn add_container_widget(&mut self, parent: NodeId, style: Style, widget: impl Widget<Msg> + 'static) -> NodeId {
-        let id = self.tree.add(parent, style).expect("родитель существует");
+        let id = self.tree.add(parent, style).expect("parent exists");
         self.nodes.insert(id, Node { widget: Box::new(widget), disabled: false });
         id
     }
@@ -309,7 +309,7 @@ impl<Msg: 'static> Ui<Msg> {
     pub fn focused(&self) -> Option<NodeId> {
         self.focus
     }
-    /// Программно ставит фокус на фокусируемый, включённый виджет (в пределах ловушки, если она задана).
+    /// Programmatically focuses a focusable, enabled widget (within the trap, if one is set).
     pub fn focus(&mut self, id: NodeId) -> bool {
         if self.focus_order().contains(&id) {
             self.focus = Some(id);
@@ -323,8 +323,8 @@ impl<Msg: 'static> Ui<Msg> {
         self.focus = None;
     }
 
-    /// Ловушка фокуса: Tab/Shift+Tab и клики фокусируют только виджеты поддерева `scope`.
-    /// Фокус вне области переносится на её первый элемент. `None` снимает ловушку.
+    /// Focus trap: Tab/Shift+Tab and clicks focus only widgets of the `scope` subtree.
+    /// Focus outside the scope moves to its first element. `None` removes the trap.
     pub fn trap_focus(&mut self, scope: Option<NodeId>) {
         self.trap = scope;
         let order = self.focus_order();
@@ -350,7 +350,7 @@ impl<Msg: 'static> Ui<Msg> {
         self.nodes.get(&id).is_some_and(|n| !n.disabled)
     }
 
-    /// Фокусируемые виджеты в порядке обхода дерева.
+    /// Focusable widgets in tree traversal order.
     fn focus_order(&self) -> Vec<NodeId> {
         let mut out = Vec::new();
         let mut stack = vec![self.trap.unwrap_or_else(|| self.tree.root())];
@@ -398,7 +398,7 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Вызывает метод виджета с контекстом; `true`, если виджет существует и включён.
+    /// Calls a widget method with context; `true` if the widget exists and is enabled.
     fn with_widget(&mut self, id: NodeId, f: impl FnOnce(&mut dyn Widget<Msg>, &Env, Rect, &MsgSink<Msg>)) -> bool {
         let rect = self.tree.rect(id);
         let env = self.env.clone();
@@ -418,7 +418,7 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Удаляет узел с поддеревом и вычищает ссылки на него (hover/focus/ключи).
+    /// Removes a node with its subtree and cleans up references to it (hover/focus/keys).
     pub(crate) fn remove_subtree(&mut self, id: NodeId) {
         let mut stack = vec![id];
         let mut all = Vec::new();
@@ -454,7 +454,7 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Обрабатывает событие. Возвращает `true`, если нужна перерисовка.
+    /// Handles an event. Returns `true` if a redraw is needed.
     pub fn event(&mut self, ev: &UiEvent) -> bool {
         let r = match self.event_overlay(ev) {
             Some(r) => r,
@@ -550,7 +550,7 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Курсор для текущей позиции указателя (по виджету под ним).
+    /// Cursor for the current pointer position (by the widget under it).
     pub fn cursor(&self) -> hey_core::CursorIcon {
         match self.hover.and_then(|h| self.nodes.get(&h).map(|n| (n.disabled, n.widget.cursor()))) {
             Some((true, _)) => hey_core::CursorIcon::NotAllowed,
@@ -559,12 +559,12 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Сообщение при сбросе файла на окно (drag-and-drop).
+    /// Message when a file is dropped onto the window (drag-and-drop).
     pub fn on_file_drop(&mut self, cb: Callback<Msg, std::path::PathBuf>) {
         self.file_drop = Some(cb);
     }
 
-    /// Файл сейчас наведён на окно (для подсветки зоны сброса).
+    /// A file is currently hovering over the window (for highlighting the drop zone).
     pub fn file_hovering(&self) -> bool {
         self.file_hover
     }
@@ -577,7 +577,7 @@ impl<Msg: 'static> Ui<Msg> {
         true
     }
 
-    /// Раскладка и отрисовка всех виджетов в порядке дерева.
+    /// Layout and paint of all widgets in tree order.
     pub fn paint(&mut self, viewport: Size) -> DisplayList {
         self.tree.compute(viewport);
         let mut out = DisplayList::new();

@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-style: темы (токены дизайна), состояния виджетов, переходы.
+//! hey-style: themes (design tokens), widget states, transitions.
 
 mod state;
 mod theme;

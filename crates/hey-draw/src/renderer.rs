@@ -2,7 +2,7 @@
 
 use crate::list::DisplayList;
 
-/// Область вывода в физических пикселях и масштаб (для справки; команды уже в физических px).
+/// Output area in physical pixels and scale (informational; commands are already in physical px).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Viewport {
     pub width: u32,
@@ -10,7 +10,7 @@ pub struct Viewport {
     pub scale: f64,
 }
 
-/// Общий контракт бэкендов (`CpuRenderer` — эталон, `GpuRenderer` — быстрый путь).
+/// Common backend contract (`CpuRenderer` is the reference, `GpuRenderer` is the fast path).
 pub trait UiRenderer {
     fn resize(&mut self, width: u32, height: u32);
     fn render(&mut self, list: &DisplayList, viewport: Viewport);

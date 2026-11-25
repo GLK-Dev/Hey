@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-draw: бэкенд-независимый список команд отрисовки (физические пиксели).
+//! hey-draw: backend-independent list of draw commands (physical pixels).
 
 pub mod cmd;
 pub mod list;

@@ -1,11 +1,11 @@
-//! Спайк ADR-7: те же сценарии, что в layout.rs, на taffy — сравнение результатов.
+//! ADR-7 spike: the same scenarios as in layout.rs, on taffy — comparing the results.
 use hey_core::Size;
 use hey_layout::{LayoutTree, Style};
 use taffy::prelude::*;
 
 #[test]
 fn row_with_grow_matches_taffy() {
-    // Наш движок: Row 300x100, gap 10, дети: 50 фикс., grow 1, grow 2.
+    // Our engine: Row 300x100, gap 10, children: 50 fixed, grow 1, grow 2.
     let mut t = LayoutTree::new(Style::row().gap(10.0));
     let a = t.add(t.root(), Style::leaf().width(50.0)).unwrap();
     let b = t.add(t.root(), Style::leaf().grow(1.0)).unwrap();

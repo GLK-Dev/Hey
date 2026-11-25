@@ -3,7 +3,7 @@ name = "counter"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Минимальный пример MVU на Hey: счётчик"
+description = "Minimal MVU example on Hey: a counter"
 
 [dependencies]
 hey-core = { path = "../../crates/hey-core" }

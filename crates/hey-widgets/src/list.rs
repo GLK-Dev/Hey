@@ -9,21 +9,21 @@ use hey_style::WidgetState;
 use hey_text::layout;
 use std::cell::Cell;
 
-/// Список строк с одиночным выбором: прокрутка колесом, стрелки/Home/End/PageUp/PageDown,
-/// выбор кликом. Рисуются только видимые строки. Выбор — `Callback<Msg, usize>`.
+/// List of rows with single selection: wheel scrolling, arrows/Home/End/PageUp/PageDown,
+/// click to select. Only visible rows are drawn. Selection is a `Callback<Msg, usize>`.
 pub struct List<Msg> {
     items: Vec<String>,
     selected: Option<usize>,
     on_select: Callback<Msg, usize>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
-    /// Высота строки и видимая высота при последней отрисовке.
+    /// Row height and visible height at the last paint.
     row_h: Cell<f32>,
     view_h: Cell<f32>,
 }
 
 impl<Msg: 'static> List<Msg> {
-    /// `rows` — высота в видимых строках.
+    /// `rows` is the height in visible rows.
     pub fn add(ui: &mut Ui<Msg>, parent: NodeId, items: Vec<String>, width: f32, rows: usize, on_select: Callback<Msg, usize>) -> NodeId {
         let env = ui.env.clone();
         let row_h = Self::row_height(&env);

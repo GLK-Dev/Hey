@@ -34,7 +34,7 @@ fn tabs_keyboard_click_and_merge() {
     assert_eq!(sink.drain(), [1, 2, 0, 2]);
 
     let r = ui.tree.rect(tabs);
-    let p = Point::new(r.x + 5.0, r.y + r.h / 2.0); // первая вкладка
+    let p = Point::new(r.x + 5.0, r.y + r.h / 2.0); // first tab
     ui.event(&UiEvent::PointerMove { pos: p });
     ui.event(&UiEvent::PointerDown { pos: p, button: MouseButton::Left });
     ui.event(&UiEvent::PointerUp { pos: p, button: MouseButton::Left });

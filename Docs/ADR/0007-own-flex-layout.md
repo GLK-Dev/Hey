@@ -1,15 +1,15 @@
-# ADR-7: Свой минимальный flex-layout; taffy — эталон для сверки
+# ADR-7: Own minimal flex layout; taffy is the reference for cross-checking
 
-**Статус:** Принято (уточнено спайком)
+**Status:** Accepted (refined by a spike)
 
-## Решение
+## Decision
 
-Раскладка Row/Column/Stack с padding, gap, grow реализована в `hey-layout`. Спайк `tests/taffy_spike.rs` показал совпадение результатов с `taffy` на сценарии Row+gap+grow.
+Row/Column/Stack layout with padding, gap and grow is implemented in `hey-layout`. The spike `tests/taffy_spike.rs` showed results matching `taffy` on a Row + gap + grow scenario.
 
-## Обоснование
+## Rationale
 
-Не блокировать ранние этапы чужим API и сохранить полный контроль над физическими пикселями.
+Avoid blocking early phases on a third-party API and keep full control over physical pixels.
 
-## Последствия
+## Consequences
 
-Миграция на `taffy` рассматривается при появлении grid/wrap; до тех пор `taffy` используется только для сверки.
+Migrating to `taffy` will be considered when grid/wrap is needed; until then `taffy` is used only for cross-checking.

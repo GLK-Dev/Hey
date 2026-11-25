@@ -13,11 +13,11 @@ struct Node {
     content: Size,
 }
 
-/// Дерево раскладки. Корень занимает всё окно; остальные узлы раскладываются flex-алгоритмом.
+/// Layout tree. The root fills the whole window; other nodes are laid out with the flex algorithm.
 pub struct LayoutTree {
     tree: Tree<Node>,
     root: NodeId,
-    /// Память измерений в пределах одного прохода: (узел, доступная ширина) → размер.
+    /// Measurement memo within a single pass: (node, available width) → size.
     cache: RefCell<HashMap<(NodeId, Option<u32>), Size>>,
     dirty: bool,
     viewport: Option<Size>,
@@ -45,7 +45,7 @@ impl LayoutTree {
         let mut tree = Tree::new();
         let root = tree
             .add(Node { style: root, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, None)
-            .expect("корень");
+            .expect("root");
         Self { tree, root, cache: RefCell::new(HashMap::new()), dirty: true, viewport: None }
     }
 
@@ -59,7 +59,7 @@ impl LayoutTree {
             .add(Node { style, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, Some(parent))
     }
 
-    /// Пометить раскладку устаревшей (например, изменился текст, который измеряет замыкание листа).
+    /// Mark the layout stale (e.g. the text measured by a leaf closure changed).
     pub fn invalidate(&mut self) {
         self.dirty = true;
     }
@@ -69,7 +69,7 @@ impl LayoutTree {
         self.tree.remove_subtree(id);
     }
 
-    /// Переставляет детей `parent` в заданном порядке (перестановка текущих детей).
+    /// Reorders the children of `parent` (a permutation of the current children).
     pub fn reorder_children(&mut self, parent: NodeId, order: &[NodeId]) -> bool {
         self.dirty = true;
         self.tree.reorder_children(parent, order)
@@ -86,7 +86,7 @@ impl LayoutTree {
         self.tree.get(id).map(|n| &n.style)
     }
 
-    /// Замыкание измерения листа: принимает доступную внутреннюю ширину (если известна).
+    /// Leaf measure closure: takes the available inner width (if known).
     pub fn set_measure(&mut self, id: NodeId, f: impl Fn(Option<f32>) -> Size + 'static) {
         self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {
@@ -94,19 +94,19 @@ impl LayoutTree {
         }
     }
 
-    /// Текущий сдвиг скролла.
+    /// Current scroll offset.
     pub fn scroll(&self, id: NodeId) -> Point {
         self.tree.get(id).map(|n| n.scroll).unwrap_or_default()
     }
 
-    /// Максимальный сдвиг скролла (после `compute`).
+    /// Maximum scroll offset (after `compute`).
     pub fn max_scroll(&self, id: NodeId) -> Point {
         let Some(n) = self.tree.get(id) else { return Point::default() };
         let v = n.rect.deflate(n.style.padding);
         Point::new((n.content.w - v.w).max(0.0), (n.content.h - v.h).max(0.0))
     }
 
-    /// Задать сдвиг (зажимается при следующем `compute`).
+    /// Set the offset (clamped on the next `compute`).
     pub fn set_scroll(&mut self, id: NodeId, p: Point) {
         self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {
@@ -114,7 +114,7 @@ impl LayoutTree {
         }
     }
 
-    /// Прокрутить на `d`; возвращает `true`, если сдвиг изменился.
+    /// Scroll by `d`; returns `true` if the offset changed.
     pub fn scroll_by(&mut self, id: NodeId, dx: f32, dy: f32) -> bool {
         let max = self.max_scroll(id);
         let Some(n) = self.tree.get_mut(id) else { return false };
@@ -125,8 +125,8 @@ impl LayoutTree {
         changed
     }
 
-    /// Самый верхний узел под точкой: всплывающие слои, затем основное дерево;
-    /// учитывает clip, скролл (через позиции), z-порядок и `pass_through`.
+    /// Topmost node under the point: popup layers first, then the main tree;
+    /// accounts for clip, scroll (via positions), z-order and `pass_through`.
     pub fn hit_test(&self, p: Point) -> Option<NodeId> {
         let mut popups: Vec<(i32, usize, NodeId)> = Vec::new();
         for (i, (id, n)) in self.tree.dfs(self.root).enumerate() {
@@ -170,7 +170,7 @@ impl LayoutTree {
         (n.style.hit && n.rect.contains(p)).then_some(id)
     }
 
-    /// Абсолютный прямоугольник узла (после `compute`).
+    /// Absolute rectangle of a node (after `compute`).
     pub fn rect(&self, id: NodeId) -> Rect {
         self.tree.get(id).map(|n| n.rect).unwrap_or_default()
     }
@@ -195,7 +195,7 @@ impl LayoutTree {
         self.tree.children(id).iter().copied().filter(|&c| !self.tree.get(c).is_some_and(|n| n.style.hidden)).collect()
     }
 
-    /// Размер border-box узла (без внешних отступов). `avail` — доступная ширина border-box.
+    /// Border-box size of a node (without outer margins). `avail` is the available border-box width.
     fn measure(&self, id: NodeId, avail: Option<f32>) -> Size {
         let key = (id, avail.map(f32::to_bits));
         if let Some(&s) = self.cache.borrow().get(&key) {
@@ -230,7 +230,7 @@ impl LayoutTree {
         Size::new(clamp(w, st.min.w, st.max.w), clamp(h, st.min.h, st.max.h))
     }
 
-    /// Размер содержимого (без padding); `inner` — доступная внутренняя ширина.
+    /// Content size (without padding); `inner` is the available inner width.
     fn content(&self, id: NodeId, inner: Option<f32>) -> Size {
         let n = self.tree.get(id).unwrap();
         let st = n.style;

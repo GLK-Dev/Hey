@@ -3,7 +3,7 @@ name = "prototype_monolith"
 version = "0.1.0"
 edition = "2021"
 publish = false
-description = "Референсный монолитный прототип из Thinks/idea.md (не развивается, только для сверки)"
+description = "Reference monolithic prototype from Thinks/idea.md (not developed, kept for comparison only)"
 
 [dependencies]
 winit = { workspace = true }

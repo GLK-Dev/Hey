@@ -51,7 +51,7 @@ impl ShellApp for Demo {
         self.text(list, "Hey", &[self.onest], 28.0 * s, w, Point::new(r.x + pad, r.y + pad), Color::hex(0xE6E8EE));
         self.text(
             list,
-            "Текст на fontdue: перенос по словам, fallback-цепочка шрифтов и обрезка по ширине.",
+            "Text on fontdue: word wrapping, font fallback chain and width truncation.",
             &[self.onest, self.mono],
             16.0 * s,
             w,

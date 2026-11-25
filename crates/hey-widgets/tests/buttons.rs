@@ -49,7 +49,7 @@ fn click_sends_message_only_on_release_inside() {
     ui.event(&UiEvent::PointerUp { pos: p, button: MouseButton::Left });
     assert_eq!(sink.drain(), [Msg::Ok]);
 
-    // нажали на OK, отпустили над «Отмена» — клика нет
+    // pressed on OK, released over "Отмена" — no click
     ui.event(&UiEvent::PointerDown { pos: p, button: MouseButton::Left });
     ui.event(&UiEvent::PointerUp { pos: center(&ui, cancel), button: MouseButton::Left });
     assert!(sink.is_empty());
@@ -58,7 +58,7 @@ fn click_sends_message_only_on_release_inside() {
 #[test]
 fn keyboard_tab_enter_space() {
     let (mut ui, sink, label, ok, cancel) = setup();
-    assert!(!ui.event(&key("Enter")), "без фокуса Enter ничего не делает");
+    assert!(!ui.event(&key("Enter")), "Enter does nothing without focus");
     ui.event(&key("Tab"));
     assert_eq!(ui.focused(), Some(ok));
     ui.event(&key("Tab"));
@@ -69,7 +69,7 @@ fn keyboard_tab_enter_space() {
     let shift = UiEvent::KeyDown { code: "Tab".into(), mods: Modifiers { shift: true, ..Default::default() } };
     ui.event(&shift);
     assert_eq!(ui.focused(), Some(ok));
-    assert_ne!(ui.focused(), Some(label), "Label не фокусируется");
+    assert_ne!(ui.focused(), Some(label), "Label is not focusable");
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn paint_colors_follow_state() {
 
     let dl = ui.paint(VP);
     assert!(dl.cmds().iter().any(|c| matches!(c, DrawCmd::Text(_))));
-    // фокус-рамка нарисована
+    // focus ring is painted
     assert!(dl.cmds().iter().any(|c| matches!(c, DrawCmd::Rect { fill, border: Some(b), .. }
         if *fill == Color::TRANSPARENT && b.color == t.palette.focus)));
 }

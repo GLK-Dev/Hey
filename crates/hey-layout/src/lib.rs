@@ -1,7 +1,7 @@
-//! hey-layout: flex-раскладка (Row/Column/Stack/Spacer), двухпроходная: measure → arrange.
+//! hey-layout: flex layout (Row/Column/Stack/Spacer), two passes: measure → arrange.
 //!
-//! Все размеры — физические пиксели (ADR-3). Итоговые прямоугольники абсолютные
-//! (в координатах корня) и притянуты к целым пикселям.
+//! All sizes are physical pixels (ADR-3). Resulting rectangles are absolute
+//! (in root coordinates) and snapped to whole pixels.
 
 mod style;
 mod tree;

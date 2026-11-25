@@ -1,15 +1,15 @@
-# ADR-8: Текст: `fontdue` для старта, затем shaping-движок
+# ADR-8: Text: `fontdue` to start, then a shaping engine
 
-**Статус:** Принято частично
+**Status:** Partially accepted
 
-## Решение
+## Decision
 
-Сейчас растеризация и метрики — `fontdue` (кириллица работает). Замена на `cosmic-text`/`parley` (shaping, bidi, fallback, IME) решается по итогам спайка.
+Rasterization and metrics currently use `fontdue` (Cyrillic works). Replacing it with `cosmic-text`/`parley` (shaping, bidi, fallback, IME) will be decided based on a spike.
 
-## Обоснование
+## Rationale
 
-Быстрый старт без тяжёлой зависимости; сложные скрипты потребуют shaping.
+A quick start without a heavy dependency; complex scripts will require shaping.
 
-## Последствия
+## Consequences
 
-Спайк ещё не выполнен (`DEVELOPMENT_PLAN.md`, фаза 2). Изоляция текста в `hey-text` (ADR-5) удерживает стоимость замены.
+The spike is not done yet (`DEVELOPMENT_PLAN.md`, phase 2). Isolating text in `hey-text` (ADR-5) keeps the cost of replacement low.

@@ -1,15 +1,15 @@
-# ADR-4: Приложение определяет свой `Msg`
+# ADR-4: The application defines its own `Msg`
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-Фреймворк знает только `UiEvent` и `Callback<Msg, A>`; тип сообщения параметризует `Ui<Msg>`.
+The framework knows only `UiEvent` and `Callback<Msg, A>`; the message type parameterizes `Ui<Msg>`.
 
-## Обоснование
+## Rationale
 
-Убирает захардкоженный `Action` прототипа; виджеты переиспользуются в любых приложениях.
+Removes the hardcoded `Action` of the prototype; widgets are reusable in any application.
 
-## Последствия
+## Consequences
 
-Виджеты обобщены по `Msg`; колбэки создаются в `view` через `Callback::new`.
+Widgets are generic over `Msg`; callbacks are created in `view` via `Callback::new`.

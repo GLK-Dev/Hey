@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Трансляция событий winit в нормализованные `UiEvent` (физические пиксели).
+//! Translation of winit events into normalized `UiEvent`s (physical pixels).
 
 use hey_core::{Modifiers, MouseButton, Point, UiEvent};
 use winit::{
@@ -8,10 +8,10 @@ use winit::{
     keyboard::{Key, ModifiersState, NamedKey},
 };
 
-/// Пикселей прокрутки на одну «строку» колеса мыши.
+/// Scroll pixels per mouse wheel "line".
 pub const LINE_PX: f32 = 40.0;
 
-/// Состояние ввода между событиями: позиция курсора и модификаторы.
+/// Input state between events: cursor position and modifiers.
 #[derive(Default)]
 pub struct InputState {
     pub pos: Point,
@@ -22,7 +22,7 @@ pub fn mods(s: ModifiersState) -> Modifiers {
     Modifiers { shift: s.shift_key(), ctrl: s.control_key(), alt: s.alt_key(), logo: s.super_key() }
 }
 
-/// Логическое имя клавиши: «Enter», «ArrowLeft», «a» (буквы — в нижнем регистре).
+/// Logical key name: "Enter", "ArrowLeft", "a" (letters are lowercase).
 pub fn key_name(k: &Key) -> Option<String> {
     match k {
         Key::Named(n) => Some(match n {
@@ -43,7 +43,7 @@ fn button(b: winit::event::MouseButton) -> Option<MouseButton> {
     }
 }
 
-/// Печатный текст для `UiEvent::Text`: без управляющих символов и без Ctrl/Alt/Logo-сочетаний.
+/// Printable text for `UiEvent::Text`: no control characters and no Ctrl/Alt/Logo combinations.
 pub fn printable(text: &str, m: Modifiers) -> Option<String> {
     let ok = !text.is_empty() && !m.ctrl && !m.alt && !m.logo && text.chars().all(|c| !c.is_control());
     ok.then(|| text.to_string())

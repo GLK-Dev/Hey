@@ -1,19 +1,19 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Реестр шрифтов: загрузка, fallback-цепочка, кэш метрик и растров глифов.
+//! Font registry: loading, fallback chain, cache of glyph metrics and rasters.
 
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-/// Идентификатор шрифта в реестре (совпадает с `GlyphRun::font`).
+/// Font identifier in the registry (matches `GlyphRun::font`).
 pub type FontId = u32;
 
-/// Растр глифа: покрытие 0..255, `w*h` байт, построчно сверху вниз.
+/// Glyph raster: coverage 0..255, `w*h` bytes, row by row from top to bottom.
 #[derive(Debug)]
 pub struct GlyphBitmap {
-    /// Смещение левого края от пера по X.
+    /// Offset of the left edge from the pen along X.
     pub xmin: i32,
-    /// Смещение нижнего края от базовой линии вверх (как в fontdue).
+    /// Offset of the bottom edge from the baseline upwards (as in fontdue).
     pub ymin: i32,
     pub w: u32,
     pub h: u32,
@@ -23,7 +23,7 @@ pub struct GlyphBitmap {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LineMetrics {
     pub ascent: f32,
-    /// Отрицательное значение (вниз от базовой линии).
+    /// Negative value (downwards from the baseline).
     pub descent: f32,
     pub line_gap: f32,
 }
@@ -43,8 +43,8 @@ pub enum FontError {
 impl std::fmt::Display for FontError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FontError::Io(e) => write!(f, "ошибка чтения шрифта: {e}"),
-            FontError::Parse(e) => write!(f, "некорректный шрифт: {e}"),
+            FontError::Io(e) => write!(f, "failed to read font: {e}"),
+            FontError::Parse(e) => write!(f, "invalid font: {e}"),
         }
     }
 }
@@ -80,13 +80,13 @@ impl Fonts {
         self.fonts.is_empty()
     }
 
-    /// Индекс глифа для `ch`; `None`, если шрифт его не содержит.
+    /// Glyph index for `ch`; `None` if the font does not contain it.
     pub fn glyph_index(&self, font: FontId, ch: char) -> Option<u16> {
         let i = self.fonts.get(font as usize)?.lookup_glyph_index(ch);
         (i != 0).then_some(i)
     }
 
-    /// Первый шрифт цепочки, содержащий `ch`; иначе первый шрифт (его .notdef).
+    /// First font in the chain that contains `ch`; otherwise the first font (its .notdef).
     pub fn pick(&self, chain: &[FontId], ch: char) -> Option<(FontId, u16)> {
         chain.iter().find_map(|&f| self.glyph_index(f, ch).map(|g| (f, g))).or_else(|| chain.first().map(|&f| (f, 0)))
     }
@@ -102,7 +102,7 @@ impl Fonts {
         }
     }
 
-    /// Растр глифа с кэшированием по (шрифт, глиф, размер).
+    /// Glyph raster cached by (font, glyph, size).
     pub fn bitmap(&self, font: FontId, glyph: u16, size_px: f32) -> Arc<GlyphBitmap> {
         let key = (font, glyph, size_px.to_bits());
         let mut cache = self.cache.lock().unwrap();

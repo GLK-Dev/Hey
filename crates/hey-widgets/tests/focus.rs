@@ -25,7 +25,7 @@ fn focus_trap_and_programmatic_focus() {
     assert!(ui.focus(a));
     assert_eq!(ui.focused(), Some(a));
 
-    // ловушка переносит фокус внутрь и замыкает Tab
+    // the trap moves focus inside and closes the Tab cycle
     ui.trap_focus(Some(scope));
     assert_eq!(ui.focused(), Some(b));
     ui.event(&tab(false));
@@ -34,9 +34,9 @@ fn focus_trap_and_programmatic_focus() {
     assert_eq!(ui.focused(), Some(b));
     ui.event(&tab(true));
     assert_eq!(ui.focused(), Some(c));
-    assert!(!ui.focus(a), "вне ловушки фокус не ставится");
+    assert!(!ui.focus(a), "focus cannot be set outside the trap");
 
-    // снятие ловушки возвращает обычный обход
+    // removing the trap restores normal traversal
     ui.trap_focus(None);
     ui.event(&tab(false));
     assert_eq!(ui.focused(), Some(a));

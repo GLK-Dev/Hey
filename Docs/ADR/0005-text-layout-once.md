@@ -1,15 +1,15 @@
-# ADR-5: Текстовый layout делается один раз в `hey-text`
+# ADR-5: Text layout is done once in `hey-text`
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-Позиции глифов считает `hey-text`; оба бэкенда потребляют готовые глифы.
+Glyph positions are computed by `hey-text`; both backends consume ready-made glyphs.
 
-## Обоснование
+## Rationale
 
-Паритет CPU/GPU и единые метрики для hit-test каретки и выделения.
+CPU/GPU parity and shared metrics for caret and selection hit-testing.
 
-## Последствия
+## Consequences
 
-Рендерер не умеет раскладывать текст сам; смена шейпера (ADR-8) затрагивает только `hey-text`.
+The renderer cannot lay out text itself; swapping the shaper (ADR-8) affects only `hey-text`.

@@ -35,13 +35,13 @@ fn panel(env: &Env, rect: Rect, out: &mut DisplayList) {
     });
 }
 
-/// Всплывающее меню выбора строки. Закрывается выбором, Esc или кликом снаружи.
+/// Popup menu for choosing a row. Closes on selection, Esc or a click outside.
 pub struct Menu<Msg> {
     items: Vec<String>,
     hot: usize,
     on_select: Callback<Msg, usize>,
     overlays: Overlays<Msg>,
-    /// Общее с `Dropdown` текущее значение (обновляется при выборе).
+    /// Current value shared with `Dropdown` (updated on selection).
     shared: Option<Rc<Cell<usize>>>,
 }
 
@@ -52,7 +52,7 @@ impl<Msg: 'static> Menu<Msg> {
         Rect::new(at.x, at.y, w.max(min_w), row_height(env) * items.len() as f32 + 2.0)
     }
 
-    /// Открывает меню в точке `at` (верхний левый угол).
+    /// Opens the menu at point `at` (top-left corner).
     pub fn open(ui: &mut Ui<Msg>, at: Point, items: Vec<String>, on_select: Callback<Msg, usize>) -> OverlayId {
         let rect = Self::rect_for(&ui.env, &items, at, 0.0);
         let m = Menu { items, hot: 0, on_select, overlays: ui.overlays(), shared: None };
@@ -130,7 +130,7 @@ impl<Msg: 'static> Widget<Msg> for Menu<Msg> {
     }
 }
 
-/// Выпадающий список: кнопка с текущим значением, по активации раскрывает `Menu` под собой.
+/// Dropdown: a button with the current value that expands a `Menu` below itself on activation.
 pub struct Dropdown<Msg> {
     items: Vec<String>,
     selected: Rc<Cell<usize>>,
@@ -193,7 +193,7 @@ impl<Msg: 'static> Widget<Msg> for Dropdown<Msg> {
         let s = self.items.get(self.selected.get()).map(String::as_str).unwrap_or("");
         let l = layout(&env.fonts, s, &text_style(env, None, false));
         push_text(env, s, Point::new(rect.x + env.theme.space(10.0), rect.y + (rect.h - l.height) / 2.0), color, out);
-        // шеврон ▾
+        // chevron ▾
         let (cx, cy, k) = (rect.right() - env.theme.space(14.0), rect.y + rect.h / 2.0, 4.0);
         out.push(DrawCmd::Line { a: Point::new(cx - k, cy - k / 2.0), b: Point::new(cx, cy + k / 2.0), width: 1.5, color });
         out.push(DrawCmd::Line { a: Point::new(cx, cy + k / 2.0), b: Point::new(cx + k, cy - k / 2.0), width: 1.5, color });
@@ -205,7 +205,7 @@ impl<Msg: 'static> Widget<Msg> for Dropdown<Msg> {
         self.open(env);
     }
     fn activate(&mut self, _sink: &MsgSink<Msg>) {
-        // клавиатурная активация: окружение берём из размеров последней отрисовки
+        // keyboard activation: the environment comes from the sizes of the last paint
         self.open_kbd();
     }
 }
@@ -220,20 +220,20 @@ impl<Msg: 'static> Dropdown<Msg> {
             overlays: self.overlays.clone(),
             shared: Some(self.selected.clone()),
         };
-        // высота строки неизвестна без Env: приблизительно по высоте кнопки
+        // row height is unknown without Env: approximate it by the button height
         let rows = self.items.len() as f32;
         let w = r.w;
         self.overlays.open(Rect::new(r.x, r.bottom() + 2.0, w, (r.h - 4.0).max(1.0) * rows + 2.0), menu, OverlayKind::Popup);
     }
 }
 
-/// Подсказка у якоря. Не принимает ввод; закрывается через `Ui::close_overlay`.
+/// Hint at an anchor. Takes no input; closed via `Ui::close_overlay`.
 pub struct Tooltip {
     text: String,
 }
 
 impl Tooltip {
-    /// Показывает подсказку под `anchor`.
+    /// Shows the hint below `anchor`.
     pub fn show<Msg: 'static>(ui: &mut Ui<Msg>, anchor: Rect, text: &str) -> OverlayId {
         let env = ui.env.clone();
         let pad = env.theme.space(8.0);
@@ -251,8 +251,8 @@ impl<Msg: 'static> Widget<Msg> for Tooltip {
     }
 }
 
-/// Модальное окно с сообщением и кнопками. Выбор — `Callback<Msg, usize>` (индекс кнопки);
-/// Esc закрывает без выбора. Tab заперт внутри (оверлей — единственная цель ввода).
+/// Modal window with a message and buttons. Selection is a `Callback<Msg, usize>` (button index);
+/// Esc closes without a choice. Tab is trapped inside (the overlay is the only input target).
 pub struct Modal<Msg> {
     title: String,
     message: String,

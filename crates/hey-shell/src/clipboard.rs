@@ -1,10 +1,10 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Системный буфер обмена на `arboard` для текстовых виджетов.
+//! System clipboard on `arboard` for text widgets.
 
 use hey_text::Clipboard;
 
-/// Обёртка над `arboard::Clipboard`; при недоступности буфера молча ничего не делает.
+/// Wrapper over `arboard::Clipboard`; silently does nothing if the clipboard is unavailable.
 pub struct SystemClipboard(Option<arboard::Clipboard>);
 
 impl SystemClipboard {
@@ -30,7 +30,7 @@ impl Clipboard for SystemClipboard {
     }
 }
 
-/// Установить системный буфер как общий для виджетов (вызывать в UI-потоке до создания окна).
+/// Install the system clipboard as the shared one for widgets (call on the UI thread before creating the window).
 pub fn install_system_clipboard() {
     hey_widgets::set_clipboard(Box::new(SystemClipboard::new()));
 }

@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! hey-text: шрифты, раскладка и редактирование текста (без привязки к UI).
+//! hey-text: fonts, text layout and editing (independent of the UI).
 
 mod edit;
 mod fonts;

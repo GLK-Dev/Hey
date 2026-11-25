@@ -79,10 +79,10 @@ fn ellipsis_truncates_to_max_lines_and_width() {
 #[test]
 fn fallback_uses_next_font_for_missing_glyph() {
     let (f, onest, mono) = fonts();
-    // Подбираем символ, которого нет в Onest, но есть в JetBrains Mono.
+    // Pick a character that is absent from Onest but present in JetBrains Mono.
     let ch = ('\u{2190}'..'\u{2600}')
         .find(|&c| f.glyph_index(onest, c).is_none() && f.glyph_index(mono, c).is_some())
-        .expect("нужен символ только в моно-шрифте");
+        .expect("need a character present only in the mono font");
     let s = format!("a{ch}b");
     let l = layout(&f, &s, &TextStyle::new(vec![onest, mono], 16.0));
     let fonts: Vec<_> = l.lines[0].glyphs.iter().map(|g| g.font).collect();

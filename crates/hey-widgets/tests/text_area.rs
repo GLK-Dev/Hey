@@ -72,7 +72,7 @@ fn area_mouse_drag_and_double_click() {
     ui.event(&key("End", false, true));
     ui.event(&key("v", false, true));
     ui.paint(vp);
-    // двойной клик по началу выделяет слово; печать заменяет его
+    // double click at the start selects a word; typing replaces it
     let p = Point::new(r.x + 12.0, y);
     down(&mut ui, p);
     up(&mut ui, p);
@@ -98,14 +98,14 @@ fn input_drag_double_click_escape() {
     ui.event(&UiEvent::Text("Z".into()));
     assert_eq!(sink.drain().last().unwrap(), "Z world");
 
-    // Esc снимает выделение: печать вставляется, а не заменяет
+    // Esc clears the selection: typing inserts instead of replacing
     ui.event(&key("a", false, true));
     ui.event(&key("Escape", false, false));
     ui.event(&UiEvent::Text("!".into()));
     assert_eq!(sink.drain().last().unwrap().matches('!').count(), 1);
     assert!(sink.is_empty());
 
-    // drag выделяет до конца
+    // drag selects to the end
     ui.paint(vp);
     down(&mut ui, Point::new(r.x + 2.0, y));
     ui.event(&UiEvent::PointerMove { pos: Point::new(r.x + 290.0, y) });

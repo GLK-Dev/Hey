@@ -11,7 +11,7 @@ fn row_gap_padding_margin() {
     let a = t.add(t.root(), Style::leaf().size(20.0, 10.0)).unwrap();
     let b = t.add(t.root(), Style::leaf().size(30.0, 10.0).margin(Insets::symmetric(2.0, 3.0))).unwrap();
     t.compute(Size::new(200.0, 100.0));
-    assert_eq!(t.rect(a), r(5.0, 5.0, 20.0, 10.0)); // явная высота не растягивается
+    assert_eq!(t.rect(a), r(5.0, 5.0, 20.0, 10.0)); // an explicit height is not stretched
     assert_eq!(t.rect(b), r(5.0 + 20.0 + 10.0 + 2.0, 5.0 + 3.0, 30.0, 10.0));
 }
 
@@ -100,7 +100,7 @@ fn nested_auto_sizes_from_content() {
 
 #[test]
 fn text_wraps_by_available_width() {
-    // Лист «текст»: 10 px на символ, перенос по ширине, высота 10 px на строку.
+    // Text leaf: 10 px per character, wraps by width, 10 px height per line.
     let text_len = 30.0f32;
     let mut t = LayoutTree::new(Style::column().align_items(Align::Start));
     let p = t.add(t.root(), Style::leaf().width(100.0)).unwrap();
@@ -141,7 +141,7 @@ mod hit {
         let a = t.add(t.root(), Style::leaf().size(50.0, 50.0).align_self(Align::Start)).unwrap();
         let b = t.add(t.root(), Style::leaf().size(50.0, 50.0).align_self(Align::Start)).unwrap();
         t.compute(Size::new(100.0, 100.0));
-        assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(b)); // позже — выше
+        assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(b)); // later means higher
         t.set_style(a, Style::leaf().size(50.0, 50.0).align_self(Align::Start).z(5));
         assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(a));
         t.set_style(a, Style::leaf().size(50.0, 50.0).align_self(Align::Start).z(5).pass_through());
@@ -158,7 +158,7 @@ mod hit {
         t.compute(Size::new(100.0, 300.0));
         assert_eq!(t.max_scroll(sc).y, 200.0);
         assert_eq!(t.hit_test(Point::new(5.0, 70.0)), Some(items[1]));
-        // Элемент за границей области скролла не ловится, даже если геометрически лежит под соседом.
+        // An element beyond the scroll area boundary is not hit, even if it geometrically lies under a sibling.
         assert_eq!(t.hit_test(Point::new(5.0, 110.0)), Some(below));
         assert!(t.scroll_by(sc, 0.0, 70.0));
         t.compute(Size::new(100.0, 300.0));
@@ -176,7 +176,7 @@ mod hit {
         let pop = t.add(clipped, Style::leaf().size(80.0, 80.0).align_self(Align::Start).popup()).unwrap();
         let other = t.add(t.root(), Style::leaf().height(100.0)).unwrap();
         t.compute(Size::new(200.0, 200.0));
-        assert_eq!(t.hit_test(Point::new(70.0, 70.0)), Some(pop)); // вне clip, но попап
+        assert_eq!(t.hit_test(Point::new(70.0, 70.0)), Some(pop)); // outside clip, but a popup
         assert_eq!(t.hit_test(Point::new(150.0, 150.0)), Some(t.root()));
         let _ = other;
     }
@@ -205,7 +205,7 @@ mod cache {
         t.compute(Size::new(100.0, 100.0));
         assert!(calls.get() > first);
         let n = calls.get();
-        t.compute(Size::new(120.0, 100.0)); // другой viewport
+        t.compute(Size::new(120.0, 100.0)); // another viewport
         assert!(calls.get() > n);
     }
 

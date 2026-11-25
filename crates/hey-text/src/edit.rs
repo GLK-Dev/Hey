@@ -1,9 +1,9 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Чистая модель редактирования текста.
+//! Pure text editing model.
 //!
-//! Позиции — байтовые смещения в UTF-8, всегда на границах графем.
-//! Выделение — между `anchor` и `caret`; `caret == anchor` — выделения нет.
+//! Positions are byte offsets into UTF-8, always on grapheme boundaries.
+//! Selection is between `anchor` and `caret`; `caret == anchor` means no selection.
 
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -56,7 +56,7 @@ impl Default for TextEditState {
 }
 
 impl TextEditState {
-    /// Каретка в конце текста.
+    /// Caret at the end of the text.
     pub fn new(text: impl Into<String>) -> Self {
         let text = text.into();
         let end = text.len();
@@ -72,7 +72,7 @@ impl TextEditState {
     pub fn anchor(&self) -> usize {
         self.anchor
     }
-    /// Выделение как `start..end` (start <= end).
+    /// Selection as `start..end` (start <= end).
     pub fn selection(&self) -> std::ops::Range<usize> {
         self.caret.min(self.anchor)..self.caret.max(self.anchor)
     }
@@ -89,9 +89,9 @@ impl TextEditState {
         !self.redo.is_empty()
     }
 
-    // ---------- навигация ----------
+    // ---------- navigation ----------
 
-    /// Ставит каретку (с привязкой к границе графемы не правее `pos`).
+    /// Places the caret (snapped to a grapheme boundary not after `pos`).
     pub fn set_caret(&mut self, pos: usize, extend: bool) {
         self.caret = self.snap(pos);
         if !extend {
@@ -134,7 +134,7 @@ impl TextEditState {
         self.last = None;
     }
 
-    /// Выделяет слово под `pos` (двойной клик).
+    /// Selects the word under `pos` (double click).
     pub fn select_word_at(&mut self, pos: usize) {
         let pos = self.snap(pos);
         for (start, w) in self.text.split_word_bound_indices() {
@@ -149,7 +149,7 @@ impl TextEditState {
         self.set_caret(pos, false);
     }
 
-    // ---------- редактирование ----------
+    // ---------- editing ----------
 
     pub fn insert(&mut self, s: &str) {
         if s.is_empty() && !self.has_selection() {
@@ -244,7 +244,7 @@ impl TextEditState {
         true
     }
 
-    // ---------- внутреннее ----------
+    // ---------- internals ----------
 
     fn snapshot(&self) -> Snapshot {
         Snapshot { text: self.text.clone(), caret: self.caret, anchor: self.anchor }
@@ -257,7 +257,7 @@ impl TextEditState {
         self.last = None;
     }
 
-    /// Сохраняет снимок для undo; подряд идущие однотипные правки без выделения склеиваются.
+    /// Saves an undo snapshot; consecutive edits of the same kind without a selection are merged.
     fn checkpoint(&mut self, kind: EditKind) {
         let coalesce = kind != EditKind::Other && self.last == Some(kind) && !self.has_selection() && !self.undo.is_empty();
         if !coalesce {
@@ -272,13 +272,13 @@ impl TextEditState {
         self.text.replace_range(r.clone(), s);
         self.caret = r.start + s.len();
         self.anchor = self.caret;
-        // Пробел/перевод строки завершает «слово» — следующий ввод начнёт новый шаг undo.
+        // A space/newline ends a "word" — the next input starts a new undo step.
         if s.contains(char::is_whitespace) {
             self.last = None;
         }
     }
 
-    /// Ближайшая граница графемы не правее `pos`.
+    /// Nearest grapheme boundary not after `pos`.
     fn snap(&self, pos: usize) -> usize {
         if pos >= self.text.len() {
             return self.text.len();
@@ -426,7 +426,7 @@ mod tests {
         assert_eq!(e.text(), "abcdef");
     }
 
-    /// Детерминированный фаззинг: инварианты при случайных операциях над Unicode.
+    /// Deterministic fuzzing: invariants under random operations over Unicode.
     #[test]
     fn fuzz_invariants() {
         const ALPHA: &[&str] = &["a", "Ы", " ", "\n", "e\u{301}", "🇺🇦", "👨‍👩‍👧", "😀", "-", "世"];
@@ -468,7 +468,7 @@ mod tests {
             let t = e.text();
             for p in [e.caret(), e.anchor()] {
                 assert!(p <= t.len() && t.is_char_boundary(p));
-                assert!(p == t.len() || t.grapheme_indices(true).any(|(i, _)| i == p), "позиция {p} внутри графемы в {t:?}");
+                assert!(p == t.len() || t.grapheme_indices(true).any(|(i, _)| i == p), "position {p} is inside a grapheme in {t:?}");
             }
         }
     }

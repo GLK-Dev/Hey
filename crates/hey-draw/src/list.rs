@@ -5,9 +5,9 @@ use hey_core::Rect;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ListError {
-    /// `ClipPop` без парного `ClipPush` на позиции `index`.
+    /// `ClipPop` without a matching `ClipPush` at position `index`.
     UnmatchedPop { index: usize },
-    /// В конце списка остались незакрытые `ClipPush`.
+    /// Unclosed `ClipPush` left at the end of the list.
     UnclosedPush { count: usize },
 }
 
@@ -41,7 +41,7 @@ impl DisplayList {
         self.cmds.is_empty()
     }
 
-    /// Проверяет парность `ClipPush`/`ClipPop`.
+    /// Checks that `ClipPush`/`ClipPop` are balanced.
     pub fn validate(&self) -> Result<(), ListError> {
         let mut depth = 0usize;
         for (index, c) in self.cmds.iter().enumerate() {
@@ -60,9 +60,9 @@ impl DisplayList {
         }
     }
 
-    /// Рисующие команды с действующей областью отсечения (пересечение всего стека).
-    /// `None` — отсечения нет; полностью отсечённое выражается `Some` с нулевой площадью.
-    /// Сами `ClipPush`/`ClipPop` не выдаются. Список должен быть валиден.
+    /// Drawing commands with the effective clip rectangle (intersection of the whole stack).
+    /// `None` means no clipping; a fully clipped area is expressed as `Some` with zero area.
+    /// `ClipPush`/`ClipPop` themselves are not yielded. The list must be valid.
     pub fn iter_clipped(&self) -> impl Iterator<Item = (&DrawCmd, Option<Rect>)> {
         let mut stack: Vec<Option<Rect>> = Vec::new();
         let mut cur: Option<Rect> = None;

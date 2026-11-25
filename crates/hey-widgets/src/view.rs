@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Декларативное описание дерева и сверка (reconcile) с живым `Ui` по `Key`.
+//! Declarative tree description and reconciliation (reconcile) with the live `Ui` by `Key`.
 
 use crate::ui::Ui;
 use hey_core::{Key, NodeId};
@@ -16,19 +16,19 @@ enum Kind<Msg> {
     Container { style: Style, children: Vec<View<Msg>> },
 }
 
-/// Описание одного узла: ключ + либо виджет (пересоздаётся при смене хэша свойств),
-/// либо контейнер с детьми (сохраняется всегда, стиль обновляется).
+/// Description of a single node: key + either a widget (recreated when the props hash changes),
+/// or a container with children (always kept, style is updated).
 pub struct View<Msg> {
     key: Key,
     kind: Kind<Msg>,
 }
 
-/// Метка контейнера в `Ui::keys` (у листьев хэш всегда нечётный).
+/// Container marker in `Ui::keys` (a leaf hash is always odd).
 const CONTAINER: u64 = 0;
 
 impl<Msg: 'static> View<Msg> {
-    /// Лист: `props` — всё, от чего зависит внешний вид/поведение (текст, значение…);
-    /// `build` создаёт виджет в переданном родителе и возвращает его `NodeId`.
+    /// Leaf: `props` is everything the look/behavior depends on (text, value…);
+    /// `build` creates the widget in the given parent and returns its `NodeId`.
     pub fn leaf(key: impl Into<Key>, props: impl Hash, build: impl FnOnce(&mut Ui<Msg>, NodeId) -> NodeId + 'static) -> Self {
         let mut h = DefaultHasher::new();
         props.hash(&mut h);
@@ -41,9 +41,9 @@ impl<Msg: 'static> View<Msg> {
 }
 
 impl<Msg: 'static> Ui<Msg> {
-    /// Приводит детей `parent` к списку `views`: узлы с тем же ключом и хэшем сохраняются
-    /// (вместе с состоянием), изменившиеся пересоздаются с переносом состояния,
-    /// лишние удаляются, порядок задаётся списком. Дети без ключа остаются первыми.
+    /// Brings the children of `parent` in line with the `views` list: nodes with the same key and hash are kept
+    /// (together with their state), changed ones are recreated with state carried over,
+    /// extra ones are removed, order follows the list. Children without a key stay first.
     pub fn reconcile(&mut self, parent: NodeId, views: Vec<View<Msg>>) {
         let old: Vec<NodeId> = self.tree.children(parent).to_vec();
         let mut order: Vec<NodeId> = old.iter().copied().filter(|id| !self.keys.contains_key(id)).collect();

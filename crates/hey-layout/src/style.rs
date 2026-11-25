@@ -2,9 +2,9 @@ use hey_core::{Insets, Size};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Axis {
-    /// Дети слева направо.
+    /// Children left to right.
     Row,
-    /// Дети сверху вниз.
+    /// Children top to bottom.
     Column,
 }
 
@@ -13,7 +13,7 @@ pub enum Align {
     Start,
     Center,
     End,
-    /// Растянуть по поперечной оси (если размер `Auto`).
+    /// Stretch along the cross axis (if the size is `Auto`).
     #[default]
     Stretch,
 }
@@ -38,10 +38,10 @@ pub enum Dim {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Kind {
-    /// Лист: размер из `LayoutTree::set_measure` или явный.
+    /// Leaf: size from `LayoutTree::set_measure` or explicit.
     Leaf,
     Flex(Axis),
-    /// Дети накладываются друг на друга в области контента.
+    /// Children are stacked on top of each other in the content area.
     Stack,
 }
 
@@ -54,7 +54,7 @@ pub struct Style {
     pub max: Size,
     pub padding: Insets,
     pub margin: Insets,
-    /// Промежуток между детьми по главной оси.
+    /// Gap between children along the main axis.
     pub gap: f32,
     pub align_items: Align,
     pub align_self: Option<Align>,
@@ -62,12 +62,12 @@ pub struct Style {
     pub grow: f32,
     pub shrink: f32,
     pub hidden: bool,
-    /// Обрезать детей по прямоугольнику узла (для hit-test и рендера).
+    /// Clip children to the node rectangle (for hit-test and rendering).
     pub clip: bool,
     pub z: i32,
-    /// Участвует в hit-test (иначе событие проходит сквозь).
+    /// Takes part in hit-test (otherwise the event passes through).
     pub hit: bool,
-    /// Всплывающий слой: поверх всего, не обрезается предками.
+    /// Popup layer: above everything, not clipped by ancestors.
     pub popup: bool,
     pub scroll_x: bool,
     pub scroll_y: bool,
@@ -110,7 +110,7 @@ impl Style {
     pub fn leaf() -> Self {
         Self::new(Kind::Leaf)
     }
-    /// Пустой лист, поглощающий свободное место.
+    /// Empty leaf that absorbs the free space.
     pub fn spacer() -> Self {
         Self::leaf().grow(1.0)
     }
@@ -191,7 +191,7 @@ impl Style {
         self.popup = true;
         self
     }
-    /// Скролл по осям (включает clip).
+    /// Scroll on the given axes (enables clip).
     pub fn scroll(mut self, x: bool, y: bool) -> Self {
         self.scroll_x = x;
         self.scroll_y = y;

@@ -1,9 +1,9 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Раскладка текста: измерение, перенос по словам/графемам, выравнивание, многострочность, «…».
+//! Text layout: measuring, word/grapheme wrapping, alignment, multiline, "…".
 //!
-//! Шейпинга нет: один символ — один глиф, без кернинга и лигатур (ограничение fontdue;
-//! см. ADR-8 о переходе на cosmic-text/parley). Единицы переноса — графемы.
+//! No shaping: one character is one glyph, no kerning or ligatures (a fontdue limitation;
+//! see ADR-8 on moving to cosmic-text/parley). Wrapping units are graphemes.
 
 use crate::fonts::{FontId, Fonts};
 use hey_core::{Color, Point};
@@ -20,18 +20,18 @@ pub enum Align {
 
 #[derive(Clone, Debug)]
 pub struct TextStyle {
-    /// Fallback-цепочка: первый шрифт, содержащий символ.
+    /// Fallback chain: the first font that contains the character.
     pub chain: Vec<FontId>,
     pub size_px: f32,
-    /// Межстрочный интервал в px; `None` — из метрик первого шрифта.
+    /// Line spacing in px; `None` — from the first font's metrics.
     pub line_height: Option<f32>,
     pub align: Align,
-    /// Ширина контейнера; `None` — без ограничения.
+    /// Container width; `None` — unlimited.
     pub max_width: Option<f32>,
-    /// Переносить по словам (иначе только по `\n`).
+    /// Wrap by words (otherwise only at `\n`).
     pub wrap: bool,
     pub max_lines: Option<usize>,
-    /// При обрезке по `max_lines`/ширине заменять хвост на «…».
+    /// When truncating by `max_lines`/width, replace the tail with "…".
     pub ellipsis: bool,
 }
 
@@ -45,10 +45,10 @@ impl TextStyle {
 pub struct PlacedGlyph {
     pub font: FontId,
     pub id: u16,
-    /// X пера относительно левого края раскладки.
+    /// Pen X relative to the left edge of the layout.
     pub x: f32,
     pub advance: f32,
-    /// Байтовое смещение символа в исходном тексте (для каретки и hit-test).
+    /// Byte offset of the character in the source text (for caret and hit-test).
     pub byte: usize,
 }
 
@@ -56,7 +56,7 @@ pub struct PlacedGlyph {
 pub struct Line {
     pub glyphs: Vec<PlacedGlyph>,
     pub width: f32,
-    /// Y базовой линии относительно верха раскладки.
+    /// Baseline Y relative to the top of the layout.
     pub baseline: f32,
 }
 
@@ -80,7 +80,7 @@ fn unit(fonts: &Fonts, chain: &[FontId], size: f32, s: &str, base: usize) -> Uni
     for (i, ch) in s.char_indices() {
         let Some((font, id)) = fonts.pick(chain, ch) else { continue };
         let advance = fonts.advance(font, id, size);
-        // Комбинируемые символы внутри графемы не двигают перо.
+        // Combining characters inside a grapheme do not advance the pen.
         let advance = if i == 0 { advance } else { 0.0 };
         glyphs.push(PlacedGlyph { font, id, x: w, advance, byte: base + i });
         w += advance;
@@ -117,7 +117,7 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
                 curw = 0.0;
             }
             if !ws && ww > limit {
-                // Слово длиннее строки — режем по графемам.
+                // The word is longer than the line — split by graphemes.
                 for u in units {
                     if curw + u.w > limit && !cur.is_empty() {
                         lines.push(std::mem::take(&mut cur));
@@ -136,7 +136,7 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
         base += para.len() + 1;
     }
 
-    // Обрезка и многоточие.
+    // Truncation and ellipsis.
     let width_limit = style.max_width.unwrap_or(f32::INFINITY);
     let mut truncated = false;
     if let Some(n) = style.max_lines.filter(|&n| n > 0) {
@@ -146,7 +146,7 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
         }
     }
     if style.ellipsis {
-        let last = lines.last_mut().expect("минимум одна строка");
+        let last = lines.last_mut().expect("at least one line");
         if truncated || line_width(last) > width_limit {
             trim_end(last);
             let tail = last.last().map_or(text.len(), |u| u.glyphs[0].byte + 1);
@@ -196,8 +196,8 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
 }
 
 impl Layout {
-    /// Команды отрисовки: серии подряд идущих глифов одного шрифта.
-    /// `origin` — левый верхний угол раскладки в физических пикселях.
+    /// Draw commands: runs of consecutive glyphs from the same font.
+    /// `origin` is the top-left corner of the layout in physical pixels.
     pub fn to_runs(&self, origin: Point, color: Color) -> Vec<GlyphRun> {
         let mut runs: Vec<GlyphRun> = Vec::new();
         for line in &self.lines {
@@ -218,7 +218,7 @@ impl Layout {
     }
 }
 
-/// Ширина однострочного текста без переноса.
+/// Width of single-line text without wrapping.
 pub fn measure(fonts: &Fonts, text: &str, chain: &[FontId], size_px: f32) -> f32 {
     let mut st = TextStyle::new(chain.to_vec(), size_px);
     st.wrap = false;

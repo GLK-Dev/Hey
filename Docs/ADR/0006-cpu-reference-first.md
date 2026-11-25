@@ -1,15 +1,15 @@
-# ADR-6: Сначала CPU-бэкенд как эталон
+# ADR-6: CPU backend first, as the reference
 
-**Статус:** Принято
+**Status:** Accepted
 
-## Решение
+## Decision
 
-`CpuRenderer` реализован первым; GPU-бэкенд будет сверяться с ним golden-тестами с допуском.
+`CpuRenderer` is implemented first; the GPU backend will be checked against it with golden tests with a tolerance.
 
-## Обоснование
+## Rationale
 
-Проще отлаживать и ловить регрессии; расхождения антиалиасинга фиксируются правилами (рамка центрируется на границе).
+Easier to debug and to catch regressions; anti-aliasing differences are pinned down by rules (a border is centered on the edge).
 
-## Последствия
+## Consequences
 
-GPU-бэкенд (`hey-render-gpu`) ещё не создан; допуск сравнения определяется при его появлении.
+The GPU backend (`hey-render-gpu`) does not exist yet; the comparison tolerance will be defined when it appears.

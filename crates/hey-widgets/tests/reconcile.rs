@@ -34,15 +34,15 @@ fn reconcile_keeps_reorders_removes() {
     let ids: Vec<_> = ui.tree.children(root).to_vec();
     assert_eq!(ids.len(), 3);
 
-    // те же свойства, другой порядок, "b" удалён, "d" добавлен
+    // same props, different order, "b" removed, "d" added
     ui.reconcile(root, vec![btn("c", "C"), btn("a", "A"), btn("d", "D")]);
     let now = ui.tree.children(root).to_vec();
     assert_eq!(now.len(), 3);
-    assert_eq!(now[0], ids[2], "c сохранён и первый");
-    assert_eq!(now[1], ids[0], "a сохранён");
+    assert_eq!(now[0], ids[2], "c is kept and first");
+    assert_eq!(now[1], ids[0], "a is kept");
     assert!(!ids.contains(&now[2]));
 
-    // смена свойств → пересоздание
+    // props changed → recreated
     ui.reconcile(root, vec![btn("c", "C2"), btn("a", "A"), btn("d", "D")]);
     let again = ui.tree.children(root).to_vec();
     assert_ne!(again[0], now[0]);
@@ -62,10 +62,10 @@ fn reconcile_preserves_widget_state_and_focus() {
     assert!(ui.focus(id));
     ui.event(&UiEvent::KeyDown { code: "End".into(), mods: Modifiers::default() });
 
-    // тот же ключ, другие свойства (хэш изменён) → новый узел, но каретка и фокус сохраняются
+    // same key, different props (hash changed) → new node, but caret and focus are kept
     let changed = View::leaf("in", 1u8, |ui: &mut Ui<M>, p| TextInput::add(ui, p, "привет мир", 200.0, Callback::new(M::Text)));
     ui.reconcile(root, vec![View::container("col", col(), vec![changed])]);
-    assert_eq!(ui.tree.children(root)[0], c, "контейнер сохранён");
+    assert_eq!(ui.tree.children(root)[0], c, "container is kept");
     let id2 = ui.tree.children(c)[0];
     assert_ne!(id2, id);
     assert_eq!(ui.focused(), Some(id2));

@@ -1,6 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Дерево поверх `Arena`: родитель/дети, удаление поддеревьев, обход в глубину.
+//! Tree on top of `Arena`: parent/children, subtree removal, depth-first traversal.
 
 use crate::arena::{Arena, NodeId};
 
@@ -33,8 +33,8 @@ impl<T> Tree<T> {
         self.arena.is_empty()
     }
 
-    /// Добавляет узел последним ребёнком `parent` (или корнем, если `None`).
-    /// Если `parent` недействителен — `None`, ничего не вставляется.
+    /// Adds a node as the last child of `parent` (or as the root if `None`).
+    /// If `parent` is invalid, returns `None` and inserts nothing.
     pub fn add(&mut self, value: T, parent: Option<NodeId>) -> Option<NodeId> {
         if let Some(p) = parent {
             if !self.arena.contains(p) {
@@ -68,7 +68,7 @@ impl<T> Tree<T> {
         self.arena.get(id).map_or(&[], |e| e.children.as_slice())
     }
 
-    /// Задаёт порядок детей. `order` должен быть перестановкой текущих детей; иначе `false`.
+    /// Sets the children order. `order` must be a permutation of the current children; otherwise `false`.
     pub fn reorder_children(&mut self, parent: NodeId, order: &[NodeId]) -> bool {
         let Some(e) = self.arena.get_mut(parent) else { return false };
         let a: std::collections::HashSet<NodeId> = e.children.iter().copied().collect();
@@ -80,7 +80,7 @@ impl<T> Tree<T> {
         true
     }
 
-    /// Удаляет узел вместе с поддеревом; возвращает число удалённых узлов.
+    /// Removes a node together with its subtree; returns the number of removed nodes.
     pub fn remove_subtree(&mut self, id: NodeId) -> usize {
         let Some(entry) = self.arena.get(id) else { return 0 };
         if let Some(p) = entry.parent {
@@ -99,7 +99,7 @@ impl<T> Tree<T> {
         removed
     }
 
-    /// Обход в глубину, прямой порядок (родитель раньше детей, дети слева направо).
+    /// Depth-first, pre-order traversal (parent before children, children left to right).
     pub fn dfs(&self, root: NodeId) -> Dfs<'_, T> {
         let stack = if self.contains(root) { vec![root] } else { Vec::new() };
         Dfs { tree: self, stack }

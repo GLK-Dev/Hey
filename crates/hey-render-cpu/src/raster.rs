@@ -39,13 +39,13 @@ pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, cmd: &DrawCmd, clip: Op
                 draw_text(fb, fonts, run, clip);
             }
         }
-        // Изображения — позже.
+        // Images come later.
         DrawCmd::Image { .. } => {}
         DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
     }
 }
 
-/// Глифы кладутся на целые пиксели (перо округляется), покрытие берётся из растра шрифта.
+/// Glyphs are placed on whole pixels (the pen is rounded); coverage comes from the font raster.
 fn draw_text(fb: &mut Framebuffer, fonts: &Fonts, run: &GlyphRun, clip: Option<Rect>) {
     for g in &run.glyphs {
         let bmp = fonts.bitmap(run.font, g.id as u16, run.size_px);
@@ -72,12 +72,12 @@ impl RectExt for Rect {
     }
 }
 
-/// Перекрытие пикселя `[p, p+1]` с отрезком `[a, b]`.
+/// Overlap of pixel `[p, p+1]` with segment `[a, b]`.
 fn overlap(p: f32, a: f32, b: f32) -> f32 {
     ((p + 1.0).min(b) - p.max(a)).clamp(0.0, 1.0)
 }
 
-/// Покрытие пикселя `(px,py)` (левый верхний угол) фигурой «прямоугольник со срезом TL/BR».
+/// Coverage of pixel `(px,py)` (top-left corner) by a "rectangle with TL/BR chamfer" shape.
 fn shape_cov(r: &Rect, c: f32, px: f32, py: f32) -> f32 {
     let mut cov = overlap(px, r.x, r.right()) * overlap(py, r.y, r.bottom());
     if c > 0.0 {
@@ -97,7 +97,7 @@ fn dist_to_segment(p: Point, a: Point, b: Point) -> f32 {
     ((p.x - qx).powi(2) + (p.y - qy).powi(2)).sqrt()
 }
 
-/// Аппроксимация erf (Абрамовиц–Стеган 7.1.26).
+/// erf approximation (Abramowitz–Stegun 7.1.26).
 fn erf(x: f32) -> f32 {
     let s = x.signum();
     let x = x.abs();
@@ -118,7 +118,7 @@ fn draw_shadow(fb: &mut Framebuffer, rect: &Rect, s: &Shadow, clip: Option<Rect>
     });
 }
 
-/// Обходит пиксели `area ∩ clip ∩ framebuffer`; `f(x, y)` -> (цвет, покрытие).
+/// Walks pixels of `area ∩ clip ∩ framebuffer`; `f(x, y)` -> (color, coverage).
 fn paint(fb: &mut Framebuffer, area: Rect, clip: Option<Rect>, f: impl Fn(f32, f32) -> (Color, f32)) {
     let mut x0 = area.x.floor().max(0.0) as i64;
     let mut y0 = area.y.floor().max(0.0) as i64;
