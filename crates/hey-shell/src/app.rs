@@ -126,6 +126,12 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         self
     }
 
+    /// Wait for vertical sync on the GPU backend (default `true`; `HEY_VSYNC=0|1` overrides).
+    pub fn vsync(mut self, on: bool) -> Self {
+        self.window.vsync = on;
+        self
+    }
+
     pub fn title(mut self, title: impl Into<String>) -> Self {
         self.window.title = title.into();
         self
@@ -172,7 +178,8 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     }
 
     pub fn run(self) -> Result<(), String> {
-        let cfg = WindowConfig { title: self.window.title.clone(), size: self.window.size, clear: self.window.clear };
+        let cfg =
+            WindowConfig { title: self.window.title.clone(), size: self.window.size, clear: self.window.clear, vsync: self.window.vsync };
         let rt = self.build()?;
         crate::run(cfg, rt).map_err(|e| e.to_string())
     }

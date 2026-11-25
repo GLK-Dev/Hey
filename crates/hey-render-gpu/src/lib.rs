@@ -95,6 +95,7 @@ struct Batch {
 struct Presenter {
     surface: wgpu::Surface<'static>,
     config: wgpu::SurfaceConfiguration,
+    modes: Vec<wgpu::PresentMode>,
 }
 
 /// GPU renderer: draws either into an offscreen texture (headless, for tests) or into a window surface.
@@ -175,7 +176,7 @@ impl GpuRenderer {
                     view_formats: vec![],
                 };
                 surface.configure(&device, &config);
-                (format, Some(Presenter { surface, config }))
+                (format, Some(Presenter { surface, config, modes: caps.present_modes.clone() }))
             }
         };
 
@@ -422,6 +423,25 @@ impl GpuRenderer {
             }
         }
         None
+    }
+
+    /// `true`: vsync (`Fifo`, always available). `false`: lowest-latency uncapped mode the surface supports
+    /// (`Mailbox`, then `Immediate`), falling back to `Fifo`. Returns the mode actually applied; no-op when headless.
+    pub fn set_vsync(&mut self, vsync: bool) -> Option<wgpu::PresentMode> {
+        let p = self.present.as_mut()?;
+        let want = if vsync {
+            wgpu::PresentMode::Fifo
+        } else {
+            [wgpu::PresentMode::Mailbox, wgpu::PresentMode::Immediate]
+                .into_iter()
+                .find(|m| p.modes.contains(m))
+                .unwrap_or(wgpu::PresentMode::Fifo)
+        };
+        if p.config.present_mode != want {
+            p.config.present_mode = want;
+            p.surface.configure(&self.device, &p.config);
+        }
+        Some(want)
     }
 
     pub fn size(&self) -> (u32, u32) {

@@ -83,11 +83,13 @@ pub struct WindowConfig {
     /// Logical size at creation.
     pub size: (f64, f64),
     pub clear: hey_core::Color,
+    /// Wait for vertical sync on the GPU backend (`HEY_VSYNC=0|1` overrides).
+    pub vsync: bool,
 }
 
 impl Default for WindowConfig {
     fn default() -> Self {
-        Self { title: "Hey".into(), size: (960.0, 600.0), clear: hey_core::Color::hex(0x0B0C10) }
+        Self { title: "Hey".into(), size: (960.0, 600.0), clear: hey_core::Color::hex(0x0B0C10), vsync: true }
     }
 }
 
@@ -110,13 +112,16 @@ struct Gfx {
     backend: Option<Backend>,
     /// Image store last handed to the active renderer (compared by pointer to detect new icons).
     images: Option<Arc<hey_draw::ImageStore>>,
+    /// Window is fully covered or minimized: skip rendering until it becomes visible again.
+    occluded: bool,
 }
 
-fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>) -> Result<Backend, String> {
+fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) -> Result<Backend, String> {
     let sz = window.inner_size();
     let mut r = GpuRenderer::new_for_window(window.clone(), sz.width.max(1), sz.height.max(1)).map_err(|e| e.to_string())?;
     r.clear_color = clear;
     r.fonts = fonts;
+    r.set_vsync(vsync);
     Ok(Backend::Gpu(Box::new(r)))
 }
 
@@ -139,12 +144,12 @@ fn is_switch_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
 }
 
 impl Gfx {
-    fn switch_backend(&mut self, clear: Color, fonts: Option<Arc<Fonts>>) {
+    fn switch_backend(&mut self, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) {
         let to_gpu = matches!(self.backend, Some(Backend::Cpu { .. }));
         self.images = None; // the new renderer has no images yet
         self.backend = None; // release the current surface first: one window cannot hold two
         let created =
-            if to_gpu { create_gpu(&self.window, clear, fonts.clone()) } else { Ok(create_cpu(&self.window, clear, fonts.clone())) };
+            if to_gpu { create_gpu(&self.window, clear, fonts.clone(), vsync) } else { Ok(create_cpu(&self.window, clear, fonts.clone())) };
         self.backend = Some(match created {
             Ok(b) => b,
             Err(e) => {
@@ -154,6 +159,15 @@ impl Gfx {
         });
         eprintln!("hey: renderer = {}", if matches!(self.backend, Some(Backend::Gpu(_))) { "gpu" } else { "cpu" });
         self.window.request_redraw();
+    }
+}
+
+/// Effective vsync: `HEY_VSYNC=0|1` overrides the configured value.
+fn vsync_setting(configured: bool) -> bool {
+    match std::env::var("HEY_VSYNC").as_deref() {
+        Ok("0") => false,
+        Ok("1") => true,
+        _ => configured,
     }
 }
 
@@ -203,7 +217,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let (clear, fonts) = (self.cfg.clear, self.app.fonts());
         let mut backend = None;
         if try_gpu {
-            match create_gpu(&window, clear, fonts.clone()) {
+            match create_gpu(&window, clear, fonts.clone(), vsync_setting(self.cfg.vsync)) {
                 Ok(b) => backend = Some(b),
                 Err(e) if allow_cpu => eprintln!("hey: GPU unavailable ({e}), using the CPU renderer"),
                 Err(e) => panic!("hey: GPU renderer requested but unavailable: {e}"),
@@ -212,13 +226,13 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
         window.set_ime_allowed(true);
         window.request_redraw();
-        self.gfx = Some(Gfx { window, backend: Some(backend), images: None });
+        self.gfx = Some(Gfx { window, backend: Some(backend), images: None, occluded: false });
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
         let Some(g) = self.gfx.as_mut() else { return };
         if is_switch_hotkey(&event, self.input.mods) {
-            g.switch_backend(self.cfg.clear, self.app.fonts());
+            g.switch_backend(self.cfg.clear, self.app.fonts(), vsync_setting(self.cfg.vsync));
             return;
         }
         let mut redraw = false;
@@ -231,8 +245,17 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         g.window.set_cursor(cursor_icon(self.app.cursor()));
         match event {
             WindowEvent::CloseRequested => el.exit(),
+            WindowEvent::Occluded(hidden) => {
+                g.occluded = hidden;
+                if !hidden {
+                    g.window.request_redraw();
+                }
+            }
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => g.window.request_redraw(),
             WindowEvent::RedrawRequested => {
+                if g.occluded {
+                    return;
+                }
                 let sz = g.window.inner_size();
                 let (Some(w), Some(h)) = (NonZeroU32::new(sz.width), NonZeroU32::new(sz.height)) else {
                     return; // minimized

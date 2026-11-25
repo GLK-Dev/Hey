@@ -177,7 +177,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Примеры: `counter`, `todo` (повторяет прототип на новом API), `gallery`.
 
 ### Фаза 8. GPU-бэкенд (`hey-render-gpu`) (4–5 Н)
-- [x] Окно через wgpu `Surface` в `hey-shell`: lost/outdated/resize, `Fifo`, адаптер по `compatible_surface`, non-sRGB формат, fallback на CPU при ошибке. [ ] окклюзия/сворачивание и `present_mode` из конфига.
+- [x] Окно через wgpu `Surface` в `hey-shell`: lost/outdated/resize, `Fifo`, адаптер по `compatible_surface`, non-sRGB формат, fallback на CPU при ошибке. [x] окклюзия/сворачивание (`WindowEvent::Occluded`, нулевой размер — кадр пропускается) и `present_mode` из конфига (`App::vsync`, `HEY_VSYNC=0|1`; без vsync — Mailbox → Immediate → Fifo).
 - [x] Instanced SDF-пайплайн (rect/chamfer/border/shadow/line), `bytemuck` + проверка размера инстанса (64 B), единый буфер инстансов. [ ] ring-буферы — позже.
 - [x] Атлас глифов (R8 1024², shelf-упаковка, кэш по (шрифт, глиф, размер), сброс страницы при переполнении, `textureLoad` без фильтрации). [ ] LRU-вытеснение, несколько страниц, подпиксельное позиционирование, SDF/MSDF-вариант для масштабирования (опционально).
 - [x] Батчинг по scissor (смежные команды с одним клипом = один draw). [ ] минимизация смен текстур — вместе с атласом.
