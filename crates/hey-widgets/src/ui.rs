@@ -125,6 +125,7 @@ pub struct Ui<Msg> {
     hover: Option<NodeId>,
     pressed: Option<NodeId>,
     focus: Option<NodeId>,
+    trap: Option<NodeId>,
     last_click: Option<(NodeId, Instant, u32)>,
     overlays: Vec<Overlay<Msg>>,
     queue: Overlays<Msg>,
@@ -143,6 +144,7 @@ impl<Msg: 'static> Ui<Msg> {
             hover: None,
             pressed: None,
             focus: None,
+            trap: None,
             last_click: None,
             overlays: Vec::new(),
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
@@ -290,6 +292,30 @@ impl<Msg: 'static> Ui<Msg> {
     pub fn focused(&self) -> Option<NodeId> {
         self.focus
     }
+    /// Программно ставит фокус на фокусируемый, включённый виджет (в пределах ловушки, если она задана).
+    pub fn focus(&mut self, id: NodeId) -> bool {
+        if self.focus_order().contains(&id) {
+            self.focus = Some(id);
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn blur(&mut self) {
+        self.focus = None;
+    }
+
+    /// Ловушка фокуса: Tab/Shift+Tab и клики фокусируют только виджеты поддерева `scope`.
+    /// Фокус вне области переносится на её первый элемент. `None` снимает ловушку.
+    pub fn trap_focus(&mut self, scope: Option<NodeId>) {
+        self.trap = scope;
+        let order = self.focus_order();
+        if self.focus.is_some_and(|f| !order.contains(&f)) {
+            self.focus = order.first().copied();
+        }
+    }
+
     pub fn hovered(&self) -> Option<NodeId> {
         self.hover
     }
@@ -310,7 +336,7 @@ impl<Msg: 'static> Ui<Msg> {
     /// Фокусируемые виджеты в порядке обхода дерева.
     fn focus_order(&self) -> Vec<NodeId> {
         let mut out = Vec::new();
-        let mut stack = vec![self.tree.root()];
+        let mut stack = vec![self.trap.unwrap_or_else(|| self.tree.root())];
         while let Some(id) = stack.pop() {
             if self.nodes.get(&id).is_some_and(|n| !n.disabled && n.widget.focusable()) {
                 out.push(id);
@@ -418,7 +444,7 @@ impl<Msg: 'static> Ui<Msg> {
                 self.set_hover(hit);
                 self.pressed = hit.filter(|&i| self.enabled(i));
                 if let Some(i) = self.pressed {
-                    if self.nodes[&i].widget.focusable() {
+                    if self.nodes[&i].widget.focusable() && (self.trap.is_none() || self.focus_order().contains(&i)) {
                         self.focus = Some(i);
                     }
                     let now = Instant::now();
