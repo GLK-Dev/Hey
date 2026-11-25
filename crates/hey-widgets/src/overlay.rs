@@ -140,7 +140,14 @@ pub struct Dropdown<Msg> {
 }
 
 impl<Msg: 'static> Dropdown<Msg> {
-    pub fn add(ui: &mut Ui<Msg>, parent: NodeId, items: Vec<String>, selected: usize, width: f32, on_select: Callback<Msg, usize>) -> NodeId {
+    pub fn add(
+        ui: &mut Ui<Msg>,
+        parent: NodeId,
+        items: Vec<String>,
+        selected: usize,
+        width: f32,
+        on_select: Callback<Msg, usize>,
+    ) -> NodeId {
         let env = ui.env.clone();
         let h = row_height(&env) + 2.0 * env.theme.space(2.0);
         let d = Dropdown {

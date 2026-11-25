@@ -31,10 +31,7 @@ impl WidgetStateStore {
 
     /// Состояние по ключу; создаётся через `Default`. Если под ключом лежит другой тип — заменяется.
     pub fn get_or_default<T: Any + Default>(&mut self, key: &Key) -> &mut T {
-        let slot = self
-            .map
-            .entry(key.clone())
-            .or_insert_with(|| Slot { value: Box::new(T::default()), touched: true });
+        let slot = self.map.entry(key.clone()).or_insert_with(|| Slot { value: Box::new(T::default()), touched: true });
         slot.touched = true;
         if !slot.value.is::<T>() {
             slot.value = Box::new(T::default());

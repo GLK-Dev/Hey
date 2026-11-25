@@ -39,18 +39,39 @@ pub enum MouseButton {
 /// Нормализованные события, не зависящие от winit (позиции — в физических пикселях).
 #[derive(Clone, Debug, PartialEq)]
 pub enum UiEvent {
-    PointerMove { pos: Point },
-    PointerDown { pos: Point, button: MouseButton },
-    PointerUp { pos: Point, button: MouseButton },
+    PointerMove {
+        pos: Point,
+    },
+    PointerDown {
+        pos: Point,
+        button: MouseButton,
+    },
+    PointerUp {
+        pos: Point,
+        button: MouseButton,
+    },
     PointerLeave,
-    Wheel { pos: Point, dx: f32, dy: f32 },
+    Wheel {
+        pos: Point,
+        dx: f32,
+        dy: f32,
+    },
     /// `code` — логическое имя клавиши («Enter», «ArrowLeft», «a»).
-    KeyDown { code: String, mods: Modifiers },
-    KeyUp { code: String, mods: Modifiers },
+    KeyDown {
+        code: String,
+        mods: Modifiers,
+    },
+    KeyUp {
+        code: String,
+        mods: Modifiers,
+    },
     /// Введённый текст (уже с учётом раскладки/IME).
     Text(String),
     FocusChanged(bool),
-    Resize { width: u32, height: u32 },
+    Resize {
+        width: u32,
+        height: u32,
+    },
     ScaleFactor(f64),
     /// Файл наведён на окно (drag-and-drop), ещё не отпущен.
     FileHovered(std::path::PathBuf),

@@ -21,6 +21,7 @@ impl Demo {
         Self { fonts: Arc::new(f), onest, mono }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn text(&self, list: &mut DisplayList, s: &str, chain: &[u32], size: f32, width: f32, at: Point, color: Color) {
         let mut st = TextStyle::new(chain.to_vec(), size);
         st.max_width = Some(width);
@@ -57,7 +58,15 @@ impl ShellApp for Demo {
             Point::new(r.x + pad, r.y + pad + 44.0 * s),
             Color::hex(0xB4BAC8),
         );
-        self.text(list, "cargo run -p hey-shell --example window", &[self.mono], 13.0 * s, w, Point::new(r.x + pad, r.y + r.h - pad - 16.0 * s), Color::hex(0x66CCFF));
+        self.text(
+            list,
+            "cargo run -p hey-shell --example window",
+            &[self.mono],
+            13.0 * s,
+            w,
+            Point::new(r.x + pad, r.y + r.h - pad - 16.0 * s),
+            Color::hex(0x66CCFF),
+        );
     }
 }
 

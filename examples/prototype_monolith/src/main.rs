@@ -29,12 +29,7 @@ struct Color {
 
 impl Color {
     const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self {
-            r: r as f32 / 255.0,
-            g: g as f32 / 255.0,
-            b: b as f32 / 255.0,
-            a: a as f32 / 255.0,
-        }
+        Self { r: r as f32 / 255.0, g: g as f32 / 255.0, b: b as f32 / 255.0, a: a as f32 / 255.0 }
     }
 
     const fn rgb(r: u8, g: u8, b: u8) -> Self {
@@ -45,6 +40,7 @@ impl Color {
         [self.r, self.g, self.b, self.a]
     }
 
+    #[allow(dead_code)]
     fn to_u32_argb(self) -> u32 {
         let a = (self.a.clamp(0.0, 1.0) * 255.0).round() as u32;
         let r = (self.r.clamp(0.0, 1.0) * 255.0).round() as u32;
@@ -54,10 +50,7 @@ impl Color {
     }
 
     fn with_alpha(self, alpha: f32) -> Self {
-        Self {
-            a: (self.a * alpha).clamp(0.0, 1.0),
-            ..self
-        }
+        Self { a: (self.a * alpha).clamp(0.0, 1.0), ..self }
     }
 }
 
@@ -148,12 +141,7 @@ impl Rect {
         let y1 = self.y.max(other.y);
         let x2 = (self.x + self.w).min(other.x + other.w).max(x1);
         let y2 = (self.y + self.h).min(other.y + other.h).max(y1);
-        Rect {
-            x: x1,
-            y: y1,
-            w: x2 - x1,
-            h: y2 - y1,
-        }
+        Rect { x: x1, y: y1, w: x2 - x1, h: y2 - y1 }
     }
 }
 
@@ -257,21 +245,9 @@ impl AppState {
             count: 3,
             next_todo_id: 4,
             todos: vec![
-                TodoItem {
-                    id: 1,
-                    title: "Единый DrawCmd для CPU и GPU".into(),
-                    done: true,
-                },
-                TodoItem {
-                    id: 2,
-                    title: "SDF-шейдер рамок и скруглений на WGSL".into(),
-                    done: true,
-                },
-                TodoItem {
-                    id: 3,
-                    title: "Кастомные табы и панели состояния".into(),
-                    done: false,
-                },
+                TodoItem { id: 1, title: "Единый DrawCmd для CPU и GPU".into(), done: true },
+                TodoItem { id: 2, title: "SDF-шейдер рамок и скруглений на WGSL".into(), done: true },
+                TodoItem { id: 3, title: "Кастомные табы и панели состояния".into(), done: false },
             ],
             hovered_id: None,
             pressed_id: None,
@@ -301,11 +277,7 @@ impl AppState {
             Action::AddTodo(title) => {
                 let t = title.trim();
                 if !t.is_empty() {
-                    self.todos.push(TodoItem {
-                        id: self.next_todo_id,
-                        title: t.to_string(),
-                        done: false,
-                    });
+                    self.todos.push(TodoItem { id: self.next_todo_id, title: t.to_string(), done: false });
                     self.next_todo_id += 1;
                     return true;
                 }
@@ -345,19 +317,11 @@ struct UiContext<'a> {
 
 impl<'a> UiContext<'a> {
     fn new(theme: &'a Theme, state: &'a AppState, font: &'a Font) -> Self {
-        Self {
-            theme,
-            state,
-            font,
-            cmds: Vec::new(),
-            hits: Vec::new(),
-        }
+        Self { theme, state, font, cmds: Vec::new(), hits: Vec::new() }
     }
 
     fn measure_text(&self, text: &str, size: f32) -> f32 {
-        text.chars()
-            .map(|ch| self.font.metrics(ch, size).advance_width)
-            .sum()
+        text.chars().map(|ch| self.font.metrics(ch, size).advance_width).sum()
     }
 
     fn draw_box(
@@ -373,46 +337,19 @@ impl<'a> UiContext<'a> {
             Some((off, blur, col)) => (off, blur, col),
             None => ([0.0, 0.0], 0.0, Color::rgba(0, 0, 0, 0)),
         };
-        self.cmds.push(DrawCmd::Box {
-            rect,
-            fill,
-            border_color,
-            border_width,
-            radius,
-            shadow_offset,
-            shadow_blur,
-            shadow_color,
-        });
+        self.cmds.push(DrawCmd::Box { rect, fill, border_color, border_width, radius, shadow_offset, shadow_blur, shadow_color });
     }
 
     fn draw_text(&mut self, x: f32, y: f32, text: impl Into<String>, size: f32, color: Color) {
-        self.cmds.push(DrawCmd::Text {
-            x,
-            y,
-            text: text.into(),
-            size,
-            color,
-        });
+        self.cmds.push(DrawCmd::Text { x, y, text: text.into(), size, color });
     }
 
-    fn button(
-        &mut self,
-        id: &str,
-        rect: Rect,
-        label: &str,
-        action: Action,
-        accent: bool,
-        danger: bool,
-    ) {
+    fn button(&mut self, id: &str, rect: Rect, label: &str, action: Action, accent: bool, danger: bool) {
         let is_hovered = self.state.hovered_id.as_deref() == Some(id);
         let is_pressed = self.state.pressed_id.as_deref() == Some(id);
 
         let (fill, border, text_col) = if danger {
-            let f = if is_hovered {
-                self.theme.danger_hover
-            } else {
-                self.theme.danger_bg
-            };
+            let f = if is_hovered { self.theme.danger_hover } else { self.theme.danger_bg };
             (f, self.theme.danger_hover, self.theme.text_primary)
         } else if accent {
             let f = if is_pressed {
@@ -435,10 +372,7 @@ impl<'a> UiContext<'a> {
         };
 
         let offset_y = if is_pressed { 1.0 } else { 0.0 };
-        let draw_rect = Rect {
-            y: rect.y + offset_y,
-            ..rect
-        };
+        let draw_rect = Rect { y: rect.y + offset_y, ..rect };
 
         self.draw_box(
             draw_rect,
@@ -446,11 +380,7 @@ impl<'a> UiContext<'a> {
             border,
             self.theme.border_width,
             self.theme.btn_radius,
-            if !is_pressed {
-                Some(([0.0, 2.0], 5.0, self.theme.shadow.with_alpha(0.55)))
-            } else {
-                None
-            },
+            if !is_pressed { Some(([0.0, 2.0], 5.0, self.theme.shadow.with_alpha(0.55))) } else { None },
         );
 
         let text_size = 15.0;
@@ -459,11 +389,7 @@ impl<'a> UiContext<'a> {
         let ty = draw_rect.y + (draw_rect.h - text_size) * 0.5 - 1.0;
         self.draw_text(tx, ty, label, text_size, text_col);
 
-        self.hits.push(HitBox {
-            id: id.to_string(),
-            rect,
-            action,
-        });
+        self.hits.push(HitBox { id: id.to_string(), rect, action });
     }
 
     fn tab(&mut self, id: &str, rect: Rect, label: &str, active: bool, tab_id: TabId) {
@@ -477,34 +403,21 @@ impl<'a> UiContext<'a> {
             self.theme.tab_inactive_bg
         };
 
-        let border_col = if active {
-            self.theme.accent
-        } else {
-            self.theme.tab_border
-        };
+        let border_col = if active { self.theme.accent } else { self.theme.tab_border };
 
         // Рисуем корпус таба; если активен — добавляем акцентную полосу сверху
         self.draw_box(
             rect,
             fill,
             border_col,
-            if active {
-                self.theme.border_width + 0.5
-            } else {
-                self.theme.border_width
-            },
+            if active { self.theme.border_width + 0.5 } else { self.theme.border_width },
             self.theme.tab_radius,
             None,
         );
 
         if active {
             self.draw_box(
-                Rect {
-                    x: rect.x + 8.0,
-                    y: rect.y,
-                    w: (rect.w - 16.0).max(4.0),
-                    h: 3.0,
-                },
+                Rect { x: rect.x + 8.0, y: rect.y, w: (rect.w - 16.0).max(4.0), h: 3.0 },
                 self.theme.accent,
                 Color::rgba(0, 0, 0, 0),
                 0.0,
@@ -517,18 +430,10 @@ impl<'a> UiContext<'a> {
         let text_w = self.measure_text(label, text_size);
         let tx = rect.x + (rect.w - text_w) * 0.5;
         let ty = rect.y + (rect.h - text_size) * 0.5;
-        let text_col = if active {
-            self.theme.text_primary
-        } else {
-            self.theme.text_muted
-        };
+        let text_col = if active { self.theme.text_primary } else { self.theme.text_muted };
         self.draw_text(tx, ty, label, text_size, text_col);
 
-        self.hits.push(HitBox {
-            id: id.to_string(),
-            rect,
-            action: Action::SelectTab(tab_id),
-        });
+        self.hits.push(HitBox { id: id.to_string(), rect, action: Action::SelectTab(tab_id) });
     }
 }
 
@@ -536,71 +441,26 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
     let mut ui = UiContext::new(theme, state, font);
 
     // Фон окна
-    ui.draw_box(
-        Rect {
-            x: 0.0,
-            y: 0.0,
-            w: width,
-            h: height,
-        },
-        theme.window_bg,
-        Color::rgba(0, 0, 0, 0),
-        0.0,
-        0.0,
-        None,
-    );
+    ui.draw_box(Rect { x: 0.0, y: 0.0, w: width, h: height }, theme.window_bg, Color::rgba(0, 0, 0, 0), 0.0, 0.0, None);
 
     // Внешняя рамка окна / контейнера
     let margin = 16.0;
-    let frame = Rect {
-        x: margin,
-        y: margin,
-        w: (width - margin * 2.0).max(200.0),
-        h: (height - margin * 2.0).max(160.0),
-    };
+    let frame = Rect { x: margin, y: margin, w: (width - margin * 2.0).max(200.0), h: (height - margin * 2.0).max(160.0) };
 
-    ui.draw_box(
-        frame,
-        theme.frame_bg,
-        theme.frame_border,
-        theme.border_width,
-        theme.frame_radius,
-        Some(([0.0, 6.0], 14.0, theme.shadow)),
-    );
+    ui.draw_box(frame, theme.frame_bg, theme.frame_border, theme.border_width, theme.frame_radius, Some(([0.0, 6.0], 14.0, theme.shadow)));
 
     // Шапка рамки + переключатель CPU / GPU
     let header_y = frame.y + 14.0;
-    ui.draw_text(
-        frame.x + 20.0,
-        header_y + 4.0,
-        "CUSTOM RUST UI ENGINE",
-        18.0,
-        theme.text_primary,
-    );
+    ui.draw_text(frame.x + 20.0, header_y + 4.0, "CUSTOM RUST UI ENGINE", 18.0, theme.text_primary);
 
-    let status_text = format!(
-        "Режим: {}  |  Кадр: {:.2} ms  |  [Tab] переключить",
-        state.backend.label(),
-        state.last_frame_ms
-    );
-    ui.draw_text(
-        frame.x + 20.0,
-        header_y + 28.0,
-        status_text,
-        13.0,
-        theme.text_muted,
-    );
+    let status_text = format!("Режим: {}  |  Кадр: {:.2} ms  |  [Tab] переключить", state.backend.label(), state.last_frame_ms);
+    ui.draw_text(frame.x + 20.0, header_y + 28.0, status_text, 13.0, theme.text_muted);
 
     let toggle_w = 190.0;
     let toggle_h = 34.0;
     ui.button(
         "btn_toggle_backend",
-        Rect {
-            x: frame.x + frame.w - toggle_w - 20.0,
-            y: header_y + 4.0,
-            w: toggle_w,
-            h: toggle_h,
-        },
+        Rect { x: frame.x + frame.w - toggle_w - 20.0, y: header_y + 4.0, w: toggle_w, h: toggle_h },
         "Переключить CPU / GPU",
         Action::ToggleBackend,
         true,
@@ -620,37 +480,15 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
 
     for (idx, (tid, hid, title)) in tabs.iter().enumerate() {
         let tx = frame.x + 20.0 + idx as f32 * (tab_w + tab_gap);
-        ui.tab(
-            hid,
-            Rect {
-                x: tx,
-                y: tab_bar_y,
-                w: tab_w,
-                h: tab_h,
-            },
-            title,
-            state.active_tab == *tid,
-            *tid,
-        );
+        ui.tab(hid, Rect { x: tx, y: tab_bar_y, w: tab_w, h: tab_h }, title, state.active_tab == *tid, *tid);
     }
 
     // Контентная панель с рамкой
     let content_y = tab_bar_y + tab_h + 6.0;
-    let content_rect = Rect {
-        x: frame.x + 18.0,
-        y: content_y,
-        w: (frame.w - 36.0).max(120.0),
-        h: (frame.y + frame.h - content_y - 18.0).max(80.0),
-    };
+    let content_rect =
+        Rect { x: frame.x + 18.0, y: content_y, w: (frame.w - 36.0).max(120.0), h: (frame.y + frame.h - content_y - 18.0).max(80.0) };
 
-    ui.draw_box(
-        content_rect,
-        theme.panel_bg,
-        theme.panel_border,
-        theme.border_width,
-        theme.panel_radius,
-        None,
-    );
+    ui.draw_box(content_rect, theme.panel_bg, theme.panel_border, theme.border_width, theme.panel_radius, None);
 
     ui.cmds.push(DrawCmd::ClipPush(Rect {
         x: content_rect.x + 2.0,
@@ -664,50 +502,14 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
 
     match state.active_tab {
         TabId::Overview => {
-            ui.draw_text(
-                inner_x,
-                cursor_y,
-                "Интерактивный счётчик",
-                18.0,
-                theme.text_primary,
-            );
+            ui.draw_text(inner_x, cursor_y, "Интерактивный счётчик", 18.0, theme.text_primary);
             cursor_y += 34.0;
 
-            ui.button(
-                "btn_dec",
-                Rect {
-                    x: inner_x,
-                    y: cursor_y,
-                    w: 54.0,
-                    h: 40.0,
-                },
-                "-1",
-                Action::Decrement,
-                false,
-                false,
-            );
+            ui.button("btn_dec", Rect { x: inner_x, y: cursor_y, w: 54.0, h: 40.0 }, "-1", Action::Decrement, false, false);
 
-            ui.draw_text(
-                inner_x + 74.0,
-                cursor_y + 9.0,
-                format!("Значение: {}", state.count),
-                20.0,
-                theme.accent_hover,
-            );
+            ui.draw_text(inner_x + 74.0, cursor_y + 9.0, format!("Значение: {}", state.count), 20.0, theme.accent_hover);
 
-            ui.button(
-                "btn_inc",
-                Rect {
-                    x: inner_x + 230.0,
-                    y: cursor_y,
-                    w: 54.0,
-                    h: 40.0,
-                },
-                "+1",
-                Action::Increment,
-                true,
-                false,
-            );
+            ui.button("btn_inc", Rect { x: inner_x + 230.0, y: cursor_y, w: 54.0, h: 40.0 }, "+1", Action::Increment, true, false);
 
             cursor_y += 66.0;
             ui.draw_text(
@@ -729,12 +531,7 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
         TabId::Todos => {
             ui.button(
                 "btn_add_todo",
-                Rect {
-                    x: inner_x,
-                    y: cursor_y,
-                    w: 190.0,
-                    h: 36.0,
-                },
+                Rect { x: inner_x, y: cursor_y, w: 190.0, h: 36.0 },
                 "+ Добавить задачу",
                 Action::AddTodo(format!("Задача #{}", state.next_todo_id)),
                 true,
@@ -748,58 +545,26 @@ fn build_ui(width: f32, height: f32, theme: &Theme, state: &AppState, font: &Fon
                     break;
                 }
 
-                let row_rect = Rect {
-                    x: inner_x,
-                    y: cursor_y,
-                    w: (content_rect.w - 40.0).max(160.0),
-                    h: 38.0,
-                };
+                let row_rect = Rect { x: inner_x, y: cursor_y, w: (content_rect.w - 40.0).max(160.0), h: 38.0 };
 
-                ui.draw_box(
-                    row_rect,
-                    theme.frame_bg,
-                    theme.btn_border,
-                    1.0,
-                    6.0,
-                    None,
-                );
+                ui.draw_box(row_rect, theme.frame_bg, theme.btn_border, 1.0, 6.0, None);
 
                 let check_label = if todo.done { "[x]" } else { "[ ]" };
                 ui.button(
                     &format!("btn_toggle_{}", todo.id),
-                    Rect {
-                        x: row_rect.x + 8.0,
-                        y: row_rect.y + 5.0,
-                        w: 44.0,
-                        h: 28.0,
-                    },
+                    Rect { x: row_rect.x + 8.0, y: row_rect.y + 5.0, w: 44.0, h: 28.0 },
                     check_label,
                     Action::ToggleTodo(todo.id),
                     todo.done,
                     false,
                 );
 
-                let title_col = if todo.done {
-                    theme.text_muted
-                } else {
-                    theme.text_primary
-                };
-                ui.draw_text(
-                    row_rect.x + 62.0,
-                    row_rect.y + 9.0,
-                    &todo.title,
-                    15.0,
-                    title_col,
-                );
+                let title_col = if todo.done { theme.text_muted } else { theme.text_primary };
+                ui.draw_text(row_rect.x + 62.0, row_rect.y + 9.0, &todo.title, 15.0, title_col);
 
                 ui.button(
                     &format!("btn_del_{}", todo.id),
-                    Rect {
-                        x: row_rect.x + row_rect.w - 86.0,
-                        y: row_rect.y + 5.0,
-                        w: 78.0,
-                        h: 28.0,
-                    },
+                    Rect { x: row_rect.x + row_rect.w - 86.0, y: row_rect.y + 5.0, w: 78.0, h: 28.0 },
                     "Удалить",
                     Action::RemoveTodo(todo.id),
                     false,
@@ -878,20 +643,9 @@ impl CpuBackend {
         Self { font }
     }
 
-    fn render_to_buffer(
-        &self,
-        cmds: &[DrawCmd],
-        width: usize,
-        height: usize,
-        buf: &mut [u32],
-    ) {
+    fn render_to_buffer(&self, cmds: &[DrawCmd], width: usize, height: usize, buf: &mut [u32]) {
         buf.fill(0xFF0E1118);
-        let screen_clip = Rect {
-            x: 0.0,
-            y: 0.0,
-            w: width as f32,
-            h: height as f32,
-        };
+        let screen_clip = Rect { x: 0.0, y: 0.0, w: width as f32, h: height as f32 };
         let mut clip_stack = vec![screen_clip];
 
         for cmd in cmds {
@@ -905,23 +659,9 @@ impl CpuBackend {
                         clip_stack.pop();
                     }
                 }
-                DrawCmd::Box {
-                    rect,
-                    fill,
-                    border_color,
-                    border_width,
-                    radius,
-                    shadow_offset,
-                    shadow_blur,
-                    shadow_color,
-                } => {
+                DrawCmd::Box { rect, fill, border_color, border_width, radius, shadow_offset, shadow_blur, shadow_color } => {
                     if shadow_color.a > 0.001 && *shadow_blur > 0.0 {
-                        let sh_rect = Rect {
-                            x: rect.x + shadow_offset[0],
-                            y: rect.y + shadow_offset[1],
-                            w: rect.w,
-                            h: rect.h,
-                        };
+                        let sh_rect = Rect { x: rect.x + shadow_offset[0], y: rect.y + shadow_offset[1], w: rect.w, h: rect.h };
                         self.raster_box_sdf(
                             buf,
                             width,
@@ -935,32 +675,14 @@ impl CpuBackend {
                             *shadow_blur * 0.7,
                         );
                     }
-                    self.raster_box_sdf(
-                        buf,
-                        width,
-                        height,
-                        active_clip,
-                        *rect,
-                        *fill,
-                        *border_color,
-                        *border_width,
-                        *radius,
-                        1.0,
-                    );
+                    self.raster_box_sdf(buf, width, height, active_clip, *rect, *fill, *border_color, *border_width, *radius, 1.0);
                 }
-                DrawCmd::Text {
-                    x,
-                    y,
-                    text,
-                    size,
-                    color,
-                } => {
+                DrawCmd::Text { x, y, text, size, color } => {
                     let mut pen_x = *x;
                     for ch in text.chars() {
                         let (metrics, bitmap) = self.font.rasterize(ch, *size);
                         let gx0 = (pen_x + metrics.xmin as f32).floor() as i32;
-                        let gy0 = (*y + (*size * 0.78) - (metrics.ymin as f32 + metrics.height as f32))
-                            .floor() as i32;
+                        let gy0 = (*y + (*size * 0.78) - (metrics.ymin as f32 + metrics.height as f32)).floor() as i32;
 
                         for row in 0..metrics.height {
                             let py = gy0 + row as i32;
@@ -1009,13 +731,7 @@ impl CpuBackend {
         aa_px: f32,
     ) {
         let pad = aa_px + border_width + 2.0;
-        let bound = Rect {
-            x: rect.x - pad,
-            y: rect.y - pad,
-            w: rect.w + pad * 2.0,
-            h: rect.h + pad * 2.0,
-        }
-        .intersect(clip);
+        let bound = Rect { x: rect.x - pad, y: rect.y - pad, w: rect.w + pad * 2.0, h: rect.h + pad * 2.0 }.intersect(clip);
 
         let x_start = (bound.x.floor() as i32).max(0) as usize;
         let y_start = (bound.y.floor() as i32).max(0) as usize;
@@ -1095,16 +811,8 @@ struct CachedGlyph {
 }
 
 enum GpuBatch {
-    Boxes {
-        clip: Rect,
-        start: u32,
-        end: u32,
-    },
-    Glyphs {
-        clip: Rect,
-        start: u32,
-        end: u32,
-    },
+    Boxes { clip: Rect, start: u32, end: u32 },
+    Glyphs { clip: Rect, start: u32, end: u32 },
 }
 
 const ATLAS_SIZE: u32 = 1024;
@@ -1291,9 +999,7 @@ fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
 impl GpuBackend {
     fn new(window: Arc<Window>, width: u32, height: u32, font: Font) -> Result<Self, String> {
         let instance = wgpu::Instance::default();
-        let surface = instance
-            .create_surface(window)
-            .map_err(|e| format!("Не удалось создать wgpu Surface: {e}"))?;
+        let surface = instance.create_surface(window).map_err(|e| format!("Не удалось создать wgpu Surface: {e}"))?;
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
@@ -1314,12 +1020,7 @@ impl GpuBackend {
         .map_err(|e| format!("Ошибка создания wgpu Device: {e}"))?;
 
         let caps = surface.get_capabilities(&adapter);
-        let format = caps
-            .formats
-            .iter()
-            .copied()
-            .find(|f| !f.is_srgb())
-            .unwrap_or(caps.formats[0]);
+        let format = caps.formats.iter().copied().find(|f| !f.is_srgb()).unwrap_or(caps.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -1345,11 +1046,7 @@ impl GpuBackend {
             entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::VERTEX,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
+                ty: wgpu::BindingType::Buffer { ty: wgpu::BufferBindingType::Uniform, has_dynamic_offset: false, min_binding_size: None },
                 count: None,
             }],
         });
@@ -1357,10 +1054,7 @@ impl GpuBackend {
         let box_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("box_bind_group"),
             layout: &uniform_bgl,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: uniform_buffer.as_entire_binding(),
-            }],
+            entries: &[wgpu::BindGroupEntry { binding: 0, resource: uniform_buffer.as_entire_binding() }],
         });
 
         let sdf_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -1397,26 +1091,10 @@ impl GpuBackend {
                     array_stride: std::mem::size_of::<BoxInstance>() as u64,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
-                        wgpu::VertexAttribute {
-                            offset: 0,
-                            shader_location: 0,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
-                        wgpu::VertexAttribute {
-                            offset: 16,
-                            shader_location: 1,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
-                        wgpu::VertexAttribute {
-                            offset: 32,
-                            shader_location: 2,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
-                        wgpu::VertexAttribute {
-                            offset: 48,
-                            shader_location: 3,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
+                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute { offset: 16, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute { offset: 32, shader_location: 2, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute { offset: 48, shader_location: 3, format: wgpu::VertexFormat::Float32x4 },
                     ],
                 }],
                 compilation_options: Default::default(),
@@ -1424,11 +1102,7 @@ impl GpuBackend {
             fragment: Some(wgpu::FragmentState {
                 module: &sdf_shader,
                 entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: Some(alpha_blend),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
+                targets: &[Some(wgpu::ColorTargetState { format, blend: Some(alpha_blend), write_mask: wgpu::ColorWrites::ALL })],
                 compilation_options: Default::default(),
             }),
             primitive: wgpu::PrimitiveState::default(),
@@ -1440,11 +1114,7 @@ impl GpuBackend {
 
         let atlas_texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("glyph_atlas"),
-            size: wgpu::Extent3d {
-                width: ATLAS_SIZE,
-                height: ATLAS_SIZE,
-                depth_or_array_layers: 1,
-            },
+            size: wgpu::Extent3d { width: ATLAS_SIZE, height: ATLAS_SIZE, depth_or_array_layers: 1 },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -1486,14 +1156,8 @@ impl GpuBackend {
             label: Some("glyph_bind_group"),
             layout: &atlas_bgl,
             entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&atlas_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&atlas_sampler),
-                },
+                wgpu::BindGroupEntry { binding: 0, resource: wgpu::BindingResource::TextureView(&atlas_view) },
+                wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::Sampler(&atlas_sampler) },
             ],
         });
 
@@ -1518,21 +1182,9 @@ impl GpuBackend {
                     array_stride: std::mem::size_of::<GlyphInstance>() as u64,
                     step_mode: wgpu::VertexStepMode::Instance,
                     attributes: &[
-                        wgpu::VertexAttribute {
-                            offset: 0,
-                            shader_location: 0,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
-                        wgpu::VertexAttribute {
-                            offset: 16,
-                            shader_location: 1,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
-                        wgpu::VertexAttribute {
-                            offset: 32,
-                            shader_location: 2,
-                            format: wgpu::VertexFormat::Float32x4,
-                        },
+                        wgpu::VertexAttribute { offset: 0, shader_location: 0, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute { offset: 16, shader_location: 1, format: wgpu::VertexFormat::Float32x4 },
+                        wgpu::VertexAttribute { offset: 32, shader_location: 2, format: wgpu::VertexFormat::Float32x4 },
                     ],
                 }],
                 compilation_options: Default::default(),
@@ -1540,11 +1192,7 @@ impl GpuBackend {
             fragment: Some(wgpu::FragmentState {
                 module: &glyph_shader,
                 entry_point: Some("fs_main"),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend: Some(alpha_blend),
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
+                targets: &[Some(wgpu::ColorTargetState { format, blend: Some(alpha_blend), write_mask: wgpu::ColorWrites::ALL })],
                 compilation_options: Default::default(),
             }),
             primitive: wgpu::PrimitiveState::default(),
@@ -1602,10 +1250,7 @@ impl GpuBackend {
     }
 
     fn ensure_glyph(&mut self, ch: char, size: f32) -> Option<CachedGlyph> {
-        let key = GlyphKey {
-            ch,
-            size_bits: size.to_bits(),
-        };
+        let key = GlyphKey { ch, size_bits: size.to_bits() };
         if let Some(g) = self.glyph_cache.get(&key) {
             return Some(*g);
         }
@@ -1615,12 +1260,7 @@ impl GpuBackend {
         let gh = metrics.height as u32;
 
         if gw == 0 || gh == 0 {
-            let g = CachedGlyph {
-                uv: [0.0; 4],
-                offset: [0.0; 2],
-                size: [0.0; 2],
-                advance: metrics.advance_width,
-            };
+            let g = CachedGlyph { uv: [0.0; 4], offset: [0.0; 2], size: [0.0; 2], advance: metrics.advance_width };
             self.glyph_cache.insert(key, g);
             return Some(g);
         }
@@ -1647,23 +1287,15 @@ impl GpuBackend {
         let y = self.atlas_cursor_y;
 
         self.queue.write_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &self.atlas_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d { x, y, z: 0 },
                 aspect: wgpu::TextureAspect::All,
             },
             &bitmap,
-            wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(gw),
-                rows_per_image: Some(gh),
-            },
-            wgpu::Extent3d {
-                width: gw,
-                height: gh,
-                depth_or_array_layers: 1,
-            },
+            wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(gw), rows_per_image: Some(gh) },
+            wgpu::Extent3d { width: gw, height: gh, depth_or_array_layers: 1 },
         );
 
         self.atlas_cursor_x += gw + 2;
@@ -1671,16 +1303,8 @@ impl GpuBackend {
 
         let f_size = ATLAS_SIZE as f32;
         let g = CachedGlyph {
-            uv: [
-                x as f32 / f_size,
-                y as f32 / f_size,
-                (x + gw) as f32 / f_size,
-                (y + gh) as f32 / f_size,
-            ],
-            offset: [
-                metrics.xmin as f32,
-                size * 0.78 - (metrics.ymin as f32 + gh as f32),
-            ],
+            uv: [x as f32 / f_size, y as f32 / f_size, (x + gw) as f32 / f_size, (y + gh) as f32 / f_size],
+            offset: [metrics.xmin as f32, size * 0.78 - (metrics.ymin as f32 + gh as f32)],
             size: [gw as f32, gh as f32],
             advance: metrics.advance_width,
         };
@@ -1695,18 +1319,10 @@ impl GpuBackend {
         self.queue.write_buffer(
             &self.uniform_buffer,
             0,
-            bytemuck::bytes_of(&ScreenUniform {
-                screen_size: [w as f32, h as f32],
-                _pad: [0.0, 0.0],
-            }),
+            bytemuck::bytes_of(&ScreenUniform { screen_size: [w as f32, h as f32], _pad: [0.0, 0.0] }),
         );
 
-        let screen_clip = Rect {
-            x: 0.0,
-            y: 0.0,
-            w: w as f32,
-            h: h as f32,
-        };
+        let screen_clip = Rect { x: 0.0, y: 0.0, w: w as f32, h: h as f32 };
         let mut clip_stack = vec![screen_clip];
 
         let mut boxes: Vec<BoxInstance> = Vec::new();
@@ -1722,25 +1338,11 @@ impl GpuBackend {
                         clip_stack.pop();
                     }
                 }
-                DrawCmd::Box {
-                    rect,
-                    fill,
-                    border_color,
-                    border_width,
-                    radius,
-                    shadow_offset,
-                    shadow_blur,
-                    shadow_color,
-                } => {
+                DrawCmd::Box { rect, fill, border_color, border_width, radius, shadow_offset, shadow_blur, shadow_color } => {
                     if shadow_color.a > 0.001 && *shadow_blur > 0.0 {
                         let start = boxes.len() as u32;
                         boxes.push(BoxInstance {
-                            rect: [
-                                rect.x + shadow_offset[0],
-                                rect.y + shadow_offset[1],
-                                rect.w,
-                                rect.h,
-                            ],
+                            rect: [rect.x + shadow_offset[0], rect.y + shadow_offset[1], rect.w, rect.h],
                             fill: shadow_color.with_alpha(0.5).to_array(),
                             border_color: [0.0; 4],
                             style: [0.0, *radius + *shadow_blur * 0.4, *shadow_blur * 0.6, 0.0],
@@ -1759,13 +1361,7 @@ impl GpuBackend {
                     let end = boxes.len() as u32;
                     push_box_batch(&mut batches, clip, start, end);
                 }
-                DrawCmd::Text {
-                    x,
-                    y,
-                    text,
-                    size,
-                    color,
-                } => {
+                DrawCmd::Text { x, y, text, size, color } => {
                     let mut pen_x = *x;
                     let start = glyphs.len() as u32;
                     for ch in text.chars() {
@@ -1798,8 +1394,7 @@ impl GpuBackend {
             });
         }
         if !boxes.is_empty() {
-            self.queue
-                .write_buffer(&self.box_buffer, 0, bytemuck::cast_slice(&boxes));
+            self.queue.write_buffer(&self.box_buffer, 0, bytemuck::cast_slice(&boxes));
         }
 
         if glyphs.len() > self.glyph_capacity {
@@ -1812,23 +1407,13 @@ impl GpuBackend {
             });
         }
         if !glyphs.is_empty() {
-            self.queue
-                .write_buffer(&self.glyph_buffer, 0, bytemuck::cast_slice(&glyphs));
+            self.queue.write_buffer(&self.glyph_buffer, 0, bytemuck::cast_slice(&glyphs));
         }
 
-        let frame = self
-            .surface
-            .get_current_texture()
-            .map_err(|e| format!("Ошибка получения SurfaceTexture: {e}"))?;
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let frame = self.surface.get_current_texture().map_err(|e| format!("Ошибка получения SurfaceTexture: {e}"))?;
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ui_frame_encoder"),
-            });
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("ui_frame_encoder") });
 
         {
             let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -1837,12 +1422,7 @@ impl GpuBackend {
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.055,
-                            g: 0.067,
-                            b: 0.094,
-                            a: 1.0,
-                        }),
+                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.055, g: 0.067, b: 0.094, a: 1.0 }),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -1887,12 +1467,7 @@ impl GpuBackend {
 }
 
 fn push_box_batch(batches: &mut Vec<GpuBatch>, clip: Rect, start: u32, end: u32) {
-    if let Some(GpuBatch::Boxes {
-        clip: prev_clip,
-        end: prev_end,
-        ..
-    }) = batches.last_mut()
-    {
+    if let Some(GpuBatch::Boxes { clip: prev_clip, end: prev_end, .. }) = batches.last_mut() {
         if *prev_clip == clip && *prev_end == start {
             *prev_end = end;
             return;
@@ -1902,12 +1477,7 @@ fn push_box_batch(batches: &mut Vec<GpuBatch>, clip: Rect, start: u32, end: u32)
 }
 
 fn push_glyph_batch(batches: &mut Vec<GpuBatch>, clip: Rect, start: u32, end: u32) {
-    if let Some(GpuBatch::Glyphs {
-        clip: prev_clip,
-        end: prev_end,
-        ..
-    }) = batches.last_mut()
-    {
+    if let Some(GpuBatch::Glyphs { clip: prev_clip, end: prev_end, .. }) = batches.last_mut() {
         if *prev_clip == clip && *prev_end == start {
             *prev_end = end;
             return;
@@ -1948,10 +1518,7 @@ fn load_system_or_local_font() -> Result<Font, String> {
         }
     }
 
-    Err(
-        "Не найден TTF-шрифт. Положите любой .ttf файл (с поддержкой кириллицы) в assets/font.ttf."
-            .to_string(),
-    )
+    Err("Не найден TTF-шрифт. Положите любой .ttf файл (с поддержкой кириллицы) в assets/font.ttf.".to_string())
 }
 
 struct App {
@@ -1993,12 +1560,7 @@ impl App {
 
     fn update_hover(&mut self) {
         let (px, py) = self.state.pointer_pos;
-        let found = self
-            .last_hits
-            .iter()
-            .rev()
-            .find(|h| h.rect.contains(px, py))
-            .map(|h| h.id.clone());
+        let found = self.last_hits.iter().rev().find(|h| h.rect.contains(px, py)).map(|h| h.id.clone());
 
         if self.state.hovered_id != found {
             self.state.hovered_id = found;
@@ -2018,13 +1580,7 @@ impl App {
         let height = size.height.max(1);
 
         let t0 = std::time::Instant::now();
-        let (cmds, hits) = build_ui(
-            width as f32,
-            height as f32,
-            &self.theme,
-            &self.state,
-            &self.cpu_backend.font,
-        );
+        let (cmds, hits) = build_ui(width as f32, height as f32, &self.theme, &self.state, &self.cpu_backend.font);
         self.last_hits = hits;
 
         match self.state.backend {
@@ -2043,13 +1599,9 @@ impl App {
 
         if self.state.backend == BackendKind::Cpu {
             if let Some(surface) = &mut self.soft_surface {
-                let _ = surface.resize(
-                    std::num::NonZeroU32::new(width).unwrap(),
-                    std::num::NonZeroU32::new(height).unwrap(),
-                );
+                let _ = surface.resize(std::num::NonZeroU32::new(width).unwrap(), std::num::NonZeroU32::new(height).unwrap());
                 if let Ok(mut buf) = surface.buffer_mut() {
-                    self.cpu_backend
-                        .render_to_buffer(&cmds, width as usize, height as usize, &mut buf);
+                    self.cpu_backend.render_to_buffer(&cmds, width as usize, height as usize, &mut buf);
                     let _ = buf.present();
                 }
             }
@@ -2065,17 +1617,14 @@ impl ApplicationHandler for App {
             return;
         }
 
-        let attrs = Window::default_attributes()
-            .with_title("Custom Rust UI Engine — CPU + GPU")
-            .with_inner_size(LogicalSize::new(920.0, 560.0));
+        let attrs =
+            Window::default_attributes().with_title("Custom Rust UI Engine — CPU + GPU").with_inner_size(LogicalSize::new(920.0, 560.0));
 
         let window = Arc::new(event_loop.create_window(attrs).expect("Ошибка создания окна"));
         let size = window.inner_size();
 
         let soft_context = SoftContext::new(window.clone()).ok();
-        let soft_surface = soft_context
-            .as_ref()
-            .and_then(|ctx| SoftSurface::new(ctx, window.clone()).ok());
+        let soft_surface = soft_context.as_ref().and_then(|ctx| SoftSurface::new(ctx, window.clone()).ok());
 
         let font_for_gpu = self.cpu_backend.font.clone();
         match GpuBackend::new(window.clone(), size.width, size.height, font_for_gpu) {
@@ -2112,32 +1661,18 @@ impl ApplicationHandler for App {
                 self.state.pointer_pos = (position.x as f32, position.y as f32);
                 self.update_hover();
             }
-            WindowEvent::MouseInput {
-                state,
-                button: MouseButton::Left,
-                ..
-            } => {
+            WindowEvent::MouseInput { state, button: MouseButton::Left, .. } => {
                 let (px, py) = self.state.pointer_pos;
                 match state {
                     ElementState::Pressed => {
-                        let hit = self
-                            .last_hits
-                            .iter()
-                            .rev()
-                            .find(|h| h.rect.contains(px, py))
-                            .cloned();
+                        let hit = self.last_hits.iter().rev().find(|h| h.rect.contains(px, py)).cloned();
                         self.state.pressed_id = hit.map(|h| h.id);
                         if let Some(w) = &self.window {
                             w.request_redraw();
                         }
                     }
                     ElementState::Released => {
-                        let released_hit = self
-                            .last_hits
-                            .iter()
-                            .rev()
-                            .find(|h| h.rect.contains(px, py))
-                            .cloned();
+                        let released_hit = self.last_hits.iter().rev().find(|h| h.rect.contains(px, py)).cloned();
 
                         if let (Some(pressed), Some(rel)) = (&self.state.pressed_id, &released_hit) {
                             if pressed == &rel.id {
@@ -2152,13 +1687,7 @@ impl ApplicationHandler for App {
                 }
             }
             WindowEvent::KeyboardInput {
-                event:
-                    KeyEvent {
-                        physical_key: PhysicalKey::Code(KeyCode::Tab),
-                        state: ElementState::Pressed,
-                        repeat: false,
-                        ..
-                    },
+                event: KeyEvent { physical_key: PhysicalKey::Code(KeyCode::Tab), state: ElementState::Pressed, repeat: false, .. },
                 ..
             } => {
                 self.dispatch(Action::ToggleBackend);
@@ -2193,4 +1722,3 @@ fn main() {
     let mut app = App::new(font);
     event_loop.run_app(&mut app).expect("Ошибка цикла событий");
 }
-

@@ -46,9 +46,17 @@ pub enum DrawCmd {
         chamfer: f32,
         shadow: Option<Shadow>,
     },
-    Line { a: Point, b: Point, width: f32, color: Color },
+    Line {
+        a: Point,
+        b: Point,
+        width: f32,
+        color: Color,
+    },
     Text(GlyphRun),
-    Image { rect: Rect, image: ImageId },
+    Image {
+        rect: Rect,
+        image: ImageId,
+    },
     ClipPush(Rect),
     ClipPop,
 }

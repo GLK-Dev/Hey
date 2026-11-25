@@ -47,18 +47,21 @@ fn golden_rect() {
 
 #[test]
 fn golden_chamfer() {
-    check("chamfer", 64, 64, vec![
-        rect(Rect::new(4.0, 4.0, 24.0, 24.0), 0xE0A030, None, 5.0, None),
-        rect(Rect::new(32.0, 4.0, 28.0, 28.0), 0xE0A030, None, 9.0, None),
-        rect(Rect::new(4.0, 34.0, 56.0, 26.0), 0xE0A030, None, 18.0, None),
-    ]);
+    check(
+        "chamfer",
+        64,
+        64,
+        vec![
+            rect(Rect::new(4.0, 4.0, 24.0, 24.0), 0xE0A030, None, 5.0, None),
+            rect(Rect::new(32.0, 4.0, 28.0, 28.0), 0xE0A030, None, 9.0, None),
+            rect(Rect::new(4.0, 34.0, 56.0, 26.0), 0xE0A030, None, 18.0, None),
+        ],
+    );
 }
 
 #[test]
 fn golden_border() {
-    check("border", 64, 64, vec![
-        rect(Rect::new(8.5, 8.5, 48.0, 48.0), 0x1B2030, Some((2.0, 0x66CCFF)), 9.0, None),
-    ]);
+    check("border", 64, 64, vec![rect(Rect::new(8.5, 8.5, 48.0, 48.0), 0x1B2030, Some((2.0, 0x66CCFF)), 9.0, None)]);
 }
 
 #[test]
@@ -69,12 +72,17 @@ fn golden_shadow() {
 
 #[test]
 fn golden_clip() {
-    check("clip", 64, 64, vec![
-        DrawCmd::ClipPush(Rect::new(8.0, 8.0, 32.0, 32.0)),
-        rect(Rect::new(0.0, 0.0, 64.0, 64.0), 0xCC3355, None, 18.0, None),
-        DrawCmd::Line { a: Point::new(0.0, 0.0), b: Point::new(64.0, 64.0), width: 3.0, color: Color::hex(0xFFFFFF) },
-        DrawCmd::ClipPop,
-    ]);
+    check(
+        "clip",
+        64,
+        64,
+        vec![
+            DrawCmd::ClipPush(Rect::new(8.0, 8.0, 32.0, 32.0)),
+            rect(Rect::new(0.0, 0.0, 64.0, 64.0), 0xCC3355, None, 18.0, None),
+            DrawCmd::Line { a: Point::new(0.0, 0.0), b: Point::new(64.0, 64.0), width: 3.0, color: Color::hex(0xFFFFFF) },
+            DrawCmd::ClipPop,
+        ],
+    );
 }
 
 #[test]

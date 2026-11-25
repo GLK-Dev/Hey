@@ -88,12 +88,7 @@ impl Rect {
     }
     /// Сжать на отступы (размер не опускается ниже нуля).
     pub fn deflate(&self, i: Insets) -> Rect {
-        Rect::new(
-            self.x + i.left,
-            self.y + i.top,
-            (self.w - i.horizontal()).max(0.0),
-            (self.h - i.vertical()).max(0.0),
-        )
+        Rect::new(self.x + i.left, self.y + i.top, (self.w - i.horizontal()).max(0.0), (self.h - i.vertical()).max(0.0))
     }
     pub fn translate(&self, dx: f32, dy: f32) -> Rect {
         Rect::new(self.x + dx, self.y + dy, self.w, self.h)

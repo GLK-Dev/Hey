@@ -441,7 +441,7 @@ impl<Msg: 'static> Ui<Msg> {
             if self.trap == Some(*n) {
                 self.trap = None;
             }
-            if self.last_click.map_or(false, |c| c.0 == *n) {
+            if self.last_click.is_some_and(|c| c.0 == *n) {
                 self.last_click = None;
             }
         }

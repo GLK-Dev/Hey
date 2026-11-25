@@ -68,11 +68,11 @@ fn button(label: &'static str, variant: Variant) -> View<Msg> {
 fn page(m: &Model) -> Vec<View<Msg>> {
     match m.tab {
         0 => vec![
-            View::container("variants", Style::row().gap(8.0), vec![
-                button("Основная", Variant::Primary),
-                button("Вторичная", Variant::Secondary),
-                button("Опасная", Variant::Danger),
-            ]),
+            View::container(
+                "variants",
+                Style::row().gap(8.0),
+                vec![button("Основная", Variant::Primary), button("Вторичная", Variant::Secondary), button("Опасная", Variant::Danger)],
+            ),
             label("last", m.last.clone()),
         ],
         1 => vec![
@@ -98,7 +98,9 @@ fn page(m: &Model) -> Vec<View<Msg>> {
                     let pick = m.pick;
                     move |ui, p| Dropdown::add(ui, p, FRUITS.iter().map(|s| s.to_string()).collect(), pick, 200.0, Callback::new(Msg::Pick))
                 }),
-                View::leaf("list", (), |ui, p| List::add(ui, p, FRUITS.iter().map(|s| s.to_string()).collect(), 200.0, 4, Callback::new(Msg::Select))),
+                View::leaf("list", (), |ui, p| {
+                    List::add(ui, p, FRUITS.iter().map(|s| s.to_string()).collect(), 200.0, 4, Callback::new(Msg::Select))
+                }),
                 label("sel", format!("Список: {}, выпадающий: {}", FRUITS[m.selected], FRUITS[m.pick])),
             ]
         }
@@ -129,8 +131,16 @@ fn view(m: &Model) -> Vec<View<Msg>> {
 fn main() {
     let font = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf");
     let model = Model {
-        tab: 0, last: "Нажмите кнопку".into(), text: String::new(), notes: String::new(), check: false, toggle: false,
-        radio: 0, slider: 40.0, pick: 0, selected: 0,
+        tab: 0,
+        last: "Нажмите кнопку".into(),
+        text: String::new(),
+        notes: String::new(),
+        check: false,
+        toggle: false,
+        radio: 0,
+        slider: 40.0,
+        pick: 0,
+        selected: 0,
     };
     if let Err(e) = App::new(model).update(update).view(view).font(font).title("Hey — gallery").run() {
         eprintln!("ошибка: {e}");

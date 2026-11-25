@@ -1,12 +1,12 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::clipboard::SharedClipboard;
 use crate::ui::{Env, Ui, Widget};
 use crate::widgets::text_style;
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::Style;
 use hey_style::WidgetState;
-use crate::clipboard::SharedClipboard;
 use hey_text::{layout, Layout, TextEditState};
 use std::cell::Cell;
 use std::rc::Rc;

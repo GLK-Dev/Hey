@@ -6,9 +6,9 @@ publish = false
 description = "Референсный монолитный прототип из Thinks/idea.md (не развивается, только для сверки)"
 
 [dependencies]
-winit = "0.30"
-softbuffer = "0.4"
-wgpu = "24"
-bytemuck = { version = "1", features = ["derive"] }
-fontdue = "0.9"
-pollster = "0.4"
+winit = { workspace = true }
+softbuffer = { workspace = true }
+wgpu = { workspace = true }
+bytemuck = { workspace = true }
+fontdue = { workspace = true }
+pollster = { workspace = true }

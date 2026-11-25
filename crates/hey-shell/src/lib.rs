@@ -8,9 +8,9 @@ mod app;
 mod clipboard;
 mod dialog;
 mod input;
+pub use app::{App, Command, TaskState};
 pub use clipboard::{install_system_clipboard, SystemClipboard};
 pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};
-pub use app::{App, Command, TaskState};
 pub use input::{InputState, LINE_PX};
 
 use hey_core::UiEvent;

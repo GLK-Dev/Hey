@@ -101,20 +101,12 @@ impl TextEditState {
     }
 
     pub fn move_left(&mut self, extend: bool) {
-        let to = if self.has_selection() && !extend {
-            self.selection().start
-        } else {
-            self.prev_grapheme(self.caret)
-        };
+        let to = if self.has_selection() && !extend { self.selection().start } else { self.prev_grapheme(self.caret) };
         self.set_caret(to, extend);
     }
 
     pub fn move_right(&mut self, extend: bool) {
-        let to = if self.has_selection() && !extend {
-            self.selection().end
-        } else {
-            self.next_grapheme(self.caret)
-        };
+        let to = if self.has_selection() && !extend { self.selection().end } else { self.next_grapheme(self.caret) };
         self.set_caret(to, extend);
     }
 
@@ -267,10 +259,7 @@ impl TextEditState {
 
     /// Сохраняет снимок для undo; подряд идущие однотипные правки без выделения склеиваются.
     fn checkpoint(&mut self, kind: EditKind) {
-        let coalesce = kind != EditKind::Other
-            && self.last == Some(kind)
-            && !self.has_selection()
-            && !self.undo.is_empty();
+        let coalesce = kind != EditKind::Other && self.last == Some(kind) && !self.has_selection() && !self.undo.is_empty();
         if !coalesce {
             self.undo.push(self.snapshot());
         }
@@ -479,10 +468,7 @@ mod tests {
             let t = e.text();
             for p in [e.caret(), e.anchor()] {
                 assert!(p <= t.len() && t.is_char_boundary(p));
-                assert!(
-                    p == t.len() || t.grapheme_indices(true).any(|(i, _)| i == p),
-                    "позиция {p} внутри графемы в {t:?}"
-                );
+                assert!(p == t.len() || t.grapheme_indices(true).any(|(i, _)| i == p), "позиция {p} внутри графемы в {t:?}");
             }
         }
     }

@@ -60,10 +60,7 @@ impl<T> Arena<T> {
             _ => return None,
         }
         let new_gen = id.generation.wrapping_add(1);
-        let old = std::mem::replace(
-            &mut self.slots[id.index as usize],
-            Slot::Free { generation: new_gen, next_free: self.free_head },
-        );
+        let old = std::mem::replace(&mut self.slots[id.index as usize], Slot::Free { generation: new_gen, next_free: self.free_head });
         self.free_head = Some(id.index);
         self.len -= 1;
         match old {
@@ -92,9 +89,7 @@ impl<T> Arena<T> {
 
     pub fn iter(&self) -> impl Iterator<Item = (NodeId, &T)> {
         self.slots.iter().enumerate().filter_map(|(i, s)| match s {
-            Slot::Occupied { generation, value } => {
-                Some((NodeId { index: i as u32, generation: *generation }, value))
-            }
+            Slot::Occupied { generation, value } => Some((NodeId { index: i as u32, generation: *generation }, value)),
             Slot::Free { .. } => None,
         })
     }

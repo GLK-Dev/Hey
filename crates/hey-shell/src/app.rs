@@ -86,7 +86,15 @@ pub struct App<M, Msg: Send + 'static> {
 
 impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     pub fn new(model: M) -> Self {
-        App { model, update: None, view: None, theme: Theme::dark(), fonts: Vec::new(), window: WindowConfig::default(), init: Command::None }
+        App {
+            model,
+            update: None,
+            view: None,
+            theme: Theme::dark(),
+            fonts: Vec::new(),
+            window: WindowConfig::default(),
+            init: Command::None,
+        }
     }
 
     pub fn update(mut self, f: impl FnMut(&mut M, Msg) -> Command<Msg> + 'static) -> Self {
@@ -138,7 +146,19 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         let sink = MsgSink::new();
         let ui = Ui::new(self.theme, Arc::new(fonts), chain, sink.clone());
         let (tx, rx) = mpsc::channel();
-        let mut rt = Runtime { model: self.model, update, view, ui, sink, tx, rx, in_flight: Arc::new(AtomicUsize::new(0)), size: Size::new(0.0, 0.0), clear: self.window.clear, dirty: true };
+        let mut rt = Runtime {
+            model: self.model,
+            update,
+            view,
+            ui,
+            sink,
+            tx,
+            rx,
+            in_flight: Arc::new(AtomicUsize::new(0)),
+            size: Size::new(0.0, 0.0),
+            clear: self.window.clear,
+            dirty: true,
+        };
         rt.run_command(self.init);
         rt.rebuild();
         Ok(rt)

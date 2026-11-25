@@ -12,7 +12,7 @@ hey-text = { path = "../hey-text" }
 hey-layout = { path = "../hey-layout" }
 hey-style = { path = "../hey-style" }
 hey-widgets = { path = "../hey-widgets" }
-winit = "0.30"
-softbuffer = "0.4"
-arboard = { version = "3", default-features = false }
-rfd = { version = "0.15", default-features = false }
+winit = { workspace = true }
+softbuffer = { workspace = true }
+arboard = { workspace = true }
+rfd = { workspace = true }

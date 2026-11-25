@@ -27,11 +27,21 @@ impl WidgetState {
     pub const fn is_normal(self) -> bool {
         self.0 == 0
     }
-    pub const fn hovered(self) -> bool { self.contains(Self::HOVERED) }
-    pub const fn pressed(self) -> bool { self.contains(Self::PRESSED) }
-    pub const fn focused(self) -> bool { self.contains(Self::FOCUSED) }
-    pub const fn disabled(self) -> bool { self.contains(Self::DISABLED) }
-    pub const fn selected(self) -> bool { self.contains(Self::SELECTED) }
+    pub const fn hovered(self) -> bool {
+        self.contains(Self::HOVERED)
+    }
+    pub const fn pressed(self) -> bool {
+        self.contains(Self::PRESSED)
+    }
+    pub const fn focused(self) -> bool {
+        self.contains(Self::FOCUSED)
+    }
+    pub const fn disabled(self) -> bool {
+        self.contains(Self::DISABLED)
+    }
+    pub const fn selected(self) -> bool {
+        self.contains(Self::SELECTED)
+    }
 }
 
 impl std::ops::BitOr for WidgetState {

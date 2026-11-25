@@ -43,7 +43,9 @@ fn offset(a: Align, free: f32) -> f32 {
 impl LayoutTree {
     pub fn new(root: Style) -> Self {
         let mut tree = Tree::new();
-        let root = tree.add(Node { style: root, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, None).expect("корень");
+        let root = tree
+            .add(Node { style: root, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, None)
+            .expect("корень");
         Self { tree, root, cache: RefCell::new(HashMap::new()), dirty: true, viewport: None }
     }
 
@@ -53,7 +55,8 @@ impl LayoutTree {
 
     pub fn add(&mut self, parent: NodeId, style: Style) -> Option<NodeId> {
         self.dirty = true;
-        self.tree.add(Node { style, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, Some(parent))
+        self.tree
+            .add(Node { style, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, Some(parent))
     }
 
     /// Пометить раскладку устаревшей (например, изменился текст, который измеряет замыкание листа).
@@ -156,13 +159,8 @@ impl LayoutTree {
         } else {
             clip
         };
-        let mut kids: Vec<(i32, usize, NodeId)> = self
-            .tree
-            .children(id)
-            .iter()
-            .enumerate()
-            .map(|(i, &c)| (self.tree.get(c).map_or(0, |k| k.style.z), i, c))
-            .collect();
+        let mut kids: Vec<(i32, usize, NodeId)> =
+            self.tree.children(id).iter().enumerate().map(|(i, &c)| (self.tree.get(c).map_or(0, |k| k.style.z), i, c)).collect();
         kids.sort_by_key(|&(z, i, _)| (std::cmp::Reverse(z), std::cmp::Reverse(i)));
         for (_, _, c) in kids {
             if let Some(h) = self.hit_node(c, p, child_clip, false) {
@@ -194,12 +192,7 @@ impl LayoutTree {
     }
 
     fn visible(&self, id: NodeId) -> Vec<NodeId> {
-        self.tree
-            .children(id)
-            .iter()
-            .copied()
-            .filter(|&c| !self.tree.get(c).is_some_and(|n| n.style.hidden))
-            .collect()
+        self.tree.children(id).iter().copied().filter(|&c| !self.tree.get(c).is_some_and(|n| n.style.hidden)).collect()
     }
 
     /// Размер border-box узла (без внешних отступов). `avail` — доступная ширина border-box.
@@ -353,11 +346,7 @@ impl LayoutTree {
             .iter()
             .map(|&id| {
                 let cs = self.tree.get(id).unwrap().style;
-                let base = if row {
-                    self.measure(id, None).w
-                } else {
-                    self.measure(id, Some((inner_cross - mc(&cs)).max(0.0))).h
-                };
+                let base = if row { self.measure(id, None).w } else { self.measure(id, Some((inner_cross - mc(&cs)).max(0.0))).h };
                 K { id, st: cs, base, size: base }
             })
             .collect();
@@ -405,11 +394,8 @@ impl LayoutTree {
             let cross = clamp(cross, clo, chi);
             let coff = c_start + offset(al, avail - cross);
             pos += m_start;
-            let r = if row {
-                snap(inner.x + pos, inner.y + coff, k.size, cross)
-            } else {
-                snap(inner.x + coff, inner.y + pos, cross, k.size)
-            };
+            let r =
+                if row { snap(inner.x + pos, inner.y + coff, k.size, cross) } else { snap(inner.x + coff, inner.y + pos, cross, k.size) };
             self.arrange(k.id, r);
             pos += k.size + m_end + between;
         }

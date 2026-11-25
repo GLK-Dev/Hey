@@ -103,9 +103,27 @@ fn num(v: &Value, k: &str) -> Result<f32, ThemeError> {
 }
 
 const KNOWN: [&str; 21] = [
-    "desktop", "desktopDeep", "panel", "document", "control", "controlHover", "line",
-    "tabInactive", "accent", "accentDark", "onAccent", "focus", "text", "textMuted",
-    "textDisabled", "success", "warning", "error", "media", "selection", "onSelection",
+    "desktop",
+    "desktopDeep",
+    "panel",
+    "document",
+    "control",
+    "controlHover",
+    "line",
+    "tabInactive",
+    "accent",
+    "accentDark",
+    "onAccent",
+    "focus",
+    "text",
+    "textMuted",
+    "textDisabled",
+    "success",
+    "warning",
+    "error",
+    "media",
+    "selection",
+    "onSelection",
 ];
 
 impl Theme {
@@ -169,13 +187,7 @@ impl Theme {
             base_ms: num(mo, "baseMs")?,
             window_ms: num(mo, "windowMs")?,
             easing: mo.get("curve").and_then(Value::as_str).and_then(Easing::parse).unwrap_or(Easing::THEME),
-            font_ui: get(fnt, "ui")?
-                .as_str()
-                .unwrap_or("")
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect(),
+            font_ui: get(fnt, "ui")?.as_str().unwrap_or("").split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect(),
             font_mono: get(fnt, "mono")?.as_str().unwrap_or("").into(),
             terminal_bg: color(term, "background")?,
             terminal_cursor: color(term, "cursor")?,

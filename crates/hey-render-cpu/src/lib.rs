@@ -8,8 +8,8 @@
 
 mod raster;
 
-use std::sync::Arc;
 use hey_text::Fonts;
+use std::sync::Arc;
 
 use hey_core::Color;
 use hey_draw::{DisplayList, UiRenderer, Viewport};
@@ -65,6 +65,33 @@ impl UiRenderer for CpuRenderer {
     }
 }
 
+impl Framebuffer {
+    /// Кодирует кадр в PNG (RGBA8).
+    pub fn encode_png(&self) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut enc = png::Encoder::new(&mut out, self.width, self.height);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        let mut w = enc.write_header().expect("png header");
+        w.write_image_data(&self.data).expect("png data");
+        w.finish().expect("png finish");
+        out
+    }
+
+    pub fn save_png(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        std::fs::write(path, self.encode_png())
+    }
+
+    /// Декодирует PNG (RGBA8) в кадр.
+    pub fn decode_png(bytes: &[u8]) -> Result<Self, png::DecodingError> {
+        let mut r = png::Decoder::new(bytes).read_info()?;
+        let mut buf = vec![0; r.output_buffer_size()];
+        let info = r.next_frame(&mut buf)?;
+        buf.truncate(info.buffer_size());
+        Ok(Self { width: info.width, height: info.height, data: buf })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -92,13 +119,7 @@ mod tests {
 
     #[test]
     fn chamfer_cuts_top_left_and_bottom_right_only() {
-        let cmd = DrawCmd::Rect {
-            rect: Rect::new(0.0, 0.0, 16.0, 16.0),
-            fill: RED,
-            border: None,
-            chamfer: 8.0,
-            shadow: None,
-        };
+        let cmd = DrawCmd::Rect { rect: Rect::new(0.0, 0.0, 16.0, 16.0), fill: RED, border: None, chamfer: 8.0, shadow: None };
         let fb = render(vec![cmd], 16, 16);
         let bg = Color::rgb(0, 0, 0);
         assert_eq!(fb.pixel(0, 0), bg, "TL срезан");
@@ -111,11 +132,7 @@ mod tests {
     #[test]
     fn clip_limits_drawing() {
         let fb = render(
-            vec![
-                DrawCmd::ClipPush(Rect::new(0.0, 0.0, 4.0, 8.0)),
-                DrawCmd::fill(Rect::new(0.0, 0.0, 8.0, 8.0), RED),
-                DrawCmd::ClipPop,
-            ],
+            vec![DrawCmd::ClipPush(Rect::new(0.0, 0.0, 4.0, 8.0)), DrawCmd::fill(Rect::new(0.0, 0.0, 8.0, 8.0), RED), DrawCmd::ClipPop],
             8,
             8,
         );
@@ -141,45 +158,9 @@ mod tests {
 
     #[test]
     fn line_covers_its_pixels() {
-        let fb = render(
-            vec![DrawCmd::Line {
-                a: Point::new(0.0, 4.0),
-                b: Point::new(8.0, 4.0),
-                width: 2.0,
-                color: RED,
-            }],
-            8,
-            8,
-        );
+        let fb = render(vec![DrawCmd::Line { a: Point::new(0.0, 4.0), b: Point::new(8.0, 4.0), width: 2.0, color: RED }], 8, 8);
         assert_eq!(fb.pixel(4, 3), RED);
         assert_eq!(fb.pixel(4, 4), RED);
         assert_eq!(fb.pixel(4, 6), Color::rgb(0, 0, 0));
-    }
-}
-
-impl Framebuffer {
-    /// Кодирует кадр в PNG (RGBA8).
-    pub fn encode_png(&self) -> Vec<u8> {
-        let mut out = Vec::new();
-        let mut enc = png::Encoder::new(&mut out, self.width, self.height);
-        enc.set_color(png::ColorType::Rgba);
-        enc.set_depth(png::BitDepth::Eight);
-        let mut w = enc.write_header().expect("png header");
-        w.write_image_data(&self.data).expect("png data");
-        w.finish().expect("png finish");
-        out
-    }
-
-    pub fn save_png(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
-        std::fs::write(path, self.encode_png())
-    }
-
-    /// Декодирует PNG (RGBA8) в кадр.
-    pub fn decode_png(bytes: &[u8]) -> Result<Self, png::DecodingError> {
-        let mut r = png::Decoder::new(bytes).read_info()?;
-        let mut buf = vec![0; r.output_buffer_size()];
-        let info = r.next_frame(&mut buf)?;
-        buf.truncate(info.buffer_size());
-        Ok(Self { width: info.width, height: info.height, data: buf })
     }
 }

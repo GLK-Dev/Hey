@@ -114,9 +114,9 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 Оценки — для одного разработчика, ориентировочно (чел.-недели, Н). Итого ≈ 30–38 Н до v1.0.
 
 ### Фаза 0. Подготовка и фиксация базы (1 Н)
-- [x] Создать workspace (корневой `Cargo.toml`). - [ ] CI (GitHub Actions: `cargo fmt --check`, `clippy -D warnings`, `cargo test`, Windows+Linux).
+- [x] Создать workspace (корневой `Cargo.toml`). - [x] CI (GitHub Actions: `cargo fmt --check`, `clippy -D warnings`, `cargo test`, Windows+Linux).
 - [x] Перенести прототип из `idea.md` в `examples/prototype_monolith` (компилируется; запуск не проверен; правки: `CachedGlyph: Clone+Copy`, лишний `&` у bind group).
-- [ ] Зафиксировать версии зависимостей (`winit 0.30`, `wgpu 24`, `softbuffer 0.4`, `fontdue 0.9`, `bytemuck`, `pollster`).
+- [x] Зафиксировать версии зависимостей (`winit 0.30`, `wgpu 24`, `softbuffer 0.4`, `fontdue 0.9`, `bytemuck`, `pollster`).
 - [ ] Написать `Docs/ARCHITECTURE.md` и `Docs/ADR/*` по таблице 3.3.
 - [ ] Шрифт по умолчанию: Onest (OFL, кириллица) из `design/fonts` — решено дизайном.
 

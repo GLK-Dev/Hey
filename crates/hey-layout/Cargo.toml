@@ -8,4 +8,4 @@ license.workspace = true
 hey-core = { path = "../hey-core" }
 
 [dev-dependencies]
-taffy = "0.16"
+taffy = { workspace = true }

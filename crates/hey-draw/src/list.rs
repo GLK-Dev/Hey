@@ -53,7 +53,11 @@ impl DisplayList {
                 _ => {}
             }
         }
-        if depth == 0 { Ok(()) } else { Err(ListError::UnclosedPush { count: depth }) }
+        if depth == 0 {
+            Ok(())
+        } else {
+            Err(ListError::UnclosedPush { count: depth })
+        }
     }
 
     /// Рисующие команды с действующей областью отсечения (пересечение всего стека).
@@ -113,10 +117,7 @@ mod tests {
         l.push(DrawCmd::fill(r(0.0, 0.0, 1.0, 1.0), c));
         l.push(DrawCmd::ClipPop);
         let clips: Vec<_> = l.iter_clipped().map(|(_, c)| c).collect();
-        assert_eq!(
-            clips,
-            [None, Some(r(5.0, 5.0, 5.0, 5.0)), Some(r(0.0, 0.0, 10.0, 10.0))]
-        );
+        assert_eq!(clips, [None, Some(r(5.0, 5.0, 5.0, 5.0)), Some(r(0.0, 0.0, 10.0, 10.0))]);
     }
 
     #[test]

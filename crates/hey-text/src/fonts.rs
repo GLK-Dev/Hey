@@ -88,10 +88,7 @@ impl Fonts {
 
     /// Первый шрифт цепочки, содержащий `ch`; иначе первый шрифт (его .notdef).
     pub fn pick(&self, chain: &[FontId], ch: char) -> Option<(FontId, u16)> {
-        chain
-            .iter()
-            .find_map(|&f| self.glyph_index(f, ch).map(|g| (f, g)))
-            .or_else(|| chain.first().map(|&f| (f, 0)))
+        chain.iter().find_map(|&f| self.glyph_index(f, ch).map(|g| (f, g))).or_else(|| chain.first().map(|&f| (f, 0)))
     }
 
     pub fn advance(&self, font: FontId, glyph: u16, size_px: f32) -> f32 {

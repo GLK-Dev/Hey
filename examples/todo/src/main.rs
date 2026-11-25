@@ -168,11 +168,16 @@ fn view(m: &Model) -> Vec<View<Msg>> {
             ],
         ),
     ];
-    children.extend(m.items.iter().filter(|i| match m.filter {
-        Filter::All => true,
-        Filter::Active => !i.done,
-        Filter::Done => i.done,
-    }).map(row));
+    children.extend(
+        m.items
+            .iter()
+            .filter(|i| match m.filter {
+                Filter::All => true,
+                Filter::Active => !i.done,
+                Filter::Done => i.done,
+            })
+            .map(row),
+    );
     children.push(View::leaf("status", status.clone(), move |ui, p| Label::add(ui, p, &status)));
     vec![View::container("root", Style::column().padding(Insets::all(24.0)).gap(12.0), children)]
 }

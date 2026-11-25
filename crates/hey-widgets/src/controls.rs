@@ -42,7 +42,13 @@ fn frame(env: &Env, r: Rect, on: bool, state: WidgetState, out: &mut DisplayList
     let line = if state.focused() || state.hovered() { p.focus } else { p.line };
     out.push(DrawCmd::Rect {
         rect: r,
-        fill: if state.disabled() { p.panel } else if on { p.focus } else { p.document },
+        fill: if state.disabled() {
+            p.panel
+        } else if on {
+            p.focus
+        } else {
+            p.document
+        },
         border: Some(Border { width: 1.0, color: line }),
         chamfer: env.theme.chamfer_small(),
         shadow: None,
@@ -226,7 +232,7 @@ impl<Msg: 'static> Slider<Msg> {
         }
     }
 
-    fn from_x(&self, env: &Env, rect: Rect, x: f32) -> f32 {
+    fn value_at_x(&self, env: &Env, rect: Rect, x: f32) -> f32 {
         let th = Self::thumb(env);
         let span = (rect.w - th).max(1.0);
         let t = ((x - rect.x - th / 2.0) / span).clamp(0.0, 1.0);
@@ -245,7 +251,10 @@ impl<Msg: 'static> Widget<Msg> for Slider<Msg> {
         let tx = rect.x + t * (rect.w - th);
         let (ty, tk) = (rect.y + rect.h / 2.0 - 2.0, 4.0);
         out.push(DrawCmd::fill(Rect::new(rect.x, ty, rect.w, tk), p.line));
-        out.push(DrawCmd::fill(Rect::new(rect.x, ty, tx - rect.x + th / 2.0, tk), if state.disabled() { p.text_disabled } else { p.focus }));
+        out.push(DrawCmd::fill(
+            Rect::new(rect.x, ty, tx - rect.x + th / 2.0, tk),
+            if state.disabled() { p.text_disabled } else { p.focus },
+        ));
         out.push(DrawCmd::Rect {
             rect: Rect::new(tx, rect.y + (rect.h - th) / 2.0, th, th),
             fill: if state.pressed() { p.focus } else { p.text },
@@ -259,11 +268,11 @@ impl<Msg: 'static> Widget<Msg> for Slider<Msg> {
     }
     fn click(&mut self, _env: &Env, _rect: Rect, _pos: Point, _sink: &MsgSink<Msg>) {}
     fn press(&mut self, env: &Env, rect: Rect, pos: Point, _clicks: u32, sink: &MsgSink<Msg>) {
-        let v = self.from_x(env, rect, pos.x);
+        let v = self.value_at_x(env, rect, pos.x);
         self.set(v, sink);
     }
     fn drag(&mut self, env: &Env, rect: Rect, pos: Point, sink: &MsgSink<Msg>) {
-        let v = self.from_x(env, rect, pos.x);
+        let v = self.value_at_x(env, rect, pos.x);
         self.set(v, sink);
     }
     fn key(&mut self, code: &str, _mods: Modifiers, sink: &MsgSink<Msg>) -> bool {

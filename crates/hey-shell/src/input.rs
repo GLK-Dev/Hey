@@ -146,7 +146,11 @@ mod tests {
     #[test]
     fn wheel_lines_become_pixels() {
         let mut s = InputState::default();
-        let ev = WindowEvent::MouseWheel { device_id: dev(), delta: MouseScrollDelta::LineDelta(0.0, -2.0), phase: winit::event::TouchPhase::Moved };
+        let ev = WindowEvent::MouseWheel {
+            device_id: dev(),
+            delta: MouseScrollDelta::LineDelta(0.0, -2.0),
+            phase: winit::event::TouchPhase::Moved,
+        };
         assert_eq!(s.translate(&ev), [UiEvent::Wheel { pos: Point::default(), dx: 0.0, dy: -2.0 * LINE_PX }]);
     }
 }

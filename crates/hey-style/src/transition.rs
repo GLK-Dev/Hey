@@ -44,7 +44,11 @@ impl Easing {
                 let (mut lo, mut hi) = (0.0f32, 1.0f32);
                 for _ in 0..24 {
                     let mid = (lo + hi) / 2.0;
-                    if b(x1, x2, mid) < t { lo = mid } else { hi = mid }
+                    if b(x1, x2, mid) < t {
+                        lo = mid
+                    } else {
+                        hi = mid
+                    }
                 }
                 b(y1, y2, (lo + hi) / 2.0)
             }

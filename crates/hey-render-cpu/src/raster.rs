@@ -14,9 +14,7 @@ pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, cmd: &DrawCmd, clip: Op
                 draw_shadow(fb, rect, s, clip);
             }
             let c = chamfer.max(0.0);
-            paint(fb, rect.inflate(1.0), clip, |x, y| {
-                (*fill, shape_cov(rect, c, x, y))
-            });
+            paint(fb, rect.inflate(1.0), clip, |x, y| (*fill, shape_cov(rect, c, x, y)));
             if let Some(Border { width, color }) = border {
                 let h = width / 2.0;
                 let outer = (rect.inflate(h), c + h * (2.0 - SQRT2));
@@ -104,10 +102,7 @@ fn erf(x: f32) -> f32 {
     let s = x.signum();
     let x = x.abs();
     let t = 1.0 / (1.0 + 0.327_591_1 * x);
-    let y = 1.0
-        - (((((1.061_405_4 * t - 1.453_152_1) * t) + 1.421_413_8) * t - 0.284_496_72) * t + 0.254_829_6)
-            * t
-            * (-x * x).exp();
+    let y = 1.0 - (((((1.061_405_4 * t - 1.453_152_1) * t) + 1.421_413_8) * t - 0.284_496_72) * t + 0.254_829_6) * t * (-x * x).exp();
     s * y
 }
 

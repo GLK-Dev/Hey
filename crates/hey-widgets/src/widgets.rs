@@ -1,13 +1,13 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
+use crate::clipboard::SharedClipboard;
 use crate::ui::{Env, Ui, Widget};
-use std::cell::Cell;
 use hey_core::{Callback, Modifiers, MsgSink, NodeId, Point, Rect, Size};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::Style;
 use hey_style::{Variant, WidgetState};
-use crate::clipboard::SharedClipboard;
 use hey_text::{layout, measure, TextEditState, TextStyle};
+use std::cell::Cell;
 
 pub(crate) fn text_style(env: &Env, width: Option<f32>, wrap: bool) -> TextStyle {
     let mut st = TextStyle::new(env.chain.clone(), env.font_px);
@@ -51,21 +51,12 @@ pub struct Button<Msg> {
 }
 
 impl<Msg: 'static> Button<Msg> {
-    pub fn add(
-        ui: &mut Ui<Msg>,
-        parent: NodeId,
-        label: &str,
-        variant: Variant,
-        on_click: Callback<Msg, ()>,
-    ) -> NodeId {
+    pub fn add(ui: &mut Ui<Msg>, parent: NodeId, label: &str, variant: Variant, on_click: Callback<Msg, ()>) -> NodeId {
         let env = ui.env.clone();
         let t = label.to_string();
         let measure = move |_w: Option<f32>| {
             let l = layout(&env.fonts, &t, &text_style(&env, None, false));
-            Size::new(
-                l.width.ceil() + 2.0 * env.theme.space(14.0),
-                l.height.ceil() + 2.0 * env.theme.space(7.0),
-            )
+            Size::new(l.width.ceil() + 2.0 * env.theme.space(14.0), l.height.ceil() + 2.0 * env.theme.space(7.0))
         };
         ui.add_widget(parent, Style::leaf(), Button { label: label.into(), variant, on_click }, measure)
     }
@@ -147,23 +138,15 @@ impl<Msg> Widget<Msg> for Panel {
         };
         let line = t.palette.line;
         if !self.open_top {
-            out.push(DrawCmd::Rect {
-                rect,
-                fill,
-                border: Some(Border { width: Self::BORDER, color: line }),
-                chamfer,
-                shadow: None,
-            });
+            out.push(DrawCmd::Rect { rect, fill, border: Some(Border { width: Self::BORDER, color: line }), chamfer, shadow: None });
             return;
         }
         out.push(DrawCmd::fill(rect, fill));
         let h = Self::BORDER / 2.0;
         let (l, r, b) = (rect.x + h, rect.right() - h, rect.bottom() - h);
-        for (a, c) in [
-            (Point::new(l, rect.y), Point::new(l, b)),
-            (Point::new(l, b), Point::new(r, b)),
-            (Point::new(r, b), Point::new(r, rect.y)),
-        ] {
+        for (a, c) in
+            [(Point::new(l, rect.y), Point::new(l, b)), (Point::new(l, b), Point::new(r, b)), (Point::new(r, b), Point::new(r, rect.y))]
+        {
             out.push(DrawCmd::Line { a, b: c, width: Self::BORDER, color: line });
         }
     }
@@ -178,20 +161,11 @@ pub struct Tabs<Msg> {
 }
 
 fn tab_widths(env: &Env, labels: &[String]) -> Vec<f32> {
-    labels
-        .iter()
-        .map(|s| layout(&env.fonts, s, &text_style(env, None, false)).width.ceil() + 2.0 * env.theme.space(14.0))
-        .collect()
+    labels.iter().map(|s| layout(&env.fonts, s, &text_style(env, None, false)).width.ceil() + 2.0 * env.theme.space(14.0)).collect()
 }
 
 impl<Msg: 'static> Tabs<Msg> {
-    pub fn add(
-        ui: &mut Ui<Msg>,
-        parent: NodeId,
-        labels: &[&str],
-        active: usize,
-        on_change: Callback<Msg, usize>,
-    ) -> NodeId {
+    pub fn add(ui: &mut Ui<Msg>, parent: NodeId, labels: &[&str], active: usize, on_change: Callback<Msg, usize>) -> NodeId {
         let env = ui.env.clone();
         let labels: Vec<String> = labels.iter().map(|s| s.to_string()).collect();
         let l2 = labels.clone();
@@ -407,12 +381,7 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
         }
         if state.focused() {
             let x = (origin.x + caret_x).floor() + 0.5;
-            out.push(DrawCmd::Line {
-                a: Point::new(x, origin.y),
-                b: Point::new(x, origin.y + l.height),
-                width: 1.0,
-                color: p.text,
-            });
+            out.push(DrawCmd::Line { a: Point::new(x, origin.y), b: Point::new(x, origin.y + l.height), width: 1.0, color: p.text });
         }
         out.push(DrawCmd::ClipPop);
     }

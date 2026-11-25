@@ -37,16 +37,7 @@ pub struct TextStyle {
 
 impl TextStyle {
     pub fn new(chain: Vec<FontId>, size_px: f32) -> Self {
-        Self {
-            chain,
-            size_px,
-            line_height: None,
-            align: Align::Left,
-            max_width: None,
-            wrap: true,
-            max_lines: None,
-            ellipsis: false,
-        }
+        Self { chain, size_px, line_height: None, align: Align::Left, max_width: None, wrap: true, max_lines: None, ellipsis: false }
     }
 }
 
@@ -117,10 +108,7 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
         let mut cur: Vec<Unit> = Vec::new();
         let mut curw = 0.0;
         for (wi, word) in para.split_word_bound_indices() {
-            let units: Vec<Unit> = word
-                .grapheme_indices(true)
-                .map(|(gi, g)| unit(fonts, &style.chain, size, g, base + wi + gi))
-                .collect();
+            let units: Vec<Unit> = word.grapheme_indices(true).map(|(gi, g)| unit(fonts, &style.chain, size, g, base + wi + gi)).collect();
             let ww = line_width(&units);
             let ws = units.iter().all(|u| u.ws);
             if !ws && curw + ww > limit && !cur.is_empty() {
