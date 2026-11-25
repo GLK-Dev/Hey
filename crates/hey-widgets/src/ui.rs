@@ -183,6 +183,15 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    /// Replaces the theme at runtime (system dark/light switch, high contrast, reduced motion).
+    /// Fonts, chain and cached icon sources are kept; the next frame is painted with the new theme.
+    pub fn set_theme(&mut self, theme: Theme) {
+        let font_px = theme.space(14.0);
+        let icons = self.env.icons.take();
+        self.env =
+            Rc::new(Env { theme, fonts: self.env.fonts.clone(), chain: self.env.chain.clone(), font_px, icons: RefCell::new(icons) });
+    }
+
     /// Handle for opening overlays from widgets.
     pub fn overlays(&self) -> Overlays<Msg> {
         self.queue.clone()

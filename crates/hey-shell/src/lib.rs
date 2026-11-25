@@ -31,6 +31,20 @@ use winit::{
     window::{Window, WindowId},
 };
 
+fn env_flag(name: &str) -> bool {
+    std::env::var(name).is_ok_and(|v| matches!(v.trim(), "1" | "true" | "TRUE" | "yes"))
+}
+
+/// Dark/light comes from the window system; high contrast and reduced motion are taken from
+/// `HEY_HIGH_CONTRAST=1` / `HEY_REDUCE_MOTION=1` (native OS queries are not wired up yet).
+fn system_appearance(window: &Window) -> hey_style::Appearance {
+    hey_style::Appearance {
+        dark: window.theme() != Some(winit::window::Theme::Light),
+        high_contrast: env_flag("HEY_HIGH_CONTRAST"),
+        reduce_motion: env_flag("HEY_REDUCE_MOTION"),
+    }
+}
+
 /// App for the shell: builds a display list for every frame.
 pub trait ShellApp {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList);
@@ -48,6 +62,12 @@ pub trait ShellApp {
     /// Image store for `DrawCmd::Image`; re-read after every `draw` (a changed `Arc` is re-uploaded).
     fn images(&self) -> Option<std::sync::Arc<hey_draw::ImageStore>> {
         None
+    }
+
+    /// The system appearance (dark/light, high contrast, reduced motion) is known or has changed.
+    /// Called once after the window is created and on every system theme switch; `true` requests a redraw.
+    fn appearance_changed(&mut self, _a: hey_style::Appearance) -> bool {
+        false
     }
 
     /// Caret rectangle in physical pixels for the IME candidate window (`None` — no text input focused).
@@ -271,6 +291,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         }
         let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
         window.set_ime_allowed(true);
+        self.app.appearance_changed(system_appearance(&window));
         window.request_redraw();
         self.gfx = Some(Gfx { window, backend: Some(backend), images: None, occluded: false });
     }
@@ -297,6 +318,11 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
             WindowEvent::Occluded(hidden) => {
                 g.occluded = hidden;
                 if !hidden {
+                    g.window.request_redraw();
+                }
+            }
+            WindowEvent::ThemeChanged(_) => {
+                if self.app.appearance_changed(system_appearance(&g.window)) {
                     g.window.request_redraw();
                 }
             }

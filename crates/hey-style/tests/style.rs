@@ -78,3 +78,29 @@ fn easing_and_transition() {
     c.tick(50.0);
     assert_eq!(c.value(), Color::rgb(100, 50, 0));
 }
+
+#[test]
+fn high_contrast_themes_meet_aaa_for_text() {
+    for t in [Theme::high_contrast_dark(), Theme::high_contrast_light()] {
+        let p = &t.palette;
+        assert!(p.text.contrast(p.panel) >= 7.0, "{}: text on panel", t.id);
+        assert!(p.text.contrast(p.document) >= 7.0, "{}: text on document", t.id);
+        assert!(p.on_accent.contrast(p.accent) >= 7.0, "{}: text on accent", t.id);
+        assert!(p.on_selection.contrast(p.selection) >= 7.0, "{}: text on selection", t.id);
+        assert!(p.focus.contrast(p.panel) >= 7.0, "{}: focus ring", t.id);
+        assert!(t.focus_width >= 3.0);
+    }
+}
+
+#[test]
+fn appearance_selects_theme_and_reduces_motion() {
+    use hey_style::Appearance;
+    let d = Theme::for_appearance(Appearance::default());
+    assert_eq!(d.palette, Theme::dark().palette);
+    assert!(d.base_ms > 0.0);
+    let l = Theme::for_appearance(Appearance { dark: false, ..Appearance::default() });
+    assert_eq!(l.palette, Theme::light().palette);
+    let hc = Theme::for_appearance(Appearance { dark: false, high_contrast: true, reduce_motion: true });
+    assert_eq!(hc.id, "high-contrast-light");
+    assert_eq!((hc.fast_ms, hc.base_ms, hc.window_ms), (0.0, 0.0, 0.0));
+}

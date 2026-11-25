@@ -82,6 +82,7 @@ pub struct App<M, Msg: Send + 'static> {
     update: Option<UpdateFn<M, Msg>>,
     view: Option<ViewFn<M, Msg>>,
     theme: Theme,
+    auto_theme: bool,
     fonts: Vec<PathBuf>,
     window: WindowConfig,
     init: Command<Msg>,
@@ -94,6 +95,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             update: None,
             view: None,
             theme: Theme::dark(),
+            auto_theme: false,
             fonts: Vec::new(),
             window: WindowConfig::default(),
             init: Command::None,
@@ -112,6 +114,12 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
 
     pub fn theme(mut self, theme: Theme) -> Self {
         self.theme = theme;
+        self
+    }
+
+    /// Follow the system appearance (dark/light, high contrast, reduced motion) instead of the fixed theme.
+    pub fn auto_theme(mut self, on: bool) -> Self {
+        self.auto_theme = on;
         self
     }
 
@@ -170,6 +178,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             in_flight: Arc::new(AtomicUsize::new(0)),
             size: Size::new(0.0, 0.0),
             clear: self.window.clear,
+            auto_theme: self.auto_theme,
             dirty: true,
         };
         rt.run_command(self.init);
@@ -198,6 +207,7 @@ pub struct Runtime<M, Msg: Send + 'static> {
     size: Size,
     #[allow(dead_code)]
     clear: hey_core::Color,
+    auto_theme: bool,
     dirty: bool,
 }
 
@@ -279,6 +289,15 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     fn event(&mut self, ev: UiEvent) -> bool {
         let handled = self.ui.event(&ev);
         handled | self.pump()
+    }
+
+    fn appearance_changed(&mut self, a: hey_style::Appearance) -> bool {
+        if !self.auto_theme {
+            return false;
+        }
+        self.ui.set_theme(Theme::for_appearance(a));
+        self.dirty = true;
+        true
     }
 
     fn fonts(&self) -> Option<Arc<Fonts>> {

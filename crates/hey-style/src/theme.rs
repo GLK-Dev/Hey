@@ -69,6 +69,20 @@ pub struct Palette {
     pub extra: HashMap<String, Color>,
 }
 
+/// System appearance preferences that influence theme selection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Appearance {
+    pub dark: bool,
+    pub high_contrast: bool,
+    pub reduce_motion: bool,
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        Appearance { dark: true, high_contrast: false, reduce_motion: false }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub id: String,
@@ -235,6 +249,88 @@ impl Theme {
         t.name = "HeOS Light".into();
         t
     }
+    /// High-contrast dark theme: pure black/white, saturated accent, thick focus ring (WCAG AAA text).
+    pub fn high_contrast_dark() -> Theme {
+        let mut t = Self::dark();
+        let p = &mut t.palette;
+        p.desktop = Color::hex(0x000000);
+        p.desktop_deep = Color::hex(0x000000);
+        p.panel = Color::hex(0x000000);
+        p.document = Color::hex(0x000000);
+        p.control = Color::hex(0x000000);
+        p.control_hover = Color::hex(0x1A1A1A);
+        p.line = Color::hex(0xFFFFFF);
+        p.tab_inactive = Color::hex(0x1A1A1A);
+        p.accent = Color::hex(0xFFE600);
+        p.accent_dark = Color::hex(0xFFE600);
+        p.on_accent = Color::hex(0x000000);
+        p.focus = Color::hex(0x00FFFF);
+        p.text = Color::hex(0xFFFFFF);
+        p.text_muted = Color::hex(0xE6E6E6);
+        p.text_disabled = Color::hex(0x9DFF9D);
+        p.success = Color::hex(0x00FF66);
+        p.warning = Color::hex(0xFFE600);
+        p.error = Color::hex(0xFF6B6B);
+        p.selection = Color::hex(0x1AEBFF);
+        p.on_selection = Color::hex(0x000000);
+        t.focus_width = t.focus_width.max(3.0);
+        t.id = "high-contrast-dark".into();
+        t.name = "High Contrast (dark)".into();
+        t
+    }
+
+    /// High-contrast light theme: white background, black text and lines.
+    pub fn high_contrast_light() -> Theme {
+        let mut t = Self::high_contrast_dark();
+        let p = &mut t.palette;
+        p.desktop = Color::hex(0xFFFFFF);
+        p.desktop_deep = Color::hex(0xFFFFFF);
+        p.panel = Color::hex(0xFFFFFF);
+        p.document = Color::hex(0xFFFFFF);
+        p.control = Color::hex(0xFFFFFF);
+        p.control_hover = Color::hex(0xE6E6E6);
+        p.line = Color::hex(0x000000);
+        p.tab_inactive = Color::hex(0xE6E6E6);
+        p.accent = Color::hex(0x0000C8);
+        p.accent_dark = Color::hex(0x0000C8);
+        p.on_accent = Color::hex(0xFFFFFF);
+        p.focus = Color::hex(0x8A0048);
+        p.text = Color::hex(0x000000);
+        p.text_muted = Color::hex(0x1A1A1A);
+        p.text_disabled = Color::hex(0x5A5A5A);
+        p.success = Color::hex(0x006B2B);
+        p.warning = Color::hex(0x7A4A00);
+        p.error = Color::hex(0xB00020);
+        p.selection = Color::hex(0x0000C8);
+        p.on_selection = Color::hex(0xFFFFFF);
+        t.id = "high-contrast-light".into();
+        t.name = "High Contrast (light)".into();
+        t
+    }
+
+    /// Disables transitions (the `prefers-reduced-motion` equivalent): all durations become zero.
+    pub fn reduced_motion(mut self) -> Theme {
+        self.fast_ms = 0.0;
+        self.base_ms = 0.0;
+        self.window_ms = 0.0;
+        self
+    }
+
+    /// Picks and adapts a theme for the given system appearance.
+    pub fn for_appearance(a: Appearance) -> Theme {
+        let t = match (a.high_contrast, a.dark) {
+            (true, true) => Self::high_contrast_dark(),
+            (true, false) => Self::high_contrast_light(),
+            (false, true) => Self::dark(),
+            (false, false) => Self::light(),
+        };
+        if a.reduce_motion {
+            t.reduced_motion()
+        } else {
+            t
+        }
+    }
+
     pub fn compact(mut self) -> Theme {
         self.density = Density::Compact;
         self

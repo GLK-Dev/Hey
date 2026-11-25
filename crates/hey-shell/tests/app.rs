@@ -87,3 +87,21 @@ fn mvu_and_background_task() {
     rt.frame(vp);
     assert_eq!(rt.ui.tree.children(rt.ui.root()).len(), 2);
 }
+
+#[test]
+fn auto_theme_follows_system_appearance() {
+    use hey_style::{Appearance, Theme};
+    let build = |auto| App::new(Model::default()).update(update).view(view).auto_theme(auto).build().unwrap();
+
+    let mut fixed = build(false);
+    assert!(!fixed.appearance_changed(Appearance { dark: false, ..Appearance::default() }));
+    assert_eq!(fixed.ui.env.theme.id, Theme::dark().id);
+
+    let mut auto = build(true);
+    assert!(auto.appearance_changed(Appearance { dark: false, high_contrast: false, reduce_motion: true }));
+    assert_eq!(auto.ui.env.theme.palette, Theme::light().palette);
+    assert_eq!(auto.ui.env.theme.base_ms, 0.0);
+    assert!(auto.appearance_changed(Appearance { dark: true, high_contrast: true, reduce_motion: false }));
+    assert_eq!(auto.ui.env.theme.id, "high-contrast-dark");
+    auto.draw(hey_draw::Viewport { width: 200, height: 100, scale: 1.0 }, &mut hey_draw::DisplayList::default());
+}
