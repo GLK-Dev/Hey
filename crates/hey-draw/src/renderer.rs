@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use crate::list::DisplayList;
 
 /// Область вывода в физических пикселях и масштаб (для справки; команды уже в физических px).

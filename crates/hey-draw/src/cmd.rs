@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use hey_core::{Color, Point, Rect};
 
 /// Рамка; центрируется на границе прямоугольника (правило ADR).

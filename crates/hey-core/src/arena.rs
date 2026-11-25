@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! Арена с поколениями (ADR-1, ADR-2): устаревший `NodeId` никогда не попадает в чужой слот.
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

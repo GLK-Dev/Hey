@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! Golden-тесты: кадр сравнивается с `tests/golden/<имя>.png`.
 //! Нет эталона или `HEY_UPDATE_GOLDEN=1` — эталон (пере)записывается.
 

@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! MVU-связка (ADR-4): виджеты порождают сообщения приложения через `Callback`, `MsgSink` их копит.
 
 use std::cell::RefCell;

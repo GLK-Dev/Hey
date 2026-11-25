@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::PathBuf;

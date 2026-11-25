@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use crate::Framebuffer;
 use hey_core::{Color, Point, Rect};
 use hey_draw::{Border, DrawCmd, GlyphRun, Shadow};

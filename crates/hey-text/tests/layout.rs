@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use hey_text::{layout, measure, Align, Fonts, TextStyle};
 
 fn fonts() -> (Fonts, u32, u32) {

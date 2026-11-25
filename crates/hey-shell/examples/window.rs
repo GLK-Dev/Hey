@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use hey_core::{Color, Point, Rect};
 use hey_draw::{Border, DisplayList, DrawCmd, Shadow, Viewport};
 use hey_shell::{run, ShellApp, WindowConfig};

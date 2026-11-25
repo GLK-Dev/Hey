@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 use crate::cmd::DrawCmd;
 use hey_core::Rect;
 

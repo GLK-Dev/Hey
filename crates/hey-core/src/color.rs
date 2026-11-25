@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 /// Цвет RGBA, 8 бит на канал, не премультиплицированный.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Color {

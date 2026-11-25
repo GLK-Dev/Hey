@@ -130,3 +130,54 @@ fn hidden_is_skipped_and_pixels_snap() {
     assert!(ws.iter().all(|w| w.fract() == 0.0));
     assert_eq!(t.rect(b).x, t.rect(a).right());
 }
+
+mod hit {
+    use super::*;
+    use hey_core::Point;
+
+    #[test]
+    fn z_order_and_pass_through() {
+        let mut t = LayoutTree::new(Style::stack());
+        let a = t.add(t.root(), Style::leaf().size(50.0, 50.0).align_self(Align::Start)).unwrap();
+        let b = t.add(t.root(), Style::leaf().size(50.0, 50.0).align_self(Align::Start)).unwrap();
+        t.compute(Size::new(100.0, 100.0));
+        assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(b)); // позже — выше
+        t.set_style(a, Style::leaf().size(50.0, 50.0).align_self(Align::Start).z(5));
+        assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(a));
+        t.set_style(a, Style::leaf().size(50.0, 50.0).align_self(Align::Start).z(5).pass_through());
+        assert_eq!(t.hit_test(Point::new(10.0, 10.0)), Some(b));
+        assert_eq!(t.hit_test(Point::new(90.0, 90.0)), Some(t.root()));
+    }
+
+    #[test]
+    fn scroll_moves_content_and_clips() {
+        let mut t = LayoutTree::new(Style::column());
+        let sc = t.add(t.root(), Style::column().height(100.0).scroll(false, true)).unwrap();
+        let items: Vec<_> = (0..5).map(|_| t.add(sc, Style::leaf().height(60.0)).unwrap()).collect();
+        let below = t.add(t.root(), Style::leaf().height(50.0)).unwrap();
+        t.compute(Size::new(100.0, 300.0));
+        assert_eq!(t.max_scroll(sc).y, 200.0);
+        assert_eq!(t.hit_test(Point::new(5.0, 70.0)), Some(items[1]));
+        // Элемент за границей области скролла не ловится, даже если геометрически лежит под соседом.
+        assert_eq!(t.hit_test(Point::new(5.0, 110.0)), Some(below));
+        assert!(t.scroll_by(sc, 0.0, 70.0));
+        t.compute(Size::new(100.0, 300.0));
+        assert_eq!(t.rect(items[1]).y, -10.0);
+        assert_eq!(t.hit_test(Point::new(5.0, 5.0)), Some(items[1]));
+        t.scroll_by(sc, 0.0, 1000.0);
+        assert_eq!(t.scroll(sc).y, 200.0);
+        assert!(!t.scroll_by(sc, 0.0, 5.0));
+    }
+
+    #[test]
+    fn popup_escapes_clip_and_wins() {
+        let mut t = LayoutTree::new(Style::column());
+        let clipped = t.add(t.root(), Style::stack().size(50.0, 50.0).clip()).unwrap();
+        let pop = t.add(clipped, Style::leaf().size(80.0, 80.0).align_self(Align::Start).popup()).unwrap();
+        let other = t.add(t.root(), Style::leaf().height(100.0)).unwrap();
+        t.compute(Size::new(200.0, 200.0));
+        assert_eq!(t.hit_test(Point::new(70.0, 70.0)), Some(pop)); // вне clip, но попап
+        assert_eq!(t.hit_test(Point::new(150.0, 150.0)), Some(t.root()));
+        let _ = other;
+    }
+}

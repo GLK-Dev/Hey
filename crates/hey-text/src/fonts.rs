@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! Реестр шрифтов: загрузка, fallback-цепочка, кэш метрик и растров глифов.
 
 use std::collections::HashMap;

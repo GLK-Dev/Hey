@@ -62,6 +62,15 @@ pub struct Style {
     pub grow: f32,
     pub shrink: f32,
     pub hidden: bool,
+    /// Обрезать детей по прямоугольнику узла (для hit-test и рендера).
+    pub clip: bool,
+    pub z: i32,
+    /// Участвует в hit-test (иначе событие проходит сквозь).
+    pub hit: bool,
+    /// Всплывающий слой: поверх всего, не обрезается предками.
+    pub popup: bool,
+    pub scroll_x: bool,
+    pub scroll_y: bool,
 }
 
 impl Style {
@@ -81,6 +90,12 @@ impl Style {
             grow: 0.0,
             shrink: 1.0,
             hidden: false,
+            clip: false,
+            z: 0,
+            hit: true,
+            popup: false,
+            scroll_x: false,
+            scroll_y: false,
         }
     }
     pub fn row() -> Self {
@@ -155,6 +170,32 @@ impl Style {
 impl Style {
     pub fn hidden(mut self) -> Self {
         self.hidden = true;
+        self
+    }
+}
+
+impl Style {
+    pub fn clip(mut self) -> Self {
+        self.clip = true;
+        self
+    }
+    pub fn z(mut self, z: i32) -> Self {
+        self.z = z;
+        self
+    }
+    pub fn pass_through(mut self) -> Self {
+        self.hit = false;
+        self
+    }
+    pub fn popup(mut self) -> Self {
+        self.popup = true;
+        self
+    }
+    /// Скролл по осям (включает clip).
+    pub fn scroll(mut self, x: bool, y: bool) -> Self {
+        self.scroll_x = x;
+        self.scroll_y = y;
+        self.clip = true;
         self
     }
 }

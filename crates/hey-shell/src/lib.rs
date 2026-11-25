@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! hey-shell: окно (winit) и вывод кадра `CpuRenderer` через softbuffer.
 //!
 //! Все размеры в физических пикселях (ADR-3); `scale` передаётся приложению для справки.

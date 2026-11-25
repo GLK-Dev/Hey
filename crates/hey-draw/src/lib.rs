@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! hey-draw: бэкенд-независимый список команд отрисовки (физические пиксели).
 
 pub mod cmd;

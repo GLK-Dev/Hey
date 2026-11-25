@@ -1,5 +1,5 @@
 use crate::style::{Align, Axis, Dim, Justify, Kind, Style};
-use hey_core::{NodeId, Rect, Size, Tree};
+use hey_core::{NodeId, Point, Rect, Size, Tree};
 
 type MeasureFn = Box<dyn Fn(Option<f32>) -> Size>;
 
@@ -7,6 +7,8 @@ struct Node {
     style: Style,
     measure: Option<MeasureFn>,
     rect: Rect,
+    scroll: Point,
+    content: Size,
 }
 
 /// Дерево раскладки. Корень занимает всё окно; остальные узлы раскладываются flex-алгоритмом.
@@ -35,7 +37,7 @@ fn offset(a: Align, free: f32) -> f32 {
 impl LayoutTree {
     pub fn new(root: Style) -> Self {
         let mut tree = Tree::new();
-        let root = tree.add(Node { style: root, measure: None, rect: Rect::default() }, None).expect("корень");
+        let root = tree.add(Node { style: root, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, None).expect("корень");
         Self { tree, root }
     }
 
@@ -44,7 +46,7 @@ impl LayoutTree {
     }
 
     pub fn add(&mut self, parent: NodeId, style: Style) -> Option<NodeId> {
-        self.tree.add(Node { style, measure: None, rect: Rect::default() }, Some(parent))
+        self.tree.add(Node { style, measure: None, rect: Rect::default(), scroll: Point::default(), content: Size::default() }, Some(parent))
     }
 
     pub fn remove(&mut self, id: NodeId) {
@@ -66,6 +68,85 @@ impl LayoutTree {
         if let Some(n) = self.tree.get_mut(id) {
             n.measure = Some(Box::new(f));
         }
+    }
+
+    /// Текущий сдвиг скролла.
+    pub fn scroll(&self, id: NodeId) -> Point {
+        self.tree.get(id).map(|n| n.scroll).unwrap_or_default()
+    }
+
+    /// Максимальный сдвиг скролла (после `compute`).
+    pub fn max_scroll(&self, id: NodeId) -> Point {
+        let Some(n) = self.tree.get(id) else { return Point::default() };
+        let v = n.rect.deflate(n.style.padding);
+        Point::new((n.content.w - v.w).max(0.0), (n.content.h - v.h).max(0.0))
+    }
+
+    /// Задать сдвиг (зажимается при следующем `compute`).
+    pub fn set_scroll(&mut self, id: NodeId, p: Point) {
+        if let Some(n) = self.tree.get_mut(id) {
+            n.scroll = p;
+        }
+    }
+
+    /// Прокрутить на `d`; возвращает `true`, если сдвиг изменился.
+    pub fn scroll_by(&mut self, id: NodeId, dx: f32, dy: f32) -> bool {
+        let max = self.max_scroll(id);
+        let Some(n) = self.tree.get_mut(id) else { return false };
+        let to = Point::new((n.scroll.x + dx).clamp(0.0, max.x), (n.scroll.y + dy).clamp(0.0, max.y));
+        let changed = to != n.scroll;
+        n.scroll = to;
+        changed
+    }
+
+    /// Самый верхний узел под точкой: всплывающие слои, затем основное дерево;
+    /// учитывает clip, скролл (через позиции), z-порядок и `pass_through`.
+    pub fn hit_test(&self, p: Point) -> Option<NodeId> {
+        let mut popups: Vec<(i32, usize, NodeId)> = Vec::new();
+        for (i, (id, n)) in self.tree.dfs(self.root).enumerate() {
+            if n.style.popup && !n.style.hidden {
+                popups.push((n.style.z, i, id));
+            }
+        }
+        popups.sort_by_key(|&(z, i, _)| (std::cmp::Reverse(z), std::cmp::Reverse(i)));
+        for (_, _, id) in popups {
+            if let Some(h) = self.hit_node(id, p, None, true) {
+                return Some(h);
+            }
+        }
+        self.hit_node(self.root, p, None, false)
+    }
+
+    fn hit_node(&self, id: NodeId, p: Point, clip: Option<Rect>, is_popup_root: bool) -> Option<NodeId> {
+        let n = self.tree.get(id)?;
+        if n.style.hidden || (n.style.popup && !is_popup_root) {
+            return None;
+        }
+        if clip.is_some_and(|c| !c.contains(p)) {
+            return None;
+        }
+        let child_clip = if n.style.clip {
+            match clip {
+                Some(c) => Some(c.intersect(&n.rect)?),
+                None => Some(n.rect),
+            }
+        } else {
+            clip
+        };
+        let mut kids: Vec<(i32, usize, NodeId)> = self
+            .tree
+            .children(id)
+            .iter()
+            .enumerate()
+            .map(|(i, &c)| (self.tree.get(c).map_or(0, |k| k.style.z), i, c))
+            .collect();
+        kids.sort_by_key(|&(z, i, _)| (std::cmp::Reverse(z), std::cmp::Reverse(i)));
+        for (_, _, c) in kids {
+            if let Some(h) = self.hit_node(c, p, child_clip, false) {
+                return Some(h);
+            }
+        }
+        (n.style.hit && n.rect.contains(p)).then_some(id)
     }
 
     /// Абсолютный прямоугольник узла (после `compute`).
@@ -104,8 +185,24 @@ impl LayoutTree {
         };
         let w_avail = fixed_w.or(avail).map(|w| clamp(w, st.min.w, st.max.w));
         let inner = w_avail.map(|w| (w - st.padding.horizontal()).max(0.0));
+        let content = self.content(id, inner);
+        let w = match st.width {
+            Dim::Px(p) => p,
+            Dim::Auto => content.w + st.padding.horizontal(),
+        };
+        let h = match st.height {
+            Dim::Px(p) => p,
+            Dim::Auto => content.h + st.padding.vertical(),
+        };
+        Size::new(clamp(w, st.min.w, st.max.w), clamp(h, st.min.h, st.max.h))
+    }
+
+    /// Размер содержимого (без padding); `inner` — доступная внутренняя ширина.
+    fn content(&self, id: NodeId, inner: Option<f32>) -> Size {
+        let n = self.tree.get(id).unwrap();
+        let st = n.style;
         let kids = self.visible(id);
-        let content = match st.kind {
+        match st.kind {
             Kind::Leaf => n.measure.as_ref().map_or(Size::default(), |f| f(inner)),
             Kind::Stack => kids.iter().fold(Size::default(), |a, &c| {
                 let m = self.tree.get(c).unwrap().style.margin;
@@ -136,16 +233,7 @@ impl LayoutTree {
                     Size::new(cross, main)
                 }
             }
-        };
-        let w = match st.width {
-            Dim::Px(p) => p,
-            Dim::Auto => content.w + st.padding.horizontal(),
-        };
-        let h = match st.height {
-            Dim::Px(p) => p,
-            Dim::Auto => content.h + st.padding.vertical(),
-        };
-        Size::new(clamp(w, st.min.w, st.max.w), clamp(h, st.min.h, st.max.h))
+        }
     }
 
     fn set_rect(&mut self, id: NodeId, r: Rect) {
@@ -162,7 +250,23 @@ impl LayoutTree {
                 self.set_rect(c, Rect::default());
             }
         }
-        let inner = rect.deflate(st.padding);
+        let viewport = rect.deflate(st.padding);
+        let mut inner = viewport;
+        if st.scroll_x || st.scroll_y {
+            let c = self.content(id, Some(viewport.w));
+            if st.scroll_x {
+                inner.w = inner.w.max(c.w);
+            }
+            if st.scroll_y {
+                inner.h = inner.h.max(c.h);
+            }
+            let max = Point::new((inner.w - viewport.w).max(0.0), (inner.h - viewport.h).max(0.0));
+            let n = self.tree.get_mut(id).unwrap();
+            n.content = Size::new(inner.w, inner.h);
+            n.scroll = Point::new(n.scroll.x.clamp(0.0, max.x), n.scroll.y.clamp(0.0, max.y));
+            inner.x -= n.scroll.x.round();
+            inner.y -= n.scroll.y.round();
+        }
         let kids = self.visible(id);
         match st.kind {
             Kind::Leaf => {}

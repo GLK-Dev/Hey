@@ -1,3 +1,5 @@
+// Copyright (c) Vitaly Golik (mjojo)
+
 //! Дерево поверх `Arena`: родитель/дети, удаление поддеревьев, обход в глубину.
 
 use crate::arena::{Arena, NodeId};
