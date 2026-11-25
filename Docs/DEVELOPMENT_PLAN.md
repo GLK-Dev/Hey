@@ -143,7 +143,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Layout текста: измерение, перенос строк, выравнивание, многострочность, обрезка с «…».
 - [x] Выделить **чистую модель редактирования** `TextEditState` (текст, каретка, выделение, границы слов/графем, undo/redo с коалесингом, clipboard-trait) из прототипа — без зависимостей от UI. Покрыть property-тестами (Unicode, кириллица, эмодзи, комбинируемые символы).
 - [x] Курсор по графемам (`unicode-segmentation`), границы слов (`unicode-segmentation`/UAX#29) вместо самодельных.
-- [ ] Спайк: `cosmic-text`/`parley` как замена fontdue (shaping, bidi) — решение по ADR-8.
+- [x] Spike: `cosmic-text` as a replacement for fontdue (shaping, bidi) — `tests/cosmic_spike.rs`; decision in ADR-8: adopt when complex scripts are needed, migration inside `hey-text` only. [ ] migration — later.
 
 ### Фаза 4. Layout и hit-test (`hey-layout`) (3 Н)
 - [x] Контейнеры: `Row`, `Column`, `Stack`, `Spacer`; `gap`, `padding`, `margin`, `align`, `justify`, `flex-grow/shrink`, min/max size.

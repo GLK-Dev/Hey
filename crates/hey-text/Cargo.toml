@@ -9,3 +9,6 @@ hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
 unicode-segmentation = { workspace = true }
 fontdue = { workspace = true }
+
+[dev-dependencies]
+cosmic-text = { workspace = true }

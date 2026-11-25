@@ -17,6 +17,7 @@ rfd = { version = "0.15", default-features = false }
 serde_json = "1"
 softbuffer = "0.4"
 taffy = "0.16"
+cosmic-text = "0.19"
 unicode-segmentation = "1"
 wgpu = "24"
 winit = "0.30"
