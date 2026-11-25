@@ -5,7 +5,7 @@ use hey_core::Color;
 use serde_json::Value;
 use std::collections::HashMap;
 
-const THEMES_JSON: &str = include_str!("../../../design/tokens/themes.json");
+const THEMES_JSON: &str = include_str!("../assets/themes.json");
 
 #[derive(Debug)]
 pub enum ThemeError {
@@ -381,6 +381,17 @@ impl Theme {
             Variant::Primary => p.on_accent,
             Variant::Danger => Color::rgb(255, 255, 255),
             Variant::Secondary => p.text,
+        }
+    }
+}
+
+#[cfg(test)]
+mod asset_tests {
+    #[test]
+    fn bundled_themes_match_design_original() {
+        let orig = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../design/tokens/themes.json");
+        if let Ok(text) = std::fs::read_to_string(orig) {
+            assert!(text == super::THEMES_JSON, "crates/hey-style/assets/themes.json is out of sync with design/");
         }
     }
 }

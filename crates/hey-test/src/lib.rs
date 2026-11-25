@@ -21,9 +21,6 @@ use hey_widgets::Ui;
 use std::path::Path;
 use std::sync::Arc;
 
-/// Bundled UI font used by the harness.
-const FONT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf");
-
 /// A [`Ui`] plus a message sink, viewport and renderer.
 pub struct Harness<Msg: 'static> {
     pub ui: Ui<Msg>,
@@ -40,7 +37,7 @@ impl<Msg: 'static> Harness<Msg> {
 
     pub fn with_theme(theme: Theme, width: f32, height: f32) -> Self {
         let mut f = Fonts::new();
-        let id = f.add_file(FONT).expect("bundled font");
+        let id = f.add_bytes(hey_text::DEFAULT_FONT).expect("bundled font");
         let fonts = Arc::new(f);
         let sink = MsgSink::new();
         let ui = Ui::new(theme, fonts.clone(), vec![id], sink.clone());

@@ -3,8 +3,13 @@ name = "hey-icons"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+description = "SVG icon rasterisation and icon set for the Hey UI framework"
 
 [dependencies]
-hey-core = { path = "../hey-core" }
-hey-draw = { path = "../hey-draw" }
+hey-core = { path = "../hey-core", version = "0.1.0" }
+hey-draw = { path = "../hey-draw", version = "0.1.0" }
 resvg = { workspace = true }

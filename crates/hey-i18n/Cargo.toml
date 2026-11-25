@@ -3,6 +3,11 @@ name = "hey-i18n"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+description = "Fluent-based localisation and locale-aware formatting for Hey"
 
 [dependencies]
 fluent-bundle = { workspace = true }

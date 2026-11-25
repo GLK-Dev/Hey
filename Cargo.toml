@@ -5,6 +5,10 @@ members = ["crates/*", "examples/*"]
 [workspace.package]
 edition = "2021"
 license = "MIT"
+repository = "https://github.com/GLK-Dev/Hey"
+readme = "README.md"
+keywords = ["gui", "ui", "framework", "desktop", "wgpu"]
+categories = ["gui"]
 
 # Versions of external dependencies are pinned here; crates refer to them via `workspace = true`.
 [workspace.dependencies]

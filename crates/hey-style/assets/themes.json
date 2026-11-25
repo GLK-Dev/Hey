@@ -1,0 +1,302 @@
+{
+  "_note": "Три темы HeOS. industrial-dark повторяет tokens.json; night-ops и zeta-remastered — новые комплекты. Базовые цвета взяты из Docs/reports/HeOS_Theme_Engine_Report.md, остальные выведены из них и проверены на контраст.",
+  "themes": {
+    "industrial-dark": {
+      "name": "HeOS Industrial Dark",
+      "role": "Основная тема",
+      "controlStyle": "flat",
+      "color": {
+        "desktop": "#14161B",
+        "desktopDeep": "#0B0C10",
+        "panel": "#181A20",
+        "document": "#14161B",
+        "control": "#20232B",
+        "controlHover": "#272B34",
+        "line": "#2C303A",
+        "tabInactive": "#3A3E47",
+        "accent": "#F5A623",
+        "accentDark": "#B26A00",
+        "onAccent": "#14161B",
+        "focus": "#00E5FF",
+        "text": "#F2F4F8",
+        "textMuted": "#9AA3B2",
+        "textDisabled": "#5E6676",
+        "success": "#00FF66",
+        "warning": "#F5A623",
+        "error": "#FF3366",
+        "media": "#B026FF",
+        "selection": "#F5A623",
+        "onSelection": "#14161B"
+      },
+      "chamfer": {
+        "small": 8,
+        "medium": 16,
+        "large": 18
+      },
+      "focus": {
+        "width": 3,
+        "offset": 3,
+        "outerLine": 0
+      },
+      "motion": {
+        "fastMs": 120,
+        "baseMs": 200,
+        "windowMs": 280,
+        "curve": "cubic-bezier(.2,.8,.2,1)",
+        "windowEffect": "scale-fade"
+      },
+      "font": {
+        "ui": "Space Grotesk, Onest",
+        "mono": "JetBrains Mono",
+        "labelsUppercaseMono": false
+      },
+      "terminal": {
+        "background": "#0E0F13",
+        "cursor": "#F5A623",
+        "ansi": [
+          "#14161B",
+          "#FF3366",
+          "#00FF66",
+          "#F5A623",
+          "#4C8DFF",
+          "#B026FF",
+          "#00E5FF",
+          "#C9CDD4",
+          "#3A3F4B",
+          "#FF6B8F",
+          "#66FFA3",
+          "#FFC861",
+          "#86B2FF",
+          "#CC70FF",
+          "#7AF2FF",
+          "#F2F4F8"
+        ]
+      },
+      "wallpaper": "wallpapers/industrial-dark.svg",
+      "highlight": {
+        "kind": "sweep",
+        "name": "Блик-срез",
+        "glow": false,
+        "glowBlurPx": 0,
+        "hover": "блик 45° за 200 мс, фон accent → #FFB840",
+        "focus": "рамка стягивается к элементу за 120 мс",
+        "select": "полоса-выделение скользит к строке за 200 мс",
+        "wait": "янтарный отрезок бежит по дорожке",
+        "notify": "выезжает справа на 16 px и проявляется"
+      },
+      "windowLink": {
+        "name": "Сигнальная линия",
+        "color": "#00E5FF",
+        "pulseColor": "#E8FDFF",
+        "lineWidth": 2,
+        "glowBlurPx": 6,
+        "growMs": 120,
+        "pulse": "smooth",
+        "frameWashPx": 14
+      }
+    },
+    "night-ops": {
+      "name": "HeOS Night Ops",
+      "role": "Ночной тактический режим",
+      "controlStyle": "outline",
+      "color": {
+        "desktop": "#0E1210",
+        "desktopDeep": "#080B09",
+        "panel": "#141916",
+        "document": "#0E1210",
+        "control": "#1B221D",
+        "controlHover": "#243029",
+        "line": "#243028",
+        "tabInactive": "#2A3530",
+        "accent": "#00FF66",
+        "accentDark": "#00B347",
+        "onAccent": "#0E1210",
+        "focus": "#00E5FF",
+        "text": "#E6F2E9",
+        "textMuted": "#8FA394",
+        "textDisabled": "#4F6157",
+        "success": "#7CFFB0",
+        "warning": "#FFB000",
+        "error": "#FF4D6D",
+        "media": "#C77DFF",
+        "selection": "#0F3D24",
+        "onSelection": "#E0F5E8",
+        "focusOuter": "#06140C",
+        "primaryFill": "#0F3D24",
+        "primaryHover": "#14532F"
+      },
+      "chamfer": {
+        "small": 8,
+        "medium": 16,
+        "large": 18
+      },
+      "focus": {
+        "width": 3,
+        "offset": 3,
+        "outerLine": 1
+      },
+      "motion": {
+        "fastMs": 90,
+        "baseMs": 160,
+        "windowMs": 220,
+        "curve": "steps(6,end)",
+        "windowEffect": "scan-wipe"
+      },
+      "font": {
+        "ui": "Space Grotesk, Onest",
+        "mono": "JetBrains Mono",
+        "labelsUppercaseMono": true
+      },
+      "terminal": {
+        "background": "#080B09",
+        "cursor": "#00FF66",
+        "ansi": [
+          "#0A0D0B",
+          "#FF4D6D",
+          "#00FF66",
+          "#FFB000",
+          "#4CC2A0",
+          "#C77DFF",
+          "#33FF88",
+          "#B8D4C3",
+          "#2A3530",
+          "#FF8098",
+          "#7CFFB0",
+          "#FFCB57",
+          "#8CE0C8",
+          "#DDA8FF",
+          "#99FFC4",
+          "#E0F5E8"
+        ]
+      },
+      "wallpaper": "wallpapers/night-ops.svg",
+      "highlight": {
+        "kind": "glow",
+        "name": "Фосфор",
+        "glow": true,
+        "glowBlurPx": 8,
+        "hover": "свечение контура 0 → 8 px за 90 мс",
+        "focus": "рамка мигает дважды и остаётся",
+        "select": "выделение перескакивает ступенями, строка вспыхивает",
+        "wait": "сегменты загораются по очереди с затухающим следом",
+        "notify": "развёртка сверху вниз линией-сканером"
+      },
+      "windowLink": {
+        "name": "Фосфорная связь",
+        "color": "#00FF66",
+        "pulseColor": "#D6FFE6",
+        "lineWidth": 2,
+        "glowBlurPx": 10,
+        "growMs": 90,
+        "pulse": "stepped",
+        "frameWashPx": 14
+      }
+    },
+    "zeta-remastered": {
+      "name": "HeOS ZETA Remastered",
+      "role": "Ретро в духе BeOS",
+      "controlStyle": "bevel",
+      "color": {
+        "desktop": "#98B4D1",
+        "desktopDeep": "#7F9DBD",
+        "panel": "#343E4B",
+        "document": "#2A323D",
+        "control": "#3E4958",
+        "controlHover": "#3E4958",
+        "line": "#4A5666",
+        "tabInactive": "#3E4958",
+        "accent": "#FFCC00",
+        "accentDark": "#C99E00",
+        "onAccent": "#1E242C",
+        "focus": "#98B4D1",
+        "text": "#F2F5F9",
+        "textMuted": "#B4C0CE",
+        "textDisabled": "#7C8794",
+        "success": "#5BE37D",
+        "warning": "#FF9F1A",
+        "error": "#FF7070",
+        "media": "#C79BFF",
+        "selection": "#FFCC00",
+        "onSelection": "#1E242C",
+        "focusOuter": "#162230",
+        "bevelLight": "#5B697A",
+        "bevelDark": "#1A2028"
+      },
+      "chamfer": {
+        "small": 4,
+        "medium": 8,
+        "large": 14
+      },
+      "focus": {
+        "width": 3,
+        "offset": 3,
+        "outerLine": 1
+      },
+      "motion": {
+        "fastMs": 80,
+        "baseMs": 120,
+        "windowMs": 160,
+        "curve": "linear",
+        "windowEffect": "zoom-rects"
+      },
+      "font": {
+        "ui": "Space Grotesk, Onest",
+        "mono": "JetBrains Mono",
+        "labelsUppercaseMono": false
+      },
+      "terminal": {
+        "background": "#161B22",
+        "cursor": "#FFCC00",
+        "ansi": [
+          "#1F262F",
+          "#FF7070",
+          "#5BE37D",
+          "#FFCC00",
+          "#6FA8FF",
+          "#C79BFF",
+          "#00FFFF",
+          "#D5DCE5",
+          "#555D68",
+          "#FF9C9C",
+          "#93F0AA",
+          "#FFE066",
+          "#A3C7FF",
+          "#DCC2FF",
+          "#7FFFFF",
+          "#FFFFFF"
+        ]
+      },
+      "wallpaper": "wallpapers/zeta-remastered.svg",
+      "highlight": {
+        "kind": "gloss",
+        "name": "Глянец",
+        "glow": false,
+        "glowBlurPx": 0,
+        "hover": "глянец на верхней половине за 80 мс",
+        "focus": "двойная рамка появляется сразу",
+        "select": "выделение перескакивает сразу и мигает один раз, как меню BeOS",
+        "wait": "бегущие диагональные полосы",
+        "notify": "появляется сразу, цветная полоса сверху мигает"
+      },
+      "windowLink": {
+        "name": "Контактная полоса",
+        "color": "#00E5FF",
+        "pulseColor": "#FFFFFF",
+        "lineWidth": 3,
+        "glowBlurPx": 0,
+        "growMs": 80,
+        "pulse": "marching-dashes",
+        "frameWashPx": 0
+      }
+    }
+  },
+  "windowLink": {
+    "snapDistancePx": 12,
+    "breakDistancePx": 16,
+    "pulseMs": 1200,
+    "pulseCount": 2,
+    "idleOpacity": 0.6,
+    "dendritePx": 8,
+    "minContactPx": 24
+  }
+}

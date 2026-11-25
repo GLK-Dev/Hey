@@ -40,7 +40,7 @@ impl<T> TaskState<T> {
 }
 
 /// Default font (Onest, SIL OFL 1.1).
-const DEFAULT_FONT: &[u8] = include_bytes!("../../../design/fonts/onest/Onest[wght].ttf");
+const DEFAULT_FONT: &[u8] = hey_text::DEFAULT_FONT;
 
 type Job<Msg> = Box<dyn FnOnce() -> Msg + Send>;
 

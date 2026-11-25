@@ -3,9 +3,14 @@ name = "hey-render-cpu"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+repository.workspace = true
+description = "Reference CPU renderer for the Hey UI framework"
 
 [dependencies]
-hey-core = { path = "../hey-core" }
-hey-draw = { path = "../hey-draw" }
-hey-text = { path = "../hey-text" }
+hey-core = { path = "../hey-core", version = "0.1.0" }
+hey-draw = { path = "../hey-draw", version = "0.1.0" }
+hey-text = { path = "../hey-text", version = "0.1.0" }
 png = { workspace = true }
