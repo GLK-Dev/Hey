@@ -105,7 +105,7 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 - **Слой стыковки окон («нейронная связь»)** — отдельный оверлей поверх окон; задача для фазы 9+.
 
 OPEN QUESTION: размеры срезов расходятся — `tokens.json` и `heos_design.h`: 5/9/18; `themes.json` (industrial-dark, night-ops): 8/16/18, zeta-remastered: 4/8/14, а `themes/README.md` говорит 5/9/18 и 0/0/0. Какие значения считать эталонными (пока берём `tokens.json`: 5/9/18)?
-OPEN QUESTION: фон рабочего стола Industrial Dark: `#0B0C10` (tokens.json) или `#14161B` (отчёт по темам).
+РЕШЕНО: фон рабочего стола Industrial Dark — `#0B0C10` (`tokens.json`).
 
 ---
 

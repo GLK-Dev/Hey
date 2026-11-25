@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["examples/prototype_monolith"]
+members = ["crates/*", "examples/prototype_monolith"]
 
 [workspace.package]
 edition = "2021"
