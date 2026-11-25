@@ -7,6 +7,7 @@ use hey_style::{Theme, WidgetState};
 use hey_text::{FontId, Fonts};
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 /// Контекст отрисовки/измерения, общий для всех виджетов.
 pub struct Env {
@@ -28,6 +29,14 @@ pub trait Widget<Msg> {
     /// Клик по виджету (позиция в абсолютных координатах). По умолчанию — `activate`.
     fn click(&mut self, _env: &Env, _rect: Rect, _pos: Point, sink: &MsgSink<Msg>) {
         self.activate(sink);
+    }
+    /// Нажатие левой кнопки на виджете; `clicks` — 1, 2, 3… (серия быстрых нажатий).
+    fn press(&mut self, _env: &Env, _rect: Rect, _pos: Point, _clicks: u32, _sink: &MsgSink<Msg>) {}
+    /// Движение указателя при зажатой кнопке (захват: приходит нажатому виджету, даже вне его).
+    fn drag(&mut self, _env: &Env, _rect: Rect, _pos: Point, _sink: &MsgSink<Msg>) {}
+    /// Колесо мыши (`dy` < 0 — вниз, в физ. px); `true` — обработано.
+    fn wheel(&mut self, _env: &Env, _rect: Rect, _dx: f32, _dy: f32) -> bool {
+        false
     }
     /// Клавиша на сфокусированном виджете; `true` — обработана.
     fn key(&mut self, _code: &str, _mods: Modifiers, _sink: &MsgSink<Msg>) -> bool {
@@ -52,7 +61,10 @@ pub struct Ui<Msg> {
     hover: Option<NodeId>,
     pressed: Option<NodeId>,
     focus: Option<NodeId>,
+    last_click: Option<(NodeId, Instant, u32)>,
 }
+
+const MULTI_CLICK: Duration = Duration::from_millis(500);
 
 impl<Msg: 'static> Ui<Msg> {
     pub fn new(theme: Theme, fonts: Rc<Fonts>, chain: Vec<FontId>, sink: MsgSink<Msg>) -> Self {
@@ -65,6 +77,7 @@ impl<Msg: 'static> Ui<Msg> {
             hover: None,
             pressed: None,
             focus: None,
+            last_click: None,
         }
     }
 
@@ -175,6 +188,19 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    /// Вызывает метод виджета с контекстом; `true`, если виджет существует и включён.
+    fn with_widget(&mut self, id: NodeId, f: impl FnOnce(&mut dyn Widget<Msg>, &Env, Rect, &MsgSink<Msg>)) -> bool {
+        let rect = self.tree.rect(id);
+        let env = self.env.clone();
+        match self.nodes.get_mut(&id) {
+            Some(n) if !n.disabled => {
+                f(n.widget.as_mut(), &env, rect, &self.sink);
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn key_to(&mut self, id: NodeId, code: &str, mods: Modifiers) -> bool {
         match self.nodes.get_mut(&id) {
             Some(n) if !n.disabled => n.widget.key(code, mods, &self.sink),
@@ -191,7 +217,22 @@ impl<Msg: 'static> Ui<Msg> {
     /// Обрабатывает событие. Возвращает `true`, если нужна перерисовка.
     pub fn event(&mut self, ev: &UiEvent) -> bool {
         match ev {
-            UiEvent::PointerMove { pos } => self.set_hover(self.tree.hit_test(*pos)),
+            UiEvent::PointerMove { pos } => {
+                let a = self.set_hover(self.tree.hit_test(*pos));
+                let b = match self.pressed {
+                    Some(p) => self.with_widget(p, |w, env, rect, sink| w.drag(env, rect, *pos, sink)),
+                    None => false,
+                };
+                a || b
+            }
+            UiEvent::Wheel { pos, dx, dy } => match self.tree.hit_test(*pos) {
+                Some(id) if self.enabled(id) => {
+                    let rect = self.tree.rect(id);
+                    let env = self.env.clone();
+                    self.nodes.get_mut(&id).is_some_and(|n| n.widget.wheel(&env, rect, *dx, *dy))
+                }
+                _ => false,
+            },
             UiEvent::PointerLeave => {
                 let a = self.set_hover(None);
                 let b = self.pressed.take().is_some();
@@ -205,6 +246,13 @@ impl<Msg: 'static> Ui<Msg> {
                     if self.nodes[&i].widget.focusable() {
                         self.focus = Some(i);
                     }
+                    let now = Instant::now();
+                    let clicks = match self.last_click {
+                        Some((id, t, n)) if id == i && now.duration_since(t) < MULTI_CLICK => n + 1,
+                        _ => 1,
+                    };
+                    self.last_click = Some((i, now, clicks));
+                    self.with_widget(i, |w, env, rect, sink| w.press(env, rect, *pos, clicks, sink));
                 }
                 true
             }
