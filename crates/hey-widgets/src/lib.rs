@@ -6,5 +6,5 @@
 mod ui;
 mod widgets;
 
-pub use ui::{Ui, Widget};
-pub use widgets::{Button, Label, Panel, PanelKind};
+pub use ui::{Env, Ui, Widget};
+pub use widgets::{Button, Label, Panel, PanelKind, Tabs};

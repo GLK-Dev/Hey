@@ -25,6 +25,14 @@ pub trait Widget<Msg> {
     }
     /// Клик мышью или Enter/Space на сфокусированном виджете.
     fn activate(&mut self, _sink: &MsgSink<Msg>) {}
+    /// Клик по виджету (позиция в абсолютных координатах). По умолчанию — `activate`.
+    fn click(&mut self, _env: &Env, _rect: Rect, _pos: Point, sink: &MsgSink<Msg>) {
+        self.activate(sink);
+    }
+    /// Клавиша на сфокусированном виджете; `true` — обработана.
+    fn key(&mut self, _code: &str, _sink: &MsgSink<Msg>) -> bool {
+        false
+    }
 }
 
 struct Node<Msg> {
@@ -153,6 +161,29 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    fn click(&mut self, id: NodeId, pos: Point) {
+        let rect = self.tree.rect(id);
+        let env = self.env.clone();
+        if let Some(n) = self.nodes.get_mut(&id) {
+            if !n.disabled {
+                n.widget.click(&env, rect, pos, &self.sink);
+            }
+        }
+    }
+
+    fn key_to(&mut self, id: NodeId, code: &str) -> bool {
+        match self.nodes.get_mut(&id) {
+            Some(n) if !n.disabled => n.widget.key(code, &self.sink),
+            _ => false,
+        }
+    }
+
+    pub(crate) fn replace_widget(&mut self, id: NodeId, widget: impl Widget<Msg> + 'static) {
+        if let Some(n) = self.nodes.get_mut(&id) {
+            n.widget = Box::new(widget);
+        }
+    }
+
     /// Обрабатывает событие. Возвращает `true`, если нужна перерисовка.
     pub fn event(&mut self, ev: &UiEvent) -> bool {
         match ev {
@@ -179,7 +210,7 @@ impl<Msg: 'static> Ui<Msg> {
                 let pressed = self.pressed.take();
                 if let (Some(p), Some(h)) = (pressed, hit) {
                     if p == h {
-                        self.activate(p);
+                        self.click(p, *pos);
                     }
                 }
                 true
@@ -189,6 +220,7 @@ impl<Msg: 'static> Ui<Msg> {
                     self.move_focus(mods.shift);
                     true
                 }
+                c if self.focus.is_some_and(|f| self.key_to(f, c)) => true,
                 "Enter" | " " => match self.focus {
                     Some(f) => {
                         self.activate(f);
