@@ -43,6 +43,33 @@ impl<Msg> Widget<Msg> for Label {
     }
 }
 
+/// SVG icon from `Env::icons`, drawn at the widget's physical size and tinted with the text color.
+/// The size is in physical pixels (ADR-3), so the icon is re-rasterized automatically on a scale change.
+pub struct Icon {
+    name: String,
+}
+
+impl Icon {
+    pub fn add<Msg: 'static>(ui: &mut Ui<Msg>, parent: NodeId, name: &str, size: f32) -> NodeId {
+        let mut style = Style::leaf();
+        style.width = hey_layout::Dim::Px(size);
+        style.height = hey_layout::Dim::Px(size);
+        ui.add_widget(parent, style, Icon { name: name.into() }, move |_| Size::new(size, size))
+    }
+}
+
+impl<Msg> Widget<Msg> for Icon {
+    fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
+        let color = if state.disabled() { env.theme.palette.text_disabled } else { env.theme.palette.text };
+        let px = rect.w.min(rect.h).round().max(1.0) as u32;
+        let id = env.icons.borrow_mut().get(&self.name, px, Some(color));
+        if let Some(image) = id {
+            let (x, y) = (rect.x + (rect.w - px as f32) / 2.0, rect.y + (rect.h - px as f32) / 2.0);
+            out.push(DrawCmd::Image { rect: Rect::new(x, y, px as f32, px as f32), image });
+        }
+    }
+}
+
 /// Button with a label; sends a message on activation (click, Enter, Space).
 pub struct Button<Msg> {
     label: String,

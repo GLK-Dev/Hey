@@ -44,6 +44,11 @@ pub trait ShellApp {
         None
     }
 
+    /// Image store for `DrawCmd::Image`; re-read after every `draw` (a changed `Arc` is re-uploaded).
+    fn images(&self) -> Option<std::sync::Arc<hey_draw::ImageStore>> {
+        None
+    }
+
     /// Called when the loop wakes up: collect background task results; `true` means a redraw is needed.
     fn tick(&mut self) -> bool {
         false
@@ -103,6 +108,8 @@ struct Gfx {
     window: Arc<Window>,
     /// `None` only while switching backends (the old one must be dropped before the new surface is created).
     backend: Option<Backend>,
+    /// Image store last handed to the active renderer (compared by pointer to detect new icons).
+    images: Option<Arc<hey_draw::ImageStore>>,
 }
 
 fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>) -> Result<Backend, String> {
@@ -134,6 +141,7 @@ fn is_switch_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
 impl Gfx {
     fn switch_backend(&mut self, clear: Color, fonts: Option<Arc<Fonts>>) {
         let to_gpu = matches!(self.backend, Some(Backend::Cpu { .. }));
+        self.images = None; // the new renderer has no images yet
         self.backend = None; // release the current surface first: one window cannot hold two
         let created =
             if to_gpu { create_gpu(&self.window, clear, fonts.clone()) } else { Ok(create_cpu(&self.window, clear, fonts.clone())) };
@@ -204,7 +212,7 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
         let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
         window.set_ime_allowed(true);
         window.request_redraw();
-        self.gfx = Some(Gfx { window, backend: Some(backend) });
+        self.gfx = Some(Gfx { window, backend: Some(backend), images: None });
     }
 
     fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -232,6 +240,19 @@ impl<A: ShellApp> ApplicationHandler for Shell<A> {
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 self.list.clear();
                 self.app.draw(vp, &mut self.list);
+                let images = self.app.images();
+                let changed = match (&images, &g.images) {
+                    (Some(a), Some(b)) => !Arc::ptr_eq(a, b),
+                    (None, None) => false,
+                    _ => true,
+                };
+                if changed {
+                    match g.backend.as_mut().expect("backend") {
+                        Backend::Gpu(r) => r.set_images(images.clone()),
+                        Backend::Cpu { renderer, .. } => renderer.images = images.clone(),
+                    }
+                    g.images = images;
+                }
                 match g.backend.as_mut().expect("backend") {
                     Backend::Gpu(r) => {
                         r.resize(sz.width, sz.height);

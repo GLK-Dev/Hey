@@ -19,4 +19,4 @@ pub use overlay::{Dropdown, Menu, Modal, Tooltip};
 pub use textarea::TextArea;
 pub use ui::{Env, OverlayId, OverlayKind, Overlays, Ui, Widget};
 pub use view::View;
-pub use widgets::{Button, Label, Panel, PanelKind, Tabs, TextInput};
+pub use widgets::{Button, Icon, Label, Panel, PanelKind, Tabs, TextInput};

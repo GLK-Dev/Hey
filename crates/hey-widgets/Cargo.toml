@@ -10,3 +10,4 @@ hey-layout = { path = "../hey-layout" }
 hey-style = { path = "../hey-style" }
 hey-text = { path = "../hey-text" }
 hey-draw = { path = "../hey-draw" }
+hey-icons = { path = "../hey-icons" }

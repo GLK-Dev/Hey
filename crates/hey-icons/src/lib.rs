@@ -119,6 +119,40 @@ impl IconCache {
     }
 }
 
+/// An `IconCache` together with the `ImageStore` it fills. Renderers get the store through `images()`;
+/// the `Arc` changes only when a new icon was rasterized, so pointer comparison detects "needs re-upload".
+pub struct IconHost {
+    pub cache: IconCache,
+    store: Arc<ImageStore>,
+}
+
+impl Default for IconHost {
+    fn default() -> Self {
+        Self { cache: IconCache::new(), store: Arc::new(ImageStore::new()) }
+    }
+}
+
+impl IconHost {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Image for `name` at `size` physical pixels (rasterized on first use).
+    pub fn get(&mut self, name: &str, size: u32, tint: Option<Color>) -> Option<ImageId> {
+        let before = self.store.len();
+        let mut next = (*self.store).clone();
+        let id = self.cache.get(&mut next, name, size, tint);
+        if next.len() != before {
+            self.store = Arc::new(next);
+        }
+        id
+    }
+
+    pub fn images(&self) -> Arc<ImageStore> {
+        self.store.clone()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -189,5 +223,18 @@ mod tests {
         let mut c = IconCache::new();
         let n = c.load_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/icons/small")).unwrap();
         assert!(n > 0);
+    }
+
+    #[test]
+    fn host_swaps_store_only_on_new_icons() {
+        let mut h = IconHost::new();
+        h.cache.add_source("sq", SQUARE.to_vec());
+        let s0 = h.images();
+        let id = h.get("sq", 16, None).unwrap();
+        let s1 = h.images();
+        assert!(!Arc::ptr_eq(&s0, &s1));
+        assert!(s1.get(id).is_some());
+        assert_eq!(h.get("sq", 16, None), Some(id));
+        assert!(Arc::ptr_eq(&s1, &h.images()), "cache hit must not replace the store");
     }
 }

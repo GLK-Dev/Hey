@@ -278,6 +278,10 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
         Some(self.ui.env.fonts.clone())
     }
 
+    fn images(&self) -> Option<Arc<hey_draw::ImageStore>> {
+        Some(self.ui.env.icons.borrow().images())
+    }
+
     fn tick(&mut self) -> bool {
         self.poll()
     }

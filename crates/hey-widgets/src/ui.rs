@@ -18,6 +18,8 @@ pub struct Env {
     pub chain: Vec<FontId>,
     /// Base font size (physical px).
     pub font_px: f32,
+    /// SVG icon sources and their rasterizations (see `Icon`).
+    pub icons: RefCell<hey_icons::IconHost>,
 }
 
 /// Widget behavior. State (hover/pressed/focus/disabled) is kept by `Ui`.
@@ -152,7 +154,7 @@ impl<Msg: 'static> Ui<Msg> {
         let font_px = theme.space(14.0);
         Ui {
             tree: LayoutTree::new(Style::column()),
-            env: Rc::new(Env { theme, fonts, chain, font_px }),
+            env: Rc::new(Env { theme, fonts, chain, font_px, icons: RefCell::default() }),
             sink,
             nodes: HashMap::new(),
             keys: HashMap::new(),
