@@ -154,10 +154,10 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] Тесты layout (таблица «вход → Rect»).
 
 ### Фаза 5. Стили и темы (`hey-style`) (2 Н)
-- [ ] `Theme`: цвета, геометрия, типографика (токены из idea.md §2), светлая/тёмная темы, режим «compact».
-- [ ] `WidgetState` (normal/hovered/pressed/focused/disabled/selected) как битовые флаги; `StyleId`/варианты (Primary/Secondary/Danger).
-- [ ] Загрузка темы из файла (RON/TOML) + hot-reload в dev-режиме.
-- [ ] Анимируемые переходы (`Transition<T>`: цвет, прозрачность, позиция), easing; тик-источник для `request_redraw`.
+- [x] `Theme` (hey-style): палитра, фаски, фокус, моушн, шрифты, терминал; встроенные industrial-dark/night-ops/zeta-remastered из `design/tokens/themes.json`, `light()`, `compact()`. Типографические размеры — [ ] позже.
+- [x] `WidgetState` (битовые флаги) и `Variant` (Primary/Secondary/Danger), `Theme::button_bg/fg`.
+- [~] Загрузка темы: `Theme::from_json` готова (формат themes.json, вместо RON/TOML); чтение с диска и hot-reload — [ ].
+- [~] `Transition<T>` (f32, Color) + `Easing` (cubic-bezier) готовы; тик-источник для `request_redraw` — [ ].
 
 ### Фаза 6. Виджеты (`hey-widgets`) (5–6 Н)
 Порядок и критерии (каждый — API, состояния, клавиатура, a11y-роль, golden-тест, пример):
