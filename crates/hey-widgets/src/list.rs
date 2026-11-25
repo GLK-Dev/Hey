@@ -58,6 +58,15 @@ impl<Msg: 'static> List<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for List<Msg> {
+    fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
+        Some(Box::new(self.scroll.get()))
+    }
+    fn load_state(&mut self, state: Box<dyn std::any::Any>) {
+        if let Ok(s) = state.downcast::<f32>() {
+            self.scroll.set(*s);
+            self.follow.set(false);
+        }
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let t = &env.theme;
         let p = &t.palette;

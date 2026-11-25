@@ -68,6 +68,18 @@ impl<T> Tree<T> {
         self.arena.get(id).map_or(&[], |e| e.children.as_slice())
     }
 
+    /// Задаёт порядок детей. `order` должен быть перестановкой текущих детей; иначе `false`.
+    pub fn reorder_children(&mut self, parent: NodeId, order: &[NodeId]) -> bool {
+        let Some(e) = self.arena.get_mut(parent) else { return false };
+        let a: std::collections::HashSet<NodeId> = e.children.iter().copied().collect();
+        let b: std::collections::HashSet<NodeId> = order.iter().copied().collect();
+        if a != b || order.len() != e.children.len() {
+            return false;
+        }
+        e.children = order.to_vec();
+        true
+    }
+
     /// Удаляет узел вместе с поддеревом; возвращает число удалённых узлов.
     pub fn remove_subtree(&mut self, id: NodeId) -> usize {
         let Some(entry) = self.arena.get(id) else { return 0 };

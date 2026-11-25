@@ -5,6 +5,7 @@ use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
 use hey_style::{Theme, WidgetState};
 use hey_text::{FontId, Fonts};
+use std::any::Any;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -51,6 +52,11 @@ pub trait Widget<Msg> {
     fn text(&mut self, _text: &str, _sink: &MsgSink<Msg>) -> bool {
         false
     }
+    /// Локальное состояние (скролл, каретка), которое переживает пересборку виджета.
+    fn save_state(&self) -> Option<Box<dyn Any>> {
+        None
+    }
+    fn load_state(&mut self, _state: Box<dyn Any>) {}
 }
 
 /// Вид оверлея: всплывающее окно (закрывается кликом снаружи), модальное
@@ -112,16 +118,18 @@ impl<Msg> Overlays<Msg> {
     }
 }
 
-struct Node<Msg> {
-    widget: Box<dyn Widget<Msg>>,
-    disabled: bool,
+pub(crate) struct Node<Msg> {
+    pub(crate) widget: Box<dyn Widget<Msg>>,
+    pub(crate) disabled: bool,
 }
 
 pub struct Ui<Msg> {
     pub tree: LayoutTree,
     pub env: Rc<Env>,
     sink: MsgSink<Msg>,
-    nodes: HashMap<NodeId, Node<Msg>>,
+    pub(crate) nodes: HashMap<NodeId, Node<Msg>>,
+    /// Ключ и хэш свойств узлов, созданных через `reconcile`.
+    pub(crate) keys: HashMap<NodeId, (hey_core::Key, u64)>,
     hover: Option<NodeId>,
     pressed: Option<NodeId>,
     focus: Option<NodeId>,
@@ -141,6 +149,7 @@ impl<Msg: 'static> Ui<Msg> {
             env: Rc::new(Env { theme, fonts, chain, font_px }),
             sink,
             nodes: HashMap::new(),
+            keys: HashMap::new(),
             hover: None,
             pressed: None,
             focus: None,
@@ -399,6 +408,36 @@ impl<Msg: 'static> Ui<Msg> {
             Some(n) if !n.disabled => n.widget.key(code, mods, &self.sink),
             _ => false,
         }
+    }
+
+    /// Удаляет узел с поддеревом и вычищает ссылки на него (hover/focus/ключи).
+    pub(crate) fn remove_subtree(&mut self, id: NodeId) {
+        let mut stack = vec![id];
+        let mut all = Vec::new();
+        while let Some(n) = stack.pop() {
+            all.push(n);
+            stack.extend_from_slice(self.tree.children(n));
+        }
+        for n in &all {
+            self.nodes.remove(n);
+            self.keys.remove(n);
+            if self.hover == Some(*n) {
+                self.hover = None;
+            }
+            if self.pressed == Some(*n) {
+                self.pressed = None;
+            }
+            if self.focus == Some(*n) {
+                self.focus = None;
+            }
+            if self.trap == Some(*n) {
+                self.trap = None;
+            }
+            if self.last_click.map_or(false, |c| c.0 == *n) {
+                self.last_click = None;
+            }
+        }
+        self.tree.remove(id);
     }
 
     pub(crate) fn replace_widget(&mut self, id: NodeId, widget: impl Widget<Msg> + 'static) {

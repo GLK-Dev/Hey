@@ -171,7 +171,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 8. [x] Реализовать **focus manager** на уровне фреймворка: порядок фокуса строится из дерева (замена ручного `focus_order`), focus trap для модалок.
 
 ### Фаза 7. Reconcile и API приложения (`hey-shell`, фасад `hey-ui`) (3 Н)
-- [ ] Диффинг дерева по `Key`: сохранение локального состояния виджетов между пересборками.
+- [x] Диффинг дерева по `Key`: сохранение локального состояния виджетов между пересборками.
 - [ ] Публичный API: `App::new(model).update(fn).view(fn).theme(...).run()`; `Command`/`Task` для фоновых задач (каналы → `Msg`), состояния idle/loading/success/error.
 - [ ] Интеграция `winit`: [x] `ApplicationHandler` + трансляция ввода в `UiEvent` (мышь, колесо, клавиши, текст, IME, фокус), `ShellApp::event`; осталось: ControlFlow (Wait/WaitUntil), курсоры, мульти-окна (позже), Drag-and-drop файлов, системный clipboard (`arboard`), диалоги файлов (`rfd`).
 - [ ] Примеры: `counter`, `todo` (повторяет прототип на новом API), `gallery`.

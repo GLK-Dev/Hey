@@ -66,6 +66,12 @@ impl LayoutTree {
         self.tree.remove_subtree(id);
     }
 
+    /// Переставляет детей `parent` в заданном порядке (перестановка текущих детей).
+    pub fn reorder_children(&mut self, parent: NodeId, order: &[NodeId]) -> bool {
+        self.dirty = true;
+        self.tree.reorder_children(parent, order)
+    }
+
     pub fn set_style(&mut self, id: NodeId, style: Style) {
         self.dirty = true;
         if let Some(n) = self.tree.get_mut(id) {

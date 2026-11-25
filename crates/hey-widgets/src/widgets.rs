@@ -345,6 +345,21 @@ impl<Msg: 'static> TextInput<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
+    fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
+        Some(Box::new((self.scroll.get(), self.edit.anchor(), self.edit.caret())))
+    }
+    fn load_state(&mut self, state: Box<dyn std::any::Any>) {
+        if let Ok(s) = state.downcast::<(f32, usize, usize)>() {
+            let (scroll, anchor, caret) = *s;
+            let t = self.edit.text();
+            if anchor <= t.len() && caret <= t.len() && t.is_char_boundary(anchor) && t.is_char_boundary(caret) {
+                self.edit.set_caret(anchor, false);
+                self.edit.set_caret(caret, true);
+            }
+            self.scroll.set(scroll);
+            self.follow.set(false);
+        }
+    }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let t = &env.theme;
         let p = &t.palette;
