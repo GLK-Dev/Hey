@@ -189,7 +189,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] **IME** (`WindowEvent::Ime`): preedit/commit (`UiEvent::Preedit`, подчёркивание в `TextInput`/`TextArea`), позиция окна кандидатов (`ShellApp::ime_cursor_area`). Пропущены как неоправданные: ring-буферы, упаковка атласа, 9-slice (Ф8).
 - [x] a11y через `accesskit` (роли/имена/состояния узлов, навигация экранным диктором).
 - [x] Локализация (`fluent`), форматирование чисел/дат — крейт `hey-i18n`.
-- [ ] RTL/bidi в `hey-text` (reordering, выравнивание, каретка).
+- [x] RTL/bidi в `hey-text` (reordering UAX #9, `Align::Start/End`, каретка и hit-test; без зеркалирования глифов и арабского shaping — ждёт cosmic-text; однострочный `TextInput` пока LTR).
 - [ ] Системные темы (dark/light auto), High-contrast, `prefers-reduced-motion`.
 - [ ] Платформенные нюансы: Windows (DPI awareness, DWM-рамка/кастомный titlebar), macOS (Cmd вместо Ctrl, меню), Linux (Wayland/X11 clipboard, DnD).
 - [ ] Стандартные шорткаты по платформе (Ctrl↔Cmd).
