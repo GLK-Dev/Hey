@@ -135,8 +135,8 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] `DisplayList` + clip-stack, валидация парности Push/Pop.
 - [x] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
 - [~] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`. _(готово: headless-растеризация rect/срез/рамка/тень/line/clip; осталось: softbuffer-вывод)_
-- [ ] Экспорт кадра в PNG; **headless-рендер без окна** для тестов.
-- [ ] Golden-тесты: набор эталонных кадров (rect, radius, border, clip, text).
+- [x] Экспорт кадра в PNG; **headless-рендер без окна** для тестов.
+- [x] Golden-тесты: набор эталонных кадров (rect, chamfer, border, shadow, clip; text — в фазе 3).
 
 ### Фаза 3. Текст (`hey-text`) (3–4 Н)
 - [ ] Загрузка шрифтов, fallback-цепочка, кэш метрик.

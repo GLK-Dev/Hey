@@ -149,3 +149,30 @@ mod tests {
         assert_eq!(fb.pixel(4, 6), Color::rgb(0, 0, 0));
     }
 }
+
+impl Framebuffer {
+    /// Кодирует кадр в PNG (RGBA8).
+    pub fn encode_png(&self) -> Vec<u8> {
+        let mut out = Vec::new();
+        let mut enc = png::Encoder::new(&mut out, self.width, self.height);
+        enc.set_color(png::ColorType::Rgba);
+        enc.set_depth(png::BitDepth::Eight);
+        let mut w = enc.write_header().expect("png header");
+        w.write_image_data(&self.data).expect("png data");
+        w.finish().expect("png finish");
+        out
+    }
+
+    pub fn save_png(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
+        std::fs::write(path, self.encode_png())
+    }
+
+    /// Декодирует PNG (RGBA8) в кадр.
+    pub fn decode_png(bytes: &[u8]) -> Result<Self, png::DecodingError> {
+        let mut r = png::Decoder::new(bytes).read_info()?;
+        let mut buf = vec![0; r.output_buffer_size()];
+        let info = r.next_frame(&mut buf)?;
+        buf.truncate(info.buffer_size());
+        Ok(Self { width: info.width, height: info.height, data: buf })
+    }
+}

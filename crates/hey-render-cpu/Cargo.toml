@@ -7,3 +7,4 @@ license.workspace = true
 [dependencies]
 hey-core = { path = "../hey-core" }
 hey-draw = { path = "../hey-draw" }
+png = "0.17"
