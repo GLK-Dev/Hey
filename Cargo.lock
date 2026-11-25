@@ -721,6 +721,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "hey-shell"
+version = "0.1.0"
+dependencies = [
+ "hey-core",
+ "hey-draw",
+ "hey-render-cpu",
+ "softbuffer",
+ "winit",
+]
+
+[[package]]
 name = "indexmap"
 version = "2.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

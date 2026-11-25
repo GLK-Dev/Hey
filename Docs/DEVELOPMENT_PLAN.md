@@ -134,7 +134,7 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 - [x] `DrawCmd`: `Rect{fill,border,chamfer,shadow}` (срез 45° вместо радиусов, см. 3.4), `Line`, `Text`/`GlyphRun`, `Image`, `ClipPush/Pop`, `Opacity/Layer` (позже).
 - [x] `DisplayList` + clip-stack, валидация парности Push/Pop.
 - [x] `trait UiRenderer { render(&mut self, &DisplayList, Viewport); resize; }`.
-- [~] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`. _(готово: headless-растеризация rect/срез/рамка/тень/line/clip; осталось: softbuffer-вывод)_
+- [x] `CpuRenderer`: скругления, рамки, тени, clip, антиалиасинг по правилам из ADR (рамка центрируется на границе), вывод в `softbuffer`.
 - [x] Экспорт кадра в PNG; **headless-рендер без окна** для тестов.
 - [x] Golden-тесты: набор эталонных кадров (rect, chamfer, border, shadow, clip; text — в фазе 3).
 
