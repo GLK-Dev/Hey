@@ -5,15 +5,16 @@
 //! the CPU math (box-filter rect coverage, chamfer, centered border, erf shadow, capsule line).
 //!
 //! Text is drawn from an R8 glyph atlas (`atlas.rs`) with whole-pixel placement like the CPU path.
-//! Images are not drawn yet. Output goes to an offscreen texture (tests) or a window surface.
+//! Images are one RGBA8 texture each, drawn nearest-neighbour (`image.wgsl`). Output goes to an offscreen texture (tests) or a window surface.
 
 mod atlas;
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use bytemuck::{Pod, Zeroable};
 use hey_core::{Color, Rect};
-use hey_draw::{DisplayList, DrawCmd, UiRenderer, Viewport};
+use hey_draw::{DisplayList, DrawCmd, ImageId, ImageStore, UiRenderer, Viewport};
 use hey_text::Fonts;
 
 const FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
@@ -74,9 +75,17 @@ impl std::fmt::Display for GpuError {
 
 impl std::error::Error for GpuError {}
 
-/// A run of instances (shapes or glyphs) drawn under one scissor rectangle `(x, y, w, h)`.
+/// What a batch draws; decides the pipeline and bind group.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Shape,
+    Glyph,
+    Image(u32),
+}
+
+/// A run of instances (shapes, glyphs or one image's quads) drawn under one scissor rectangle `(x, y, w, h)`.
 struct Batch {
-    glyph: bool,
+    kind: Kind,
     scissor: (u32, u32, u32, u32),
     start: u32,
     end: u32,
@@ -99,6 +108,11 @@ pub struct GpuRenderer {
     instances_cap: u64,
     text_pipeline: wgpu::RenderPipeline,
     text_bind: wgpu::BindGroup,
+    image_pipeline: wgpu::RenderPipeline,
+    image_bgl: wgpu::BindGroupLayout,
+    /// Uploaded images (each bind group keeps its texture alive); cleared by `set_images`.
+    image_cache: HashMap<u32, wgpu::BindGroup>,
+    images: Option<Arc<ImageStore>>,
     glyphs: wgpu::Buffer,
     glyphs_cap: u64,
     atlas_tex: wgpu::Texture,
@@ -296,6 +310,36 @@ impl GpuRenderer {
             multiview: None,
             cache: None,
         });
+        // Image pipeline: same quad layout as glyphs, its own shader and a per-image bind group.
+        let image_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("hey-image-shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("image.wgsl").into()),
+        });
+        let image_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("hey-image-pipeline"),
+            layout: Some(&text_layout),
+            vertex: wgpu::VertexState {
+                module: &image_shader,
+                entry_point: Some("vs"),
+                compilation_options: Default::default(),
+                buffers: &[wgpu::VertexBufferLayout {
+                    array_stride: std::mem::size_of::<GlyphInst>() as u64,
+                    step_mode: wgpu::VertexStepMode::Instance,
+                    attributes: &gattrs,
+                }],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &image_shader,
+                entry_point: Some("fs"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState { format, blend: Some(over), write_mask: wgpu::ColorWrites::ALL })],
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
         let atlas_tex = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("hey-atlas"),
             size: wgpu::Extent3d { width: atlas::PAGE, height: atlas::PAGE, depth_or_array_layers: 1 },
@@ -328,6 +372,10 @@ impl GpuRenderer {
             instances_cap,
             text_pipeline,
             text_bind,
+            image_pipeline,
+            image_bgl: text_bgl,
+            image_cache: HashMap::new(),
+            images: None,
             glyphs,
             glyphs_cap,
             atlas_tex,
@@ -420,6 +468,54 @@ impl GpuRenderer {
         out
     }
 
+    /// Sets the image registry (drops previously uploaded textures).
+    pub fn set_images(&mut self, images: Option<Arc<ImageStore>>) {
+        self.images = images;
+        self.image_cache.clear();
+    }
+
+    /// Uploads the image on first use and emits its quad; mirrors the CPU path (whole-pixel rect, nearest sampling).
+    fn push_image(&mut self, rect: &Rect, id: ImageId, out: &mut Vec<GlyphInst>) -> Option<u32> {
+        let img = self.images.as_ref()?.get(id)?;
+        let (x0, y0) = (rect.x.round(), rect.y.round());
+        let (w, h) = (rect.right().round() - x0, rect.bottom().round() - y0);
+        if w <= 0.0 || h <= 0.0 {
+            return None;
+        }
+        let (iw, ih) = (img.width, img.height);
+        if !self.image_cache.contains_key(&id.0) {
+            let size = wgpu::Extent3d { width: iw, height: ih, depth_or_array_layers: 1 };
+            let tex = self.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("hey-image"),
+                size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
+            self.queue.write_texture(
+                tex.as_image_copy(),
+                &img.rgba,
+                wgpu::TexelCopyBufferLayout { offset: 0, bytes_per_row: Some(iw * 4), rows_per_image: Some(ih) },
+                size,
+            );
+            let view = tex.create_view(&Default::default());
+            let bind = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("hey-image-bind"),
+                layout: &self.image_bgl,
+                entries: &[
+                    wgpu::BindGroupEntry { binding: 0, resource: self.globals.as_entire_binding() },
+                    wgpu::BindGroupEntry { binding: 1, resource: wgpu::BindingResource::TextureView(&view) },
+                ],
+            });
+            self.image_cache.insert(id.0, bind);
+        }
+        out.push(GlyphInst { dst: [x0, y0, w, h], src: [iw as f32, ih as f32, 0.0, 0.0], color: [1.0; 4] });
+        Some(id.0)
+    }
+
     /// Rasterizes (once) and places the glyphs of a run; mirrors the CPU text path.
     fn push_text(&mut self, run: &hey_draw::GlyphRun, out: &mut Vec<GlyphInst>) {
         let Some(fonts) = self.fonts.clone() else { return };
@@ -490,7 +586,7 @@ impl GpuRenderer {
                     bounds: [x0.floor(), y0.floor(), x1.ceil(), y1.ceil()],
                 });
             }
-            // Text (glyph atlas) and images come next.
+            // Text and images are handled in `render` (they need renderer state).
             DrawCmd::Text(_) | DrawCmd::Image { .. } | DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
         }
     }
@@ -553,10 +649,17 @@ impl UiRenderer for GpuRenderer {
         let mut batches: Vec<Batch> = Vec::new();
         for (cmd, clip) in list.iter_clipped() {
             let Some(sc) = scissor(clip, w, h) else { continue };
-            let is_text = matches!(cmd, DrawCmd::Text(_));
+            let mut kind = Kind::Shape;
             let (start, end) = if let DrawCmd::Text(run) = cmd {
+                kind = Kind::Glyph;
                 let start = glyphs.len() as u32;
                 self.push_text(run, &mut glyphs);
+                (start, glyphs.len() as u32)
+            } else if let DrawCmd::Image { rect, image } = cmd {
+                let start = glyphs.len() as u32;
+                if let Some(id) = self.push_image(rect, *image, &mut glyphs) {
+                    kind = Kind::Image(id);
+                }
                 (start, glyphs.len() as u32)
             } else {
                 let start = instances.len() as u32;
@@ -567,8 +670,8 @@ impl UiRenderer for GpuRenderer {
                 continue;
             }
             match batches.last_mut() {
-                Some(b) if b.glyph == is_text && b.scissor == sc && b.end == start => b.end = end,
-                _ => batches.push(Batch { glyph: is_text, scissor: sc, start, end }),
+                Some(b) if b.kind == kind && b.scissor == sc && b.end == start => b.end = end,
+                _ => batches.push(Batch { kind, scissor: sc, start, end }),
             }
         }
         let gbytes: &[u8] = bytemuck::cast_slice(&glyphs);
@@ -619,20 +722,28 @@ impl UiRenderer for GpuRenderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
-            // `None` = nothing bound yet, `Some(true)` = glyph pipeline, `Some(false)` = shape pipeline.
-            let mut bound: Option<bool> = None;
+            // `None` = nothing bound yet; rebinding happens only when the batch kind changes.
+            let mut bound: Option<Kind> = None;
             for b in &batches {
-                if bound != Some(b.glyph) {
-                    if b.glyph {
-                        pass.set_pipeline(&self.text_pipeline);
-                        pass.set_bind_group(0, &self.text_bind, &[]);
-                        pass.set_vertex_buffer(0, self.glyphs.slice(..));
-                    } else {
-                        pass.set_pipeline(&self.pipeline);
-                        pass.set_bind_group(0, &self.bind_group, &[]);
-                        pass.set_vertex_buffer(0, self.instances.slice(..));
+                if bound != Some(b.kind) {
+                    match b.kind {
+                        Kind::Glyph => {
+                            pass.set_pipeline(&self.text_pipeline);
+                            pass.set_bind_group(0, &self.text_bind, &[]);
+                            pass.set_vertex_buffer(0, self.glyphs.slice(..));
+                        }
+                        Kind::Image(id) => {
+                            pass.set_pipeline(&self.image_pipeline);
+                            pass.set_bind_group(0, &self.image_cache[&id], &[]);
+                            pass.set_vertex_buffer(0, self.glyphs.slice(..));
+                        }
+                        Kind::Shape => {
+                            pass.set_pipeline(&self.pipeline);
+                            pass.set_bind_group(0, &self.bind_group, &[]);
+                            pass.set_vertex_buffer(0, self.instances.slice(..));
+                        }
                     }
-                    bound = Some(b.glyph);
+                    bound = Some(b.kind);
                 }
                 let (x, y, sw, sh) = b.scissor;
                 pass.set_scissor_rect(x, y, sw, sh);

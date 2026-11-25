@@ -2,12 +2,12 @@
 
 use crate::Framebuffer;
 use hey_core::{Color, Point, Rect};
-use hey_draw::{Border, DrawCmd, GlyphRun, Shadow};
+use hey_draw::{Border, DrawCmd, GlyphRun, ImageStore, Shadow};
 use hey_text::Fonts;
 
 const SQRT2: f32 = std::f32::consts::SQRT_2;
 
-pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, cmd: &DrawCmd, clip: Option<Rect>) {
+pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, images: Option<&ImageStore>, cmd: &DrawCmd, clip: Option<Rect>) {
     match cmd {
         DrawCmd::Rect { rect, fill, border, chamfer, shadow } => {
             if let Some(s) = shadow {
@@ -39,8 +39,11 @@ pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, cmd: &DrawCmd, clip: Op
                 draw_text(fb, fonts, run, clip);
             }
         }
-        // Images come later.
-        DrawCmd::Image { .. } => {}
+        DrawCmd::Image { rect, image } => {
+            if let Some(img) = images.and_then(|s| s.get(*image)) {
+                draw_image(fb, img, rect, clip);
+            }
+        }
         DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
     }
 }
@@ -61,6 +64,23 @@ fn draw_text(fb: &mut Framebuffer, fonts: &Fonts, run: &GlyphRun, clip: Option<R
             (run.color, cov)
         });
     }
+}
+
+/// The rectangle is snapped to whole pixels and the bitmap is sampled nearest-neighbour
+/// with integer math (`floor((x - x0) * src_w / dst_w)`), so the GPU can match it exactly.
+fn draw_image(fb: &mut Framebuffer, img: &hey_draw::Image, rect: &Rect, clip: Option<Rect>) {
+    let (x0, y0) = (rect.x.round() as i64, rect.y.round() as i64);
+    let (w, h) = ((rect.right().round() as i64 - x0).max(0), (rect.bottom().round() as i64 - y0).max(0));
+    if w == 0 || h == 0 {
+        return;
+    }
+    let area = Rect::new(x0 as f32, y0 as f32, w as f32, h as f32);
+    paint(fb, area, clip, |x, y| {
+        let sx = ((x as i64 - x0) * img.width as i64 / w) as usize;
+        let sy = ((y as i64 - y0) * img.height as i64 / h) as usize;
+        let i = (sy * img.width as usize + sx) * 4;
+        (Color::rgba(img.rgba[i], img.rgba[i + 1], img.rgba[i + 2], img.rgba[i + 3]), 1.0)
+    });
 }
 
 trait RectExt {

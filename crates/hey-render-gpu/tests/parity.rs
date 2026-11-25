@@ -6,7 +6,7 @@
 use std::sync::Arc;
 
 use hey_core::{Color, Point, Rect};
-use hey_draw::{Border, DisplayList, DrawCmd, Shadow, UiRenderer, Viewport};
+use hey_draw::{Border, DisplayList, DrawCmd, ImageId, ImageStore, Shadow, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
 use hey_render_gpu::GpuRenderer;
 use hey_text::{layout, Align, Fonts, TextStyle};
@@ -16,7 +16,13 @@ struct Diff {
     bad: usize,
 }
 
-fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, fonts: Option<Arc<Fonts>>) -> Option<Diff> {
+#[derive(Default)]
+struct Assets {
+    fonts: Option<Arc<Fonts>>,
+    images: Option<Arc<ImageStore>>,
+}
+
+fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, assets: Assets) -> Option<Diff> {
     let mut gpu = match GpuRenderer::new_headless(w, h) {
         Ok(g) => g,
         Err(e) => {
@@ -31,10 +37,12 @@ fn compare(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, fonts: Optio
 
     let mut cpu = CpuRenderer::new(w, h);
     cpu.clear_color = bg;
-    cpu.fonts = fonts.clone();
+    cpu.fonts = assets.fonts.clone();
+    cpu.images = assets.images.clone();
     cpu.render(&list, vp);
     gpu.clear_color = bg;
-    gpu.fonts = fonts;
+    gpu.fonts = assets.fonts;
+    gpu.set_images(assets.images);
     gpu.render(&list, vp);
     let g = gpu.read_pixels();
 
@@ -64,11 +72,11 @@ fn rect(r: Rect, fill: u32, border: Option<(f32, u32)>, chamfer: f32, shadow: Op
 }
 
 fn check(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8) {
-    check_with(name, w, h, cmds, tol, None);
+    check_with(name, w, h, cmds, tol, Assets::default());
 }
 
-fn check_with(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, fonts: Option<Arc<Fonts>>) {
-    if let Some(d) = compare(name, w, h, cmds, tol, fonts) {
+fn check_with(name: &str, w: u32, h: u32, cmds: Vec<DrawCmd>, tol: u8, assets: Assets) {
+    if let Some(d) = compare(name, w, h, cmds, tol, assets) {
         assert_eq!(d.bad, 0, "{name}: {} channels differ by more than {tol} (max {})", d.bad, d.max);
     }
 }
@@ -181,5 +189,35 @@ fn parity_text() {
     cmds.push(DrawCmd::ClipPop);
     // A shape drawn after the text must cover it (painting order is preserved across pipelines).
     cmds.push(DrawCmd::fill(Rect::new(150.0, 100.0, 60.0, 30.0), Color::rgba(255, 0, 0, 200)));
-    check_with("text", 240, 180, cmds, TOL, Some(Arc::new(f)));
+    check_with("text", 240, 180, cmds, TOL, Assets { fonts: Some(Arc::new(f)), images: None });
+}
+
+#[test]
+fn parity_image() {
+    // 4x3 gradient with varying alpha: upscaled, downscaled, fractional rect, clipped, under a shape.
+    let (iw, ih) = (4u32, 3u32);
+    let mut px = Vec::new();
+    for y in 0..ih {
+        for x in 0..iw {
+            px.extend_from_slice(&[(x * 70) as u8, (y * 100) as u8, 200 - (x * 40) as u8, 255 - ((x + y) * 30) as u8]);
+        }
+    }
+    let mut store = ImageStore::new();
+    let a = store.add(iw, ih, px).unwrap();
+    let b = store.add(2, 2, vec![255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 0, 128]).unwrap();
+    let cmds = vec![
+        DrawCmd::fill(Rect::new(0.0, 0.0, 128.0, 96.0), Color::hex(0x2A6FDB)),
+        DrawCmd::Image { rect: Rect::new(4.0, 4.0, 40.0, 30.0), image: a },
+        DrawCmd::Image { rect: Rect::new(50.3, 4.6, 2.0, 3.0), image: a },
+        DrawCmd::Image { rect: Rect::new(60.0, 4.0, 31.7, 21.2), image: b },
+        DrawCmd::ClipPush(Rect::new(10.0, 40.0, 30.0, 20.0)),
+        DrawCmd::Image { rect: Rect::new(4.0, 36.0, 60.0, 45.0), image: a },
+        DrawCmd::ClipPop,
+        DrawCmd::Image { rect: Rect::new(70.0, 40.0, 40.0, 40.0), image: b },
+        DrawCmd::fill(Rect::new(90.0, 60.0, 30.0, 30.0), Color::rgba(255, 0, 0, 160)),
+        // Unknown id and an empty (after snapping) rect are ignored by both renderers.
+        DrawCmd::Image { rect: Rect::new(0.0, 0.0, 10.0, 10.0), image: ImageId(99) },
+        DrawCmd::Image { rect: Rect::new(0.0, 0.0, 0.2, 10.0), image: a },
+    ];
+    check_with("image", 128, 96, cmds, TOL, Assets { fonts: None, images: Some(Arc::new(store)) });
 }

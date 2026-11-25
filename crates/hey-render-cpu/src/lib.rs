@@ -4,7 +4,7 @@
 //! Conventions: pixel center is `(i+0.5, j+0.5)`; the border is centered on the edge
 //! of the rectangle; clipping is rounded to whole pixels; blending is straight-alpha "over".
 //! Text is drawn from `hey_text::Fonts` rasters (whole pixels, no subpixel positioning).
-//! Images are skipped for now.
+//! Images come from `images` (nearest-neighbour, whole-pixel rect).
 
 mod raster;
 
@@ -43,11 +43,13 @@ pub struct CpuRenderer {
     pub clear_color: Color,
     /// Font registry; without it `DrawCmd::Text` is skipped.
     pub fonts: Option<Arc<Fonts>>,
+    /// Image registry; without it `DrawCmd::Image` is skipped.
+    pub images: Option<Arc<hey_draw::ImageStore>>,
 }
 
 impl CpuRenderer {
     pub fn new(width: u32, height: u32) -> Self {
-        Self { fb: Framebuffer::new(width, height), clear_color: Color::rgb(0, 0, 0), fonts: None }
+        Self { fb: Framebuffer::new(width, height), clear_color: Color::rgb(0, 0, 0), fonts: None, images: None }
     }
 }
 
@@ -60,7 +62,7 @@ impl UiRenderer for CpuRenderer {
         debug_assert!(list.validate().is_ok(), "invalid DisplayList");
         self.fb.clear(self.clear_color);
         for (cmd, clip) in list.iter_clipped() {
-            raster::draw(&mut self.fb, self.fonts.as_deref(), cmd, clip);
+            raster::draw(&mut self.fb, self.fonts.as_deref(), self.images.as_deref(), cmd, clip);
         }
     }
 }
