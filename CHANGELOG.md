@@ -22,6 +22,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - DPI scaling: `Ui::set_scale` / `Ui::scale`, `DisplayList::scale_by`. Layout and widget events are logical; pointer positions come in physical pixels and `paint` returns physical ones. The shell applies the window scale factor, including the IME and accessibility rectangles.
 - `Theme::from_file` and `App::watch_theme`: load a theme from a `themes.json`-format file and hot-reload it on change (polled every 250 ms).
 - State crossfade: hover, press and focus changes fade over `fast_ms` with the theme easing. `Ui::tick` / `Ui::animating`, `DisplayList::blend`; the shell drives them. Disabled by reduced motion.
+- Windows: high contrast and reduced motion are read from the OS (`SystemParametersInfoW`); the env flags still force them on. New dependency: `windows-sys` (Windows only).
 - Golden test at 2x DPI (`scaled_2x`) and a cookbook section on scrolling and DPI.
 
 ### Changed

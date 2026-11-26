@@ -33,17 +33,21 @@ use winit::{
     window::{Window, WindowId},
 };
 
+mod os;
+
 fn env_flag(name: &str) -> bool {
     std::env::var(name).is_ok_and(|v| matches!(v.trim(), "1" | "true" | "TRUE" | "yes"))
 }
 
-/// Dark/light comes from the window system; high contrast and reduced motion are taken from
-/// `HEY_HIGH_CONTRAST=1` / `HEY_REDUCE_MOTION=1` (native OS queries are not wired up yet).
+/// Dark/light comes from the window system. High contrast and reduced motion come from the OS
+/// where a native query exists (Windows); `HEY_HIGH_CONTRAST=1` / `HEY_REDUCE_MOTION=1` force
+/// them on everywhere.
 fn system_appearance(window: &Window) -> hey_style::Appearance {
+    let (hc, rm) = os::native_flags().unwrap_or((false, false));
     hey_style::Appearance {
         dark: window.theme() != Some(winit::window::Theme::Light),
-        high_contrast: env_flag("HEY_HIGH_CONTRAST"),
-        reduce_motion: env_flag("HEY_REDUCE_MOTION"),
+        high_contrast: hc || env_flag("HEY_HIGH_CONTRAST"),
+        reduce_motion: rm || env_flag("HEY_REDUCE_MOTION"),
     }
 }
 

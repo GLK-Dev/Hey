@@ -49,7 +49,7 @@ Goal: native feel on every OS. Needs hardware or CI runners per OS.
 - [ ] Windows: DPI awareness manifest, DWM titlebar.
 - [ ] macOS: native menu bar.
 - [ ] Linux: `rfd` backend, Wayland/X11 clipboard and drag and drop.
-- [ ] Native queries for high contrast and reduced motion instead of env or heuristics.
+- [x] Native queries for high contrast and reduced motion: done on Windows (`SystemParametersInfoW`); macOS and Linux still use the `HEY_HIGH_CONTRAST` / `HEY_REDUCE_MOTION` env flags.
 - [ ] Multi-window.
 
 ## 0.4: text
