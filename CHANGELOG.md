@@ -26,6 +26,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - Windows: high contrast and reduced motion are read from the OS (`SystemParametersInfoW`); the env flags still force them on. New dependency: `windows-sys` (Windows only).
 - CPU rasterizer: rectangle interiors take a fast path (about 2x faster at 1080p, 3.7x at 4K, pixel-identical).
 - Golden test at 2x DPI (`scaled_2x`) and a cookbook section on scrolling and DPI.
+- `Harness::set_scale` in `hey-test`, with a 2x golden screenshot of a focused text input.
 
 ### Changed
 - **License:** MIT is replaced by GUIL 1.0 (`LICENSE.md`: non-commercial use, source must stay available). `Cargo.toml` uses `license-file` because GUIL is not an SPDX id. Releases already received under MIT stay MIT.

@@ -46,6 +46,12 @@ impl<Msg: 'static> Harness<Msg> {
         h
     }
 
+    /// Set the DPI scale factor; the viewport stays in physical pixels.
+    pub fn set_scale(&mut self, scale: f64) {
+        self.ui.set_scale(scale);
+        self.frame();
+    }
+
     /// Run layout and paint once (needed before hit-testing new nodes).
     pub fn frame(&mut self) {
         self.ui.paint(self.viewport);

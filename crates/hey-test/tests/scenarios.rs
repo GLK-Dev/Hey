@@ -35,3 +35,18 @@ fn rendering_is_deterministic() {
     TextInput::add(&mut h.ui, root, "same", 150.0, Callback::new(|s| s));
     assert!(h.render().data == h.render().data);
 }
+
+#[test]
+fn hidpi_screenshot_at_scale_two() {
+    let mut h = Harness::<String>::new(640.0, 160.0);
+    h.set_scale(2.0);
+    let root = h.ui.root();
+    let input = TextInput::add(&mut h.ui, root, "", 240.0, Callback::new(|s| s));
+    h.frame();
+    // Pointer coordinates are physical; click() uses the logical rect, so scale it.
+    let r = h.ui.tree.rect(input);
+    h.click_at(hey_core::Point::new((r.x + r.w * 0.5) * 2.0, (r.y + r.h * 0.5) * 2.0));
+    assert_eq!(h.ui.focused(), Some(input));
+    h.type_text("Hello");
+    h.screenshot(GOLDEN, "typed_2x");
+}
