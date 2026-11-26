@@ -39,7 +39,7 @@ Goal: enough to build a real application.
 - [x] `TextInput::add_submit`: Enter callback.
 - [x] DPI scale factor end to end: layout and events in logical units, `Ui::paint` returns physical pixels (`Ui::set_scale`, `DisplayList::scale_by`).
 - [x] Theme loading from disk and hot reload (`Theme::from_file`, `App::watch_theme`).
-- [ ] Tick source for `Transition` redraws (no widget animates yet; add together with the first animated widget).
+- [x] Hover/press/focus crossfade for every widget (`Ui::tick`, `Ui::animating`, `DisplayList::blend`); the shell redraws every 16 ms while it runs. Off with reduced motion.
 - [x] Slice sizes: `themes.json` is the source of truth per theme (8/16/18, zeta-remastered 4/8/14).
 
 ## 0.3: platform

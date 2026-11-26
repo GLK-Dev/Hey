@@ -66,6 +66,46 @@ impl DisplayList {
         }
     }
 
+    /// Interpolates two lists of the same shape (same command kinds in the same order): colors blend by `t`.
+    /// If the shapes differ the target list wins.
+    pub fn blend(from: &DisplayList, to: &DisplayList, t: f32) -> DisplayList {
+        let t = t.clamp(0.0, 1.0);
+        let same = from.cmds.len() == to.cmds.len()
+            && from.cmds.iter().zip(&to.cmds).all(|(a, b)| match (a, b) {
+                (DrawCmd::Rect { .. }, DrawCmd::Rect { .. }) | (DrawCmd::Line { .. }, DrawCmd::Line { .. }) => true,
+                (DrawCmd::Text(x), DrawCmd::Text(y)) => x.glyphs.len() == y.glyphs.len(),
+                (a, b) => std::mem::discriminant(a) == std::mem::discriminant(b) && a == b,
+            });
+        if !same {
+            return to.clone();
+        }
+        let cmds = from
+            .cmds
+            .iter()
+            .zip(&to.cmds)
+            .map(|(a, b)| match (a, b) {
+                (DrawCmd::Rect { fill: f0, border: b0, .. }, DrawCmd::Rect { rect, fill, border, chamfer, shadow }) => DrawCmd::Rect {
+                    rect: *rect,
+                    fill: f0.lerp(*fill, t),
+                    border: match (b0, border) {
+                        (Some(x), Some(y)) => Some(crate::cmd::Border { width: y.width, color: x.color.lerp(y.color, t) }),
+                        _ => *border,
+                    },
+                    chamfer: *chamfer,
+                    shadow: *shadow,
+                },
+                (DrawCmd::Line { color: c0, .. }, DrawCmd::Line { a, b, width, color }) => {
+                    DrawCmd::Line { a: *a, b: *b, width: *width, color: c0.lerp(*color, t) }
+                }
+                (DrawCmd::Text(x), DrawCmd::Text(y)) => {
+                    DrawCmd::Text(crate::cmd::GlyphRun { color: x.color.lerp(y.color, t), ..y.clone() })
+                }
+                (_, b) => b.clone(),
+            })
+            .collect();
+        DisplayList { cmds }
+    }
+
     pub fn cmds(&self) -> &[DrawCmd] {
         &self.cmds
     }

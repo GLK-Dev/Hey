@@ -5,7 +5,7 @@ use crate::scrollbar::{self, Bar};
 use hey_core::{Callback, Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
-use hey_style::{Theme, WidgetState};
+use hey_style::{Theme, Transition, WidgetState};
 use hey_text::{FontId, Fonts};
 use std::any::Any;
 use std::cell::RefCell;
@@ -163,6 +163,16 @@ pub struct Ui<Msg> {
     sb_drag: Option<(NodeId, bool, f32)>,
     /// Device pixels per logical pixel. Layout and widget events are logical; `paint` returns physical pixels.
     scale: f64,
+    /// State each node was last painted with, to detect changes.
+    shown: HashMap<NodeId, WidgetState>,
+    /// Running state crossfades.
+    fades: HashMap<NodeId, Fade>,
+}
+
+/// Crossfade from the previous visual state of a node to its current one.
+struct Fade {
+    from: WidgetState,
+    t: Transition<f32>,
 }
 
 const MULTI_CLICK: Duration = Duration::from_millis(500);
@@ -186,6 +196,8 @@ impl<Msg: 'static> Ui<Msg> {
             file_hover: false,
             sb_drag: None,
             scale: 1.0,
+            shown: HashMap::new(),
+            fades: HashMap::new(),
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -548,6 +560,20 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    /// Advances state animations by `dt_ms`. Returns true while any is still running (keep redrawing).
+    pub fn tick(&mut self, dt_ms: f32) -> bool {
+        self.fades.retain(|_, f| {
+            f.t.tick(dt_ms);
+            f.t.is_running()
+        });
+        !self.fades.is_empty()
+    }
+
+    /// True while a hover/press/focus crossfade is running.
+    pub fn animating(&self) -> bool {
+        !self.fades.is_empty()
+    }
+
     /// Device pixels per logical pixel (1.0 by default).
     pub fn scale(&self) -> f64 {
         self.scale
@@ -743,9 +769,21 @@ impl<Msg: 'static> Ui<Msg> {
                 continue;
             }
             let rect = self.tree.rect(id);
-            if let Some(n) = self.nodes.get(&id) {
+            if self.nodes.contains_key(&id) {
                 let st = self.state_of(id);
-                n.widget.paint(&self.env, rect, st, &mut out);
+                self.track_state(id, st);
+                let n = &self.nodes[&id];
+                match self.fades.get(&id) {
+                    Some(f) => {
+                        let (mut a, mut b) = (DisplayList::new(), DisplayList::new());
+                        n.widget.paint(&self.env, rect, f.from, &mut a);
+                        n.widget.paint(&self.env, rect, st, &mut b);
+                        for c in DisplayList::blend(&a, &b, f.t.value()).cmds() {
+                            out.push(c.clone());
+                        }
+                    }
+                    None => n.widget.paint(&self.env, rect, st, &mut out),
+                }
                 if st.focused() {
                     self.paint_focus(rect, &mut out);
                 }
@@ -756,6 +794,8 @@ impl<Msg: 'static> Ui<Msg> {
             }
             stack.extend(self.tree.children(id).iter().rev().map(|&c| (c, false)));
         }
+        self.shown.retain(|id, _| self.nodes.contains_key(id));
+        self.fades.retain(|id, _| self.nodes.contains_key(id));
         self.queue.0.borrow_mut().viewport = viewport;
         self.apply_queue();
         let top = self.top_interactive();
@@ -770,6 +810,23 @@ impl<Msg: 'static> Ui<Msg> {
             o.widget.paint(&self.env, o.rect, st, &mut out);
         }
         out
+    }
+
+    /// Records the painted state of a node and starts a crossfade when it changed (unless motion is reduced).
+    fn track_state(&mut self, id: NodeId, st: WidgetState) {
+        let prev = self.shown.insert(id, st);
+        let ms = self.env.theme.fast_ms;
+        match prev {
+            Some(p) if p != st && ms > 0.0 => {
+                let mut t = Transition::new(0.0, ms, self.env.theme.easing);
+                t.set(1.0);
+                self.fades.insert(id, Fade { from: p, t });
+            }
+            _ if ms <= 0.0 => {
+                self.fades.remove(&id);
+            }
+            _ => {}
+        }
     }
 
     /// Closes the clip of a clipping node and draws its scrollbars on top of the content.

@@ -192,6 +192,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             clear: self.window.clear,
             auto_theme: self.auto_theme,
             watch,
+            last_tick: std::time::Instant::now(),
             dirty: true,
         };
         rt.run_command(self.init);
@@ -261,6 +262,7 @@ pub struct Runtime<M, Msg: Send + 'static> {
     clear: hey_core::Color,
     auto_theme: bool,
     watch: Option<ThemeWatch>,
+    last_tick: std::time::Instant,
     dirty: bool,
 }
 
@@ -337,7 +339,12 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
 impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList) {
         self.ui.set_scale(viewport.scale);
+        let was = self.ui.animating();
         *list = self.frame(Size::new(viewport.width as f32, viewport.height as f32));
+        if !was {
+            // A crossfade that starts in this frame is timed from now.
+            self.last_tick = std::time::Instant::now();
+        }
     }
 
     fn event(&mut self, ev: UiEvent) -> bool {
@@ -387,11 +394,19 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
             self.dirty = true;
             redraw = true;
         }
+        // Frame-independent animation time; capped so a long idle gap does not skip a transition.
+        let now = std::time::Instant::now();
+        let dt = now.duration_since(self.last_tick).as_secs_f32() * 1000.0;
+        self.last_tick = now;
+        if self.ui.animating() {
+            self.ui.tick(dt.min(50.0));
+            redraw = true;
+        }
         redraw
     }
 
     fn pending(&self) -> bool {
-        self.watch.is_some() || self.in_flight.load(Ordering::SeqCst) > 0
+        self.watch.is_some() || self.ui.animating() || self.in_flight.load(Ordering::SeqCst) > 0
     }
 
     fn cursor(&self) -> hey_core::CursorIcon {

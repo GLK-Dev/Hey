@@ -88,6 +88,8 @@ fn paint_colors_follow_state() {
     let (mut ui, _, _, ok, _) = setup();
     let t = Theme::dark();
     let fill_of = |ui: &mut Ui<Msg>| -> Color {
+        ui.paint(VP);
+        ui.tick(10_000.0); // let the state crossfade finish
         let dl = ui.paint(VP);
         dl.cmds()
             .iter()
