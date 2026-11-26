@@ -112,14 +112,19 @@ struct Run {
 
 /// Splits `chars` into runs by fallback font and by strong direction.
 /// The font and direction stick to neutral characters, marks and joiners.
+/// `Some(true)` for strong RTL, `Some(false)` for strong LTR, `None` for neutrals.
+fn strong_rtl(ch: char) -> Option<bool> {
+    match unicode_bidi::bidi_class(ch) {
+        unicode_bidi::BidiClass::R | unicode_bidi::BidiClass::AL => Some(true),
+        unicode_bidi::BidiClass::L => Some(false),
+        _ => None,
+    }
+}
+
 fn split_runs(fonts: &Fonts, chain: &[FontId], chars: &[(usize, char)]) -> Vec<Run> {
     let mut runs: Vec<Run> = Vec::new();
     for &(byte, ch) in chars {
-        let rtl_class = match unicode_bidi::bidi_class(ch) {
-            unicode_bidi::BidiClass::R | unicode_bidi::BidiClass::AL => Some(true),
-            unicode_bidi::BidiClass::L => Some(false),
-            _ => None,
-        };
+        let rtl_class = strong_rtl(ch);
         if let Some(r) = runs.last_mut() {
             // Marks and joiners stay with their base; other chars take the first chain font.
             let attaches = matches!(unicode_bidi::bidi_class(ch), unicode_bidi::BidiClass::NSM | unicode_bidi::BidiClass::BN);
@@ -131,7 +136,11 @@ fn split_runs(fonts: &Fonts, chain: &[FontId], chars: &[(usize, char)]) -> Vec<R
             }
         }
         let Some((font, _)) = fonts.pick(chain, ch) else { continue };
-        let rtl = rtl_class.unwrap_or_else(|| runs.last().is_some_and(|r| r.rtl));
+        // Neutrals follow the previous run, or the next strong character at the start.
+        let rtl = rtl_class.unwrap_or_else(|| match runs.last() {
+            Some(r) => r.rtl,
+            None => chars.iter().find_map(|&(_, c)| strong_rtl(c)).unwrap_or(false),
+        });
         runs.push(Run { font, rtl, chars: vec![(byte, ch)] });
     }
     runs

@@ -30,6 +30,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - `Harness::set_scale` in `hey-test`, with a 2x golden screenshot of a focused text input.
 
 ### Changed
+- Brackets and other mirrored characters are mirrored in RTL runs, including at the start of a paragraph.
 - Text is shaped with `harfrust` (kerning, ligatures, contextual alternates, Arabic joined forms); glyphs are still rasterized by `fontdue` by glyph id. Wrapping, bidi, fallback, ellipsis and hit-testing are unchanged. The text golden was regenerated because of kerning.
 - **License:** MIT is replaced by GUIL 1.0 (`LICENSE.md`: non-commercial use, source must stay available). `Cargo.toml` uses `license-file` because GUIL is not an SPDX id. Releases already received under MIT stay MIT.
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.

@@ -208,3 +208,20 @@ fn arabic_letters_take_joined_forms() {
     let shaped: Vec<u16> = g.iter().map(|g| g.id).collect();
     assert_ne!(shaped, isolated, "letters must take joined forms");
 }
+
+#[test]
+fn brackets_mirror_in_rtl_text() {
+    let Ok(bytes) = std::fs::read("C:/Windows/Fonts/arial.ttf") else { return };
+    let mut f = Fonts::new();
+    let arial = f.add_bytes(&bytes).unwrap();
+    let open = f.glyph_index(arial, '(').unwrap();
+    let close = f.glyph_index(arial, ')').unwrap();
+    // Logical "(בית)": in an RTL paragraph the first glyph drawn on the right is the
+    // mirrored "(" which looks like ")".
+    let l = layout(&f, "(בית)", &TextStyle::new(vec![arial], 24.0));
+    let ids: Vec<u16> = l.lines[0].glyphs.iter().map(|g| g.id).collect();
+    assert_eq!(ids.len(), 5);
+    // Visual order is left to right: logical last char first.
+    assert_eq!(ids[0], open, "closing bracket is drawn mirrored on the left");
+    assert_eq!(ids[4], close, "opening bracket is drawn mirrored on the right");
+}
