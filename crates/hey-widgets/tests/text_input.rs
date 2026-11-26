@@ -87,3 +87,19 @@ fn shift_z_redoes() {
     ui.event(&key("z", true, true));
     assert_eq!(sink.drain().last().unwrap(), "abc");
 }
+
+#[test]
+fn enter_submits_current_text() {
+    let mut f = Fonts::new();
+    let onest = f.add_file(concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf")).unwrap();
+    let sink = MsgSink::new();
+    let mut ui: Ui<(bool, String)> = Ui::new(Theme::dark(), std::sync::Arc::new(f), vec![onest], sink.clone());
+    let root = ui.root();
+    TextInput::add_submit(&mut ui, root, "", 200.0, Callback::new(|s| (false, s)), Callback::new(|s| (true, s)));
+    ui.paint(Size::new(400.0, 100.0));
+    ui.event(&key("Tab", false, false));
+    ui.event(&UiEvent::Text("hi".into()));
+    assert_eq!(sink.drain(), [(false, "hi".to_string())]);
+    assert!(ui.event(&key("Enter", false, false)));
+    assert_eq!(sink.drain(), [(true, "hi".to_string())]);
+}

@@ -314,6 +314,7 @@ pub struct TextInput<Msg> {
     edit: TextEditState,
     clipboard: SharedClipboard,
     on_change: Callback<Msg, String>,
+    on_submit: Option<Callback<Msg, String>>,
     scroll: Cell<f32>,
     follow: Cell<bool>,
     /// IME composition shown at the caret (not part of the text until committed).
@@ -324,6 +325,29 @@ pub struct TextInput<Msg> {
 
 impl<Msg: 'static> TextInput<Msg> {
     pub fn add(ui: &mut Ui<Msg>, parent: NodeId, text: &str, width: f32, on_change: Callback<Msg, String>) -> NodeId {
+        Self::build(ui, parent, text, width, on_change, None)
+    }
+
+    /// Like [`TextInput::add`], and pressing Enter emits `on_submit` with the current text.
+    pub fn add_submit(
+        ui: &mut Ui<Msg>,
+        parent: NodeId,
+        text: &str,
+        width: f32,
+        on_change: Callback<Msg, String>,
+        on_submit: Callback<Msg, String>,
+    ) -> NodeId {
+        Self::build(ui, parent, text, width, on_change, Some(on_submit))
+    }
+
+    fn build(
+        ui: &mut Ui<Msg>,
+        parent: NodeId,
+        text: &str,
+        width: f32,
+        on_change: Callback<Msg, String>,
+        on_submit: Option<Callback<Msg, String>>,
+    ) -> NodeId {
         let env = ui.env.clone();
         let measure_fn = move |_w: Option<f32>| {
             let h = layout(&env.fonts, "Ag", &text_style(&env, None, false)).height.ceil();
@@ -333,6 +357,7 @@ impl<Msg: 'static> TextInput<Msg> {
             edit: TextEditState::new(text),
             clipboard: SharedClipboard,
             on_change,
+            on_submit,
             scroll: Cell::new(0.0),
             follow: Cell::new(true),
             preedit: String::new(),
@@ -474,6 +499,15 @@ impl<Msg: 'static> Widget<Msg> for TextInput<Msg> {
         self.follow.set(true);
     }
     fn key(&mut self, code: &str, mods: Modifiers, sink: &MsgSink<Msg>) -> bool {
+        if matches!(code, "Enter" | "NumpadEnter") {
+            return match &self.on_submit {
+                Some(cb) => {
+                    cb.emit(sink, self.edit.text().to_string());
+                    true
+                }
+                None => false,
+            };
+        }
         let before = self.edit.text().to_string();
         let sh = mods.shift;
         // Edit shortcuts use the command key (Cmd on macOS); word-wise motion uses Ctrl (Option on macOS).

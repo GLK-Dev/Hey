@@ -18,6 +18,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - MIT `LICENSE` and crates.io package metadata; `hey_text::DEFAULT_FONT` (bundled Onest).
 - Scroll containers: `Style::scroll` containers clip children, take wheel events from any descendant, and draw a draggable scrollbar (thumb drag, track paging). `LayoutTree::parent`.
 - `List::add_keyed`: stable row keys; selection (previously lost on rebuild) and scroll follow the key.
+- `TextInput::add_submit`: `on_submit` callback fired by Enter.
 
 ### Changed
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
