@@ -27,3 +27,6 @@ rfd = { workspace = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm", "Win32_UI_Accessibility", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
+rfd = { workspace = true, features = ["gtk3"] }
