@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hey - declarative desktop UI for Rust</title>
+<meta name="description" content="Hey is a Rust UI framework: MVU architecture, flexbox layout, design-token themes, CPU and GPU renderers, accessibility and i18n built in.">
+<meta property="og:title" content="Hey - declarative desktop UI for Rust">
+<meta property="og:description" content="MVU, flexbox, design tokens, CPU + GPU rendering, accessibility and i18n.">
+<meta property="og:image" content="https://glk-dev.github.io/Hey/assets/banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0B0C10">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="wrap">
+<nav aria-label="Main">
+  <a class="brand" href="./"><img src="assets/logo.svg" alt="">Hey</a>
+  <span class="sp"></span>
+  <a class="l" href="#features">Features</a>
+  <a class="l" href="#themes">Themes</a>
+  <a class="l" href="wiki/">Wiki</a>
+  <a class="l" href="https://github.com/GLK-Dev/Hey">GitHub</a>
+</nav>
+
+<header class="hero">
+  <div>
+    <span class="tag">Rust / Pre-1.0</span>
+    <h1>Desktop UI,<br><em>declared</em>.</h1>
+    <p class="lead">Hey is a Rust UI framework built around one idea: your view is a pure function of your model. Flexbox layout, design-token themes, a CPU reference renderer and a wgpu one, with accessibility and i18n from day one.</p>
+    <div class="cta">
+      <a class="btn" href="wiki/GETTING_STARTED.html">Get started</a>
+      <a class="btn alt" href="https://github.com/GLK-Dev/Hey">View on GitHub</a>
+    </div>
+  </div>
+  <div class="win chamfer" aria-label="Example code">
+    <div class="bar"><i></i><i></i><i></i>&nbsp;counter.rs</div>
+<pre class="code"><span class="k">enum</span> <span class="t">Msg</span> { Inc, Dec }
+
+<span class="k">fn</span> update(n: <span class="k">&amp;mut</span> i32, m: <span class="t">Msg</span>) {
+    <span class="k">match</span> m {
+        <span class="t">Msg</span>::Inc =&gt; *n += 1,
+        <span class="t">Msg</span>::Dec =&gt; *n -= 1,
+    }
+}
+
+<span class="k">fn</span> view(n: <span class="k">&amp;</span>i32) -&gt; <span class="t">View</span>&lt;<span class="t">Msg</span>&gt; {
+    column([
+        label(<span class="k">format!</span>(<span class="s">"Count: {n}"</span>)),
+        button(<span class="s">"+"</span>).on_click(<span class="t">Msg</span>::Inc),
+    ])
+}
+<span class="c">// OS event -> Msg -> update -> view -> layout -> paint</span></pre>
+  </div>
+</header>
+
+<section id="features">
+  <h2>Built for real applications</h2>
+  <p>Everything between the OS window and the pixel, in one workspace of 12 crates.</p>
+  <div class="grid">
+    <div class="card chamfer"><h3>MVU architecture</h3><p>One model, one <code>update</code>, one <code>view</code>. Views are reconciled into an arena with generational node ids.</p></div>
+    <div class="card chamfer"><h3>Flexbox layout</h3><p>Our own flex engine with scroll containers, clipping, wheel bubbling and draggable scrollbars.</p></div>
+    <div class="card chamfer"><h3>Design tokens</h3><p>Themes live in <code>themes.json</code>: colors, chamfers, motion. Hot-reload them while the app runs.</p></div>
+    <div class="card chamfer"><h3>Two renderers</h3><p>A pixel-exact CPU reference backend and a wgpu GPU backend. Golden screenshots keep both honest.</p></div>
+    <div class="card chamfer"><h3>Accessible</h3><p>AccessKit tree, keyboard focus, IME input, high contrast and reduced motion read from the OS.</p></div>
+    <div class="card chamfer"><h3>i18n and RTL</h3><p>Fluent localization, bidi text, DPI scaling end to end, platform-aware shortcuts.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>Measured, not promised</h2>
+  <p>Windows, release build, <code>examples/counter</code>.</p>
+  <div class="stats chamfer">
+    <div class="stat"><b>8.6 ms</b><span>input to frame, 1080p CPU</span></div>
+    <div class="stat"><b>~140 ms</b><span>cold start to window</span></div>
+    <div class="stat"><b>0</b><span>idle redraws</span></div>
+    <div class="stat"><b>12</b><span>crates, one workspace</span></div>
+  </div>
+</section>
+
+<section id="themes">
+  <h2>Industrial by default</h2>
+  <p>Chamfered corners, flat controls, high contrast. Three themes ship in the box.</p>
+  <div class="themes">
+    <div class="th chamfer" style="background:#14161B"><b>Industrial Dark</b><div class="sw"><i style="background:#F5A623"></i><i style="background:#00E5FF"></i><i style="background:#20232B"></i><i style="background:#F2F4F8"></i></div></div>
+    <div class="th chamfer" style="background:#0A0F0B"><b style="color:#E6F2E9">Night Ops</b><div class="sw"><i style="background:#00FF66"></i><i style="background:#1B2A1F"></i><i style="background:#E6F2E9"></i></div></div>
+    <div class="th chamfer" style="background:#12151C"><b style="color:#F2F5F9">Zeta Remastered</b><div class="sw"><i style="background:#FFCC00"></i><i style="background:#262B36"></i><i style="background:#F2F5F9"></i></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="pitch chamfer">
+    <div><h2>Built in the open by one developer</h2><p>Hey is made by Vitaly Golik (GLK-Dev) with strict tests: property tests, golden screenshots and benchmarks gate every change. Star it, read the ADRs, or build something.</p></div>
+    <a class="btn" href="https://github.com/GLK-Dev/Hey">Star on GitHub</a>
+  </div>
+</section>
+
+<footer>
+  <span>&copy; Vitaly Golik (GLK-Dev) &middot; GUIL 1.0: non-commercial, source stays available</span>
+  <span><a href="wiki/">Wiki</a> &middot; <a href="wiki/ROADMAP.html">Roadmap</a> &middot; <a href="https://github.com/GLK-Dev/Hey/blob/main/CHANGELOG.md">Changelog</a></span>
+</footer>
+</div>
+</body>
+</html>

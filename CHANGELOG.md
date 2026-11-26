@@ -5,6 +5,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- Project site (`site/`, dark industrial landing page, logo, banner) and an mdBook wiki built from `Docs/`, deployed via GitHub Pages workflow.
 - Workspace of 12 crates: core, layout (flexbox), style (design tokens, themes), text (shaping, bidi), draw (display list), CPU and GPU renderers, widgets, shell (winit), icons, i18n and the test harness.
 - MVU application shell (`App`, `Command`, `View` reconciliation).
 - Widgets: Button, Label, TextInput, TextArea, List, Tabs, Checkbox, Radio, Toggle, Slider, ProgressBar, Panel, Icon; overlays (Dropdown, Menu, Modal, Tooltip).

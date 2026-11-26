@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="Hey - declarative desktop UI for Rust">
+<defs><pattern id="g" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#2C303A" stroke-width="1" opacity=".55"/></pattern></defs>
+<rect width="1280" height="320" fill="#0B0C10"/><rect width="1280" height="320" fill="url(#g)"/>
+<polygon points="860,0 1280,0 1280,320 760,320 760,100" fill="#181A20" stroke="#2C303A" stroke-width="2"/>
+<polygon points="930,60 1230,60 1230,240 1180,270 930,270" fill="#20232B" stroke="#F5A623" stroke-width="2"/>
+<rect x="960" y="90" width="120" height="14" fill="#F5A623"/><rect x="960" y="120" width="200" height="8" fill="#3A3E47"/><rect x="960" y="140" width="170" height="8" fill="#3A3E47"/>
+<polygon points="960,190 1050,190 1050,230 1034,246 960,246" fill="#00E5FF"/>
+<g transform="translate(80,80)"><polygon points="36,0 160,0 160,124 124,160 0,160 0,36" fill="#F5A623"/><polygon points="42,52 54,40 66,40 66,68 94,68 94,40 118,40 118,108 106,120 94,120 94,92 66,92 66,120 42,120" fill="#14161B"/><rect x="75" y="75" width="10" height="10" fill="#00E5FF"/></g>
+<text x="270" y="150" font-family="Onest,Segoe UI,Arial,sans-serif" font-size="88" font-weight="800" fill="#F2F4F8">Hey</text>
+<text x="272" y="196" font-family="Onest,Segoe UI,Arial,sans-serif" font-size="26" fill="#9AA3B2">Declarative desktop UI for Rust</text>
+<text x="272" y="232" font-family="Consolas,monospace" font-size="18" fill="#00E5FF">MVU / CPU + GPU / accessible / themeable</text>
+</svg>

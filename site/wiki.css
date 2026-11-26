@@ -1,0 +1,5 @@
+:root{--sidebar-width:290px}
+.ayu{--bg:#0B0C10;--fg:#F2F4F8;--sidebar-bg:#14161B;--sidebar-fg:#9AA3B2;--sidebar-active:#F5A623;--links:#00E5FF;--inline-code-color:#F5A623;--theme-popup-bg:#181A20;--theme-popup-border:#2C303A;--quote-bg:#181A20;--table-border-color:#2C303A;--table-header-bg:#181A20;--searchbar-bg:#181A20;--searchbar-fg:#F2F4F8}
+.ayu .content a{color:#00E5FF}
+.ayu .menu-title{color:#F5A623;font-weight:800}
+.ayu pre{border:1px solid #2C303A;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}

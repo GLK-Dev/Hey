@@ -1,0 +1,15 @@
+[book]
+title = "Hey Wiki"
+authors = ["Vitaly Golik (GLK-Dev)"]
+language = "en"
+src = "../Docs"
+
+[build]
+build-dir = "../_site/wiki"
+create-missing = false
+
+[output.html]
+default-theme = "ayu"
+preferred-dark-theme = "ayu"
+git-repository-url = "https://github.com/GLK-Dev/Hey"
+additional-css = ["../site/wiki.css"]
