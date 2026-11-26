@@ -403,7 +403,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                             return;
                         }
                         let Ok(mut buf) = surface.buffer_mut() else { return };
-                        for (dst, px) in buf.iter_mut().zip(renderer.fb.data.chunks_exact(4)) {
+                        for (dst, px) in buf.iter_mut().zip(renderer.fb.data.as_chunks::<4>().0.iter()) {
                             *dst = (px[0] as u32) << 16 | (px[1] as u32) << 8 | px[2] as u32;
                         }
                         if let Err(e) = buf.present() {

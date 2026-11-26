@@ -33,8 +33,9 @@ impl Framebuffer {
 
     /// Fills the whole buffer with `c`.
     pub fn clear(&mut self, c: Color) {
-        for px in self.data.chunks_exact_mut(4) {
-            px.copy_from_slice(&[c.r, c.g, c.b, c.a]);
+        let (pixels, _) = self.data.as_chunks_mut::<4>();
+        for px in pixels {
+            *px = [c.r, c.g, c.b, c.a];
         }
     }
 
