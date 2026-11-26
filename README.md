@@ -1,5 +1,7 @@
 # Hey UI
 
+**Website:** https://glk-dev.github.io/Hey/ | **Wiki:** https://glk-dev.github.io/Hey/wiki/
+
 Declarative desktop UI framework in Rust with dual interchangeable backends (**CPU** via `tiny-skia`/`fontdue`/`softbuffer` and **GPU** via `wgpu` SDF rendering), built around an arena tree and unidirectional MVU data flow.
 
 See [Docs/DEVELOPMENT_PLAN.md](Docs/DEVELOPMENT_PLAN.md) for the full phase-by-phase roadmap (`M0`-`M6`, ADRs 1-8, and crate boundaries) and [Thinks/idea.md](Thinks/idea.md) for the original research notes and monolithic prototype.
