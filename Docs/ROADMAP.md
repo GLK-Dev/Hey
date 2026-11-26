@@ -17,6 +17,8 @@ Open measurement gaps: Linux and macOS numbers, GPU frame time, and a first-fram
 
 Goal: the first publishable version.
 
+Deferred by the owner (2026-11-26): crates.io work (name check, `cargo package` CI gate, publishing). Development continues with 0.2; these items stay open.
+
 - [ ] API review using the checklist in `API_POLICY.md`:
   - `#![warn(missing_docs)]` in every public crate, then fix the warnings (done: i18n, icons, render-cpu, render-gpu; backlog ~500 items in the other seven).
   - [x] `#[non_exhaustive]` on `UiEvent`, `DrawCmd`, `Role` and `GpuError`.
@@ -32,7 +34,8 @@ Goal: the first publishable version.
 
 Goal: enough to build a real application.
 
-- [ ] `ScrollView` and scrollbar drag; `List` item keys.
+- [x] Scroll containers (`Style::scroll`): clipping, wheel bubbling, draggable scrollbar thumb, track paging.
+- [ ] `List` item keys.
 - [ ] `TextInput` Enter callback (submit).
 - [ ] DPI scale factor end to end (layout in logical units, raster in physical).
 - [ ] Theme loading from disk and hot reload; tick source for `Transition` redraws.

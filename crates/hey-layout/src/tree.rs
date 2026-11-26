@@ -179,6 +179,11 @@ impl LayoutTree {
         self.tree.children(id)
     }
 
+    /// Parent of a node (`None` for the root).
+    pub fn parent(&self, id: NodeId) -> Option<NodeId> {
+        self.tree.parent(id)
+    }
+
     pub fn compute(&mut self, viewport: Size) {
         if !self.dirty && self.viewport == Some(viewport) {
             return;

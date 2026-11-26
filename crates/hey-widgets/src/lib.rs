@@ -8,6 +8,7 @@ mod clipboard;
 mod controls;
 mod list;
 mod overlay;
+mod scrollbar;
 mod textarea;
 mod ui;
 mod view;

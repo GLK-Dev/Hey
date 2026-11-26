@@ -1,6 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
 use crate::a11y::{A11y, A11yAction, A11yNode, A11yTree};
+use crate::scrollbar::{self, Bar};
 use hey_core::{Callback, Modifiers, MouseButton, MsgSink, NodeId, Point, Rect, Size, UiEvent};
 use hey_draw::{Border, DisplayList, DrawCmd};
 use hey_layout::{LayoutTree, Style};
@@ -158,6 +159,8 @@ pub struct Ui<Msg> {
     queue: Overlays<Msg>,
     file_drop: Option<Callback<Msg, std::path::PathBuf>>,
     file_hover: bool,
+    /// Scrollbar thumb drag: container, axis is vertical, pointer offset inside the thumb.
+    sb_drag: Option<(NodeId, bool, f32)>,
 }
 
 const MULTI_CLICK: Duration = Duration::from_millis(500);
@@ -179,6 +182,7 @@ impl<Msg: 'static> Ui<Msg> {
             overlays: Vec::new(),
             file_drop: None,
             file_hover: false,
+            sb_drag: None,
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -560,6 +564,9 @@ impl<Msg: 'static> Ui<Msg> {
                 true
             }
             UiEvent::PointerMove { pos } => {
+                if let Some((id, vertical, grab)) = self.sb_drag {
+                    return self.drag_scrollbar(id, vertical, grab, *pos);
+                }
                 let a = self.set_hover(self.tree.hit_test(*pos));
                 let b = match self.pressed {
                     Some(p) => self.with_widget(p, |w, env, rect, sink| w.drag(env, rect, *pos, sink)),
@@ -568,13 +575,15 @@ impl<Msg: 'static> Ui<Msg> {
                 a || b
             }
             UiEvent::Wheel { pos, dx, dy } => match self.tree.hit_test(*pos) {
-                Some(id) if self.enabled(id) => {
+                Some(id) => {
                     let rect = self.tree.rect(id);
                     let env = self.env.clone();
-                    self.nodes.get_mut(&id).is_some_and(|n| n.widget.wheel(&env, rect, *dx, *dy))
+                    (self.enabled(id) && self.nodes.get_mut(&id).is_some_and(|n| n.widget.wheel(&env, rect, *dx, *dy)))
+                        || self.scroll_ancestors(id, *dx, *dy)
                 }
                 _ => false,
             },
+            UiEvent::PointerLeave if self.sb_drag.is_some() => false,
             UiEvent::PointerLeave => {
                 let a = self.set_hover(None);
                 let b = self.pressed.take().is_some();
@@ -582,6 +591,9 @@ impl<Msg: 'static> Ui<Msg> {
             }
             UiEvent::PointerDown { pos, button: MouseButton::Left } => {
                 let hit = self.tree.hit_test(*pos);
+                if self.press_scrollbar(hit, *pos) {
+                    return true;
+                }
                 self.set_hover(hit);
                 self.pressed = hit.filter(|&i| self.enabled(i));
                 if let Some(i) = self.pressed {
@@ -599,6 +611,9 @@ impl<Msg: 'static> Ui<Msg> {
                 true
             }
             UiEvent::PointerUp { pos, button: MouseButton::Left } => {
+                if self.sb_drag.take().is_some() {
+                    return true;
+                }
                 let hit = self.tree.hit_test(*pos);
                 self.set_hover(hit);
                 let pressed = self.pressed.take();
@@ -673,8 +688,12 @@ impl<Msg: 'static> Ui<Msg> {
     pub fn paint(&mut self, viewport: Size) -> DisplayList {
         self.tree.compute(viewport);
         let mut out = DisplayList::new();
-        let mut stack = vec![self.tree.root()];
-        while let Some(id) = stack.pop() {
+        let mut stack = vec![(self.tree.root(), false)];
+        while let Some((id, leave)) = stack.pop() {
+            if leave {
+                self.paint_scroll_leave(id, &mut out);
+                continue;
+            }
             let rect = self.tree.rect(id);
             if let Some(n) = self.nodes.get(&id) {
                 let st = self.state_of(id);
@@ -683,7 +702,11 @@ impl<Msg: 'static> Ui<Msg> {
                     self.paint_focus(rect, &mut out);
                 }
             }
-            stack.extend(self.tree.children(id).iter().rev().copied());
+            if self.tree.style(id).is_some_and(|s| s.clip) {
+                out.push(DrawCmd::ClipPush(rect));
+                stack.push((id, true));
+            }
+            stack.extend(self.tree.children(id).iter().rev().map(|&c| (c, false)));
         }
         self.queue.0.borrow_mut().viewport = viewport;
         self.apply_queue();
@@ -699,6 +722,81 @@ impl<Msg: 'static> Ui<Msg> {
             o.widget.paint(&self.env, o.rect, st, &mut out);
         }
         out
+    }
+
+    /// Closes the clip of a clipping node and draws its scrollbars on top of the content.
+    fn paint_scroll_leave(&self, id: NodeId, out: &mut DisplayList) {
+        out.push(DrawCmd::ClipPop);
+        let t = &self.env.theme;
+        for bar in self.scrollbars(id) {
+            let dragging = self.sb_drag.is_some_and(|(d, v, _)| d == id && v == bar.vertical);
+            let color = if dragging { t.palette.text_muted } else { t.palette.text_disabled };
+            let r = bar.thumb;
+            out.push(DrawCmd::Rect { rect: r, fill: color, border: None, chamfer: t.chamfer_small().min(r.w / 2.0), shadow: None });
+        }
+    }
+
+    /// Scrollbars of a layout scroll container (empty if nothing overflows).
+    fn scrollbars(&self, id: NodeId) -> Vec<Bar> {
+        let Some(st) = self.tree.style(id) else { return Vec::new() };
+        let rect = self.tree.rect(id);
+        let view = rect.deflate(st.padding);
+        let (scroll, max) = (self.tree.scroll(id), self.tree.max_scroll(id));
+        let scale = self.env.theme.density.scale();
+        [(st.scroll_y, true), (st.scroll_x, false)]
+            .into_iter()
+            .filter(|&(on, _)| on)
+            .filter_map(|(_, vertical)| scrollbar::bar(rect, view, scroll, max, vertical, scale))
+            .collect()
+    }
+
+    /// Wheel on a widget that did not handle it: scrolls the nearest scrollable ancestor.
+    fn scroll_ancestors(&mut self, id: NodeId, dx: f32, dy: f32) -> bool {
+        let mut cur = Some(id);
+        while let Some(c) = cur {
+            if let Some(st) = self.tree.style(c) {
+                let (sx, sy) = (st.scroll_x, st.scroll_y);
+                if (sy || sx) && self.tree.scroll_by(c, if sx { -dx } else { 0.0 }, if sy { -dy } else { 0.0 }) {
+                    return true;
+                }
+            }
+            cur = self.tree.parent(c);
+        }
+        false
+    }
+
+    /// Press on a scrollbar of `hit` or its ancestors: starts a thumb drag or pages along the track.
+    fn press_scrollbar(&mut self, hit: Option<NodeId>, pos: Point) -> bool {
+        let mut cur = hit;
+        while let Some(c) = cur {
+            for bar in self.scrollbars(c) {
+                if bar.thumb.contains(pos) {
+                    self.sb_drag = Some((c, bar.vertical, bar.grab(pos)));
+                    return true;
+                }
+                if bar.track.contains(pos) {
+                    let dir = if bar.axis(pos) < bar.axis(Point::new(bar.thumb.x, bar.thumb.y)) { -1.0 } else { 1.0 };
+                    let d = dir * bar.view;
+                    if bar.vertical {
+                        self.tree.scroll_by(c, 0.0, d);
+                    } else {
+                        self.tree.scroll_by(c, d, 0.0);
+                    }
+                    return true;
+                }
+            }
+            cur = self.tree.parent(c);
+        }
+        false
+    }
+
+    fn drag_scrollbar(&mut self, id: NodeId, vertical: bool, grab: f32, pos: Point) -> bool {
+        let Some(bar) = self.scrollbars(id).into_iter().find(|b| b.vertical == vertical) else { return false };
+        let max = self.tree.max_scroll(id);
+        let cur = self.tree.scroll(id);
+        let off = bar.offset_for(bar.axis(pos), grab, if vertical { max.y } else { max.x });
+        let (dx, dy) = if vertical { (0.0, off - cur.y) } else { (off - cur.x, 0.0) };
+        self.tree.scroll_by(id, dx, dy)
     }
 
     fn paint_focus(&self, rect: Rect, out: &mut DisplayList) {
