@@ -93,5 +93,5 @@ The CPU renderer is the reference implementation. The GPU renderer (wgpu, SDF) i
 
 - [Cookbook](COOKBOOK.md): short recipes.
 - [API policy](API_POLICY.md): semver, stability and review checklist.
-- [Architecture](ARCHITECTURE.md) and [Development plan](DEVELOPMENT_PLAN.md).
+- [Architecture](ARCHITECTURE.md), [Development plan](DEVELOPMENT_PLAN.md) and [Roadmap](ROADMAP.md).
 - API reference: `cargo doc --workspace --no-deps --open`.

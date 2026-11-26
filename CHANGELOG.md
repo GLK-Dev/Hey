@@ -14,4 +14,5 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - `hey-test`: input simulation and golden screenshots.
 - Property tests (`proptest`) and `criterion` benchmarks.
 - Documentation: getting started, cookbook, API policy.
+- `Docs/ROADMAP.md`: release plan 0.1 to 1.0 and measured performance targets.
 - MIT `LICENSE` and crates.io package metadata; `hey_text::DEFAULT_FONT` (bundled Onest).

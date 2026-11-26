@@ -197,11 +197,13 @@ OPEN QUESTION: размеры срезов расходятся — `tokens.json
 ### Фаза 10. Качество, производительность, документация (3 Н)
 - [~] Бенчмарки (`criterion`): layout 10k узлов, paint, CPU-растеризация 4K. Done: `hey-layout/benches/layout.rs`, `hey-widgets/benches/frame.rs` (`cargo bench -p hey-layout --bench layout`, `-p hey-widgets --bench frame`). Deferred: GPU frame, `tracing` + Tracy/puffin.
   - Baseline (Windows, release): layout 10k full 1.34 ms, cached 2 ns, hit-test 57 µs; typical UI paint 0.27 ms, CPU frame 1080p 8.6 ms; synthetic 2000 bordered chamfered rects: 70 ms at 1080p, 275 ms at 4K (rect rasterizer is the hotspot, optimize later).
-- [ ] Цели: ввод→кадр ≤ 16 мс при 1080p/60 FPS на CPU-бэкенде для типового UI; холостой CPU ≈ 0%; холодный старт < 300 мс.
+- [~] Цели (измерено на Windows, см. `Docs/ROADMAP.md`; Linux/macOS не измерены): ввод→кадр ≤ 16 мс при 1080p/60 FPS на CPU-бэкенде для типового UI; холостой CPU ≈ 0%; холодный старт < 300 мс.
 - [~] Fuzz/property-тесты текстового редактора и арены. Done: `proptest` suites (`hey-text/tests/edit_props.rs`, `hey-core/tests/arena_props.rs`). Deferred: `cargo-fuzz` targets.
 - [x] Симуляция ввода в `hey-test` (сценарии «клик → ввод → undo → скриншот»): `Harness` (click/type/key/undo/redo/screenshot с golden PNG).
 - [~] `cargo doc`, гайд «Начало работы», Cookbook, API-ревью, semver-политика, CHANGELOG. Done: `cargo doc` без предупреждений, `Docs/GETTING_STARTED.md`, `Docs/COOKBOOK.md`, `Docs/API_POLICY.md` (semver + чеклист), `CHANGELOG.md`. Deferred: фактический API-ревью по чеклисту (`#[non_exhaustive]`, типизированные ошибки, docs на всех pub-элементах).
 - [~] Лицензия, публикация на crates.io (`0.1` → `0.x` → `1.0`). Done: MIT `LICENSE`, package metadata (description, repository, keywords), path deps with versions, assets embedded inside crates (`hey-text/assets` font, `hey-style/assets/themes.json`, sync tests vs `design/`), `cargo package -p hey-core` verified. Deferred: actual `cargo publish` in dependency order (needs owner approval), API review before 0.2.
+
+Дальнейший план по релизам (0.1 → 1.0): `Docs/ROADMAP.md`.
 
 ### Фаза 11 (после v1.0, опционально)
 - Vello/`vello_cpu` как третий бэкенд для сложной векторной графики.
