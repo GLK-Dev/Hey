@@ -113,3 +113,19 @@ fn theme_from_file_reads_and_reports_errors() {
     assert!(matches!(Theme::from_file("no/such/file.json", "x"), Err(ThemeError::Io(_))));
     assert!(matches!(Theme::from_file(path, "nope"), Err(ThemeError::Missing(_))));
 }
+
+#[test]
+fn builtin_themes_match_chamfer_tokens() {
+    assert_eq!(Theme::builtin("industrial-dark").unwrap().chamfer, [8.0, 16.0, 18.0]);
+    assert_eq!(Theme::builtin("night-ops").unwrap().chamfer, [8.0, 16.0, 18.0]);
+    assert_eq!(Theme::builtin("zeta-remastered").unwrap().chamfer, [4.0, 8.0, 14.0]);
+
+    let design_path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/tokens/themes.json");
+    for id in ["industrial-dark", "night-ops", "zeta-remastered"] {
+        assert_eq!(
+            Theme::builtin(id).unwrap().chamfer,
+            Theme::from_file(design_path, id).unwrap().chamfer,
+            "chamfer parity mismatch for {id}"
+        );
+    }
+}

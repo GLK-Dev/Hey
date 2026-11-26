@@ -22,7 +22,7 @@
 
 Анимации на PNG не видны — смотрите их на досках-комплектах (раздел «Движение») и в `motion/themes-highlight.mp4`.
 
-`tokens/tokens.json` не менялся: `gui/tests/step1.rs` сверяет с ним `tokens.rs`. Тема `industrial-dark` в `themes.json` повторяет его значения.
+`tokens/tokens.json` не менялся: `gui/tests/step1.rs` сверяет с ним `tokens.rs`. Тема `industrial-dark` в `themes.json` опирается на базовую палитру, с per-theme размерами срезов (`8 / 16 / 18`).
 
 ## Чем темы отличаются
 
@@ -31,7 +31,7 @@
 | | Industrial Dark | Night Ops | ZETA Remastered |
 | --- | --- | --- | --- |
 | `controlStyle` | `flat` — заливка | `outline` — контур 1 px | `bevel` — фаска света и тени |
-| Срезы (small / medium / large) | 5 / 9 / 18 | 5 / 9 / 18 | 0 / 0 / 0 |
+| Срезы (small / medium / large) | 8 / 16 / 18 | 8 / 16 / 18 | 4 / 8 / 14 |
 | Главная кнопка | заливка accent | тёмно-зелёная заливка, контур и текст accent | жёлтый градиент с фаской |
 | Нажатая кнопка | accentDark | заливка accent, тёмный текст | фаска наоборот, градиент перевёрнут |
 | Вкладка окна | трапеция accent | трапеция accent + метка-блок, моноширинные прописные | жёлтая трапеция с фаской и квадратной кнопкой закрытия |
