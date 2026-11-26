@@ -277,7 +277,14 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
             .with_title(self.cfg.title.clone())
             .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1))
             .with_visible(false);
-        let window = Arc::new(el.create_window(attrs).expect("create window"));
+        let window = match el.create_window(attrs) {
+            Ok(w) => Arc::new(w),
+            Err(e) => {
+                eprintln!("hey: cannot create the window: {e}");
+                el.exit();
+                return;
+            }
+        };
         // The adapter must exist before the window becomes visible.
         self.adapter = Some(accesskit_winit::Adapter::with_event_loop_proxy(el, &window, self.proxy.clone()));
         window.set_visible(true);
@@ -374,12 +381,17 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                             renderer.resize(sz.width, sz.height);
                         }
                         renderer.render(&self.list, vp);
-                        surface.resize(w, h).expect("resize surface");
-                        let mut buf = surface.buffer_mut().expect("buffer");
+                        // A lost or resizing surface only drops this frame; the next redraw retries.
+                        if surface.resize(w, h).is_err() {
+                            return;
+                        }
+                        let Ok(mut buf) = surface.buffer_mut() else { return };
                         for (dst, px) in buf.iter_mut().zip(renderer.fb.data.chunks_exact(4)) {
                             *dst = (px[0] as u32) << 16 | (px[1] as u32) << 8 | px[2] as u32;
                         }
-                        buf.present().expect("present");
+                        if let Err(e) = buf.present() {
+                            eprintln!("hey: present failed: {e}");
+                        }
                     }
                 }
             }

@@ -20,4 +20,5 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ### Changed
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
 - `App::build`, `App::run` and `hey_shell::run` return `hey_shell::Error`; `I18n::add_ftl` returns `I18nError` (no more `String` errors, no winit type in the public API).
+- `GpuRenderer::set_vsync` no longer returns a `wgpu` type. The shell skips a frame on surface errors and exits cleanly if the window cannot be created, instead of panicking.
 - `missing_docs` enforced in hey-i18n, hey-icons, hey-render-cpu and hey-render-gpu.

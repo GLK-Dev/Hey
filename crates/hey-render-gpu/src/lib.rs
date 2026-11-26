@@ -433,9 +433,9 @@ impl GpuRenderer {
     }
 
     /// `true`: vsync (`Fifo`, always available). `false`: lowest-latency uncapped mode the surface supports
-    /// (`Mailbox`, then `Immediate`), falling back to `Fifo`. Returns the mode actually applied; no-op when headless.
-    pub fn set_vsync(&mut self, vsync: bool) -> Option<wgpu::PresentMode> {
-        let p = self.present.as_mut()?;
+    /// (`Mailbox`, then `Immediate`), falling back to `Fifo`. No-op when headless.
+    pub fn set_vsync(&mut self, vsync: bool) {
+        let Some(p) = self.present.as_mut() else { return };
         let want = if vsync {
             wgpu::PresentMode::Fifo
         } else {
@@ -448,7 +448,6 @@ impl GpuRenderer {
             p.config.present_mode = want;
             p.surface.configure(&self.device, &p.config);
         }
-        Some(want)
     }
 
     /// Current surface size in pixels as `(width, height)`.

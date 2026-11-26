@@ -21,8 +21,8 @@ Goal: the first publishable version.
   - `#![warn(missing_docs)]` in every public crate, then fix the warnings (done: i18n, icons, render-cpu, render-gpu; backlog ~500 items in the other seven).
   - [x] `#[non_exhaustive]` on `UiEvent`, `DrawCmd`, `Role` and `GpuError`.
   - [x] Typed errors: `hey_shell::Error`, `hey_i18n::I18nError`.
-  - No `unwrap` in library code outside tests.
-  - No `taffy` / `winit` / `wgpu` / `fontdue` types in public signatures unless intended.
+  - [x] No `unwrap` in library code outside tests (shell runtime failures no longer panic; the remaining `expect` calls document internal invariants).
+  - [x] No `taffy` / `winit` / `wgpu` / `fontdue` types in public signatures unless intended (only `GpuRenderer::new_for_window` takes a wgpu surface target, on purpose).
 - [ ] Check that the `hey-*` names are free on crates.io; reserve them if not.
 - [ ] CI: add macOS to the matrix; add a `cargo package` check and a `cargo doc` warnings gate.
 - [ ] Publish in dependency order: core, draw, layout, style, text, i18n, icons, render-cpu, render-gpu, widgets, shell, test. Needs owner approval and a crates.io token.
