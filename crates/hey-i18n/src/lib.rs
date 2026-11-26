@@ -12,6 +12,45 @@ use fluent_bundle::concurrent::FluentBundle;
 use fluent_bundle::{FluentArgs, FluentResource, FluentValue};
 use unic_langid::LanguageIdentifier;
 
+/// Error returned by [`I18n::add_ftl`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum I18nError {
+    /// The locale tag is not a valid BCP 47 identifier.
+    InvalidLocale {
+        /// The offending tag.
+        locale: String,
+        /// Parser message.
+        message: String,
+    },
+    /// The FTL source has syntax errors.
+    Syntax {
+        /// Locale the source was added to.
+        locale: String,
+        /// Parser diagnostics.
+        message: String,
+    },
+    /// A message id is already defined for this locale.
+    Duplicate {
+        /// Locale the source was added to.
+        locale: String,
+        /// Diagnostics.
+        message: String,
+    },
+}
+
+impl std::fmt::Display for I18nError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            I18nError::InvalidLocale { locale, message } => write!(f, "invalid locale `{locale}`: {message}"),
+            I18nError::Syntax { locale, message } => write!(f, "FTL syntax error in `{locale}`: {message}"),
+            I18nError::Duplicate { locale, message } => write!(f, "duplicate message in `{locale}`: {message}"),
+        }
+    }
+}
+
+impl std::error::Error for I18nError {}
+
 /// Message argument value.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Arg {
@@ -69,15 +108,19 @@ impl I18n {
     }
 
     /// Adds (or extends) the messages of `locale` from FTL source.
-    pub fn add_ftl(&mut self, locale: &str, ftl: &str) -> Result<(), String> {
-        let id: LanguageIdentifier = locale.parse().map_err(|e| format!("invalid locale `{locale}`: {e}"))?;
-        let res = FluentResource::try_new(ftl.to_owned()).map_err(|(_, errs)| format!("FTL syntax error in `{locale}`: {errs:?}"))?;
+    pub fn add_ftl(&mut self, locale: &str, ftl: &str) -> Result<(), I18nError> {
+        let id: LanguageIdentifier = locale.parse().map_err(|e: unic_langid::LanguageIdentifierError| I18nError::InvalidLocale {
+            locale: locale.to_owned(),
+            message: e.to_string(),
+        })?;
+        let res = FluentResource::try_new(ftl.to_owned())
+            .map_err(|(_, errs)| I18nError::Syntax { locale: locale.to_owned(), message: format!("{errs:?}") })?;
         let bundle = self.bundles.entry(locale.to_owned()).or_insert_with(|| {
             let mut b = FluentBundle::new_concurrent(vec![id]);
             b.set_use_isolating(false); // isolation marks confuse plain-text rendering
             b
         });
-        bundle.add_resource(res).map_err(|e| format!("duplicate message in `{locale}`: {e:?}"))
+        bundle.add_resource(res).map_err(|e| I18nError::Duplicate { locale: locale.to_owned(), message: format!("{e:?}") })
     }
 
     /// Switches the active locale. Unknown locales are accepted: lookups fall back to the default one.

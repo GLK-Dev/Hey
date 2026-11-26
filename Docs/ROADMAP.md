@@ -20,7 +20,7 @@ Goal: the first publishable version.
 - [ ] API review using the checklist in `API_POLICY.md`:
   - `#![warn(missing_docs)]` in every public crate, then fix the warnings (done: i18n, icons, render-cpu, render-gpu; backlog ~500 items in the other seven).
   - [x] `#[non_exhaustive]` on `UiEvent`, `DrawCmd`, `Role` and `GpuError`.
-  - Typed errors for `App::run` / `App::build` instead of `Result<_, String>`.
+  - [x] Typed errors: `hey_shell::Error`, `hey_i18n::I18nError`.
   - No `unwrap` in library code outside tests.
   - No `taffy` / `winit` / `wgpu` / `fontdue` types in public signatures unless intended.
 - [ ] Check that the `hey-*` names are free on crates.io; reserve them if not.

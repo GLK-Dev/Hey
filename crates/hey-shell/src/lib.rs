@@ -10,10 +10,12 @@ mod a11y;
 mod app;
 mod clipboard;
 mod dialog;
+mod error;
 mod input;
 pub use app::{App, Command, TaskState};
 pub use clipboard::{install_system_clipboard, SystemClipboard};
 pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};
+pub use error::Error;
 pub use input::{InputState, LINE_PX};
 
 use hey_core::{Color, UiEvent};
@@ -129,13 +131,13 @@ impl Default for WindowConfig {
     }
 }
 
-pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), winit::error::EventLoopError> {
+pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), Error> {
     install_system_clipboard();
-    let event_loop = EventLoop::<a11y::UserEvent>::with_user_event().build()?;
+    let event_loop = EventLoop::<a11y::UserEvent>::with_user_event().build().map_err(|e| Error::EventLoop(e.to_string()))?;
     let proxy = event_loop.create_proxy();
     event_loop.set_control_flow(ControlFlow::Wait);
     let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default(), adapter: None, proxy };
-    event_loop.run_app(&mut shell)
+    event_loop.run_app(&mut shell).map_err(|e| Error::EventLoop(e.to_string()))
 }
 
 enum Backend {
@@ -153,9 +155,9 @@ struct Gfx {
     occluded: bool,
 }
 
-fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) -> Result<Backend, String> {
+fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) -> Result<Backend, Error> {
     let sz = window.inner_size();
-    let mut r = GpuRenderer::new_for_window(window.clone(), sz.width.max(1), sz.height.max(1)).map_err(|e| e.to_string())?;
+    let mut r = GpuRenderer::new_for_window(window.clone(), sz.width.max(1), sz.height.max(1)).map_err(|e| Error::Gpu(e.to_string()))?;
     r.clear_color = clear;
     r.fonts = fonts;
     r.set_vsync(vsync);

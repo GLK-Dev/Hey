@@ -6,7 +6,7 @@
 //! `view(&model)` → `Ui::reconcile`. Background tasks (`Command::perform`) run on threads,
 //! results come back via `mpsc` and are polled in `tick()`.
 
-use crate::{ShellApp, WindowConfig};
+use crate::{Error, ShellApp, WindowConfig};
 use hey_core::{MsgSink, Size, UiEvent};
 use hey_draw::{DisplayList, Viewport};
 use hey_style::Theme;
@@ -152,17 +152,17 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     }
 
     /// Build the runtime without a window (for tests and embedding).
-    pub fn build(self) -> Result<Runtime<M, Msg>, String> {
-        let update = self.update.ok_or("App: update is not set")?;
-        let view = self.view.ok_or("App: view is not set")?;
+    pub fn build(self) -> Result<Runtime<M, Msg>, Error> {
+        let update = self.update.ok_or(Error::MissingCallback("update"))?;
+        let view = self.view.ok_or(Error::MissingCallback("view"))?;
         let mut fonts = Fonts::new();
         let mut chain: Vec<FontId> = Vec::new();
         for p in &self.fonts {
-            chain.push(fonts.add_file(p).map_err(|e| format!("font {}: {e:?}", p.display()))?);
+            chain.push(fonts.add_file(p).map_err(|e| Error::Font { path: Some(p.clone()), message: format!("{e:?}") })?);
         }
         if chain.is_empty() {
             // Default font is Onest (OFL, Cyrillic), embedded into the binary.
-            chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| format!("default font: {e:?}"))?);
+            chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| Error::Font { path: None, message: format!("{e:?}") })?);
         }
         let sink = MsgSink::new();
         let ui = Ui::new(self.theme, Arc::new(fonts), chain, sink.clone());
@@ -186,11 +186,11 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         Ok(rt)
     }
 
-    pub fn run(self) -> Result<(), String> {
+    pub fn run(self) -> Result<(), Error> {
         let cfg =
             WindowConfig { title: self.window.title.clone(), size: self.window.size, clear: self.window.clear, vsync: self.window.vsync };
         let rt = self.build()?;
-        crate::run(cfg, rt).map_err(|e| e.to_string())
+        crate::run(cfg, rt)
     }
 }
 
