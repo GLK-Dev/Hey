@@ -15,7 +15,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - Property tests (`proptest`) and `criterion` benchmarks.
 - Documentation: getting started, cookbook, API policy.
 - `Docs/ROADMAP.md`: release plan 0.1 to 1.0 and measured performance targets.
-- MIT `LICENSE` and crates.io package metadata; `hey_text::DEFAULT_FONT` (bundled Onest).
+- `LICENSE.md` (GLK-Dev Universal Innovation License, GUIL 1.0) and crates.io package metadata; `hey_text::DEFAULT_FONT` (bundled Onest).
 - Scroll containers: `Style::scroll` containers clip children, take wheel events from any descendant, and draw a draggable scrollbar (thumb drag, track paging). `LayoutTree::parent`.
 - `List::add_keyed`: stable row keys; selection (previously lost on rebuild) and scroll follow the key.
 - `TextInput::add_submit`: `on_submit` callback fired by Enter.
@@ -25,6 +25,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - Golden test at 2x DPI (`scaled_2x`) and a cookbook section on scrolling and DPI.
 
 ### Changed
+- **License:** MIT is replaced by GUIL 1.0 (`LICENSE.md`: non-commercial use, source must stay available). `Cargo.toml` uses `license-file` because GUIL is not an SPDX id. Releases already received under MIT stay MIT.
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
 - `App::build`, `App::run` and `hey_shell::run` return `hey_shell::Error`; `I18n::add_ftl` returns `I18nError` (no more `String` errors, no winit type in the public API).
 - `GpuRenderer::set_vsync` no longer returns a `wgpu` type. The shell skips a frame on surface errors and exits cleanly if the window cannot be created, instead of panicking.

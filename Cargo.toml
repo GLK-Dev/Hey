@@ -4,7 +4,7 @@ members = ["crates/*", "examples/*"]
 
 [workspace.package]
 edition = "2021"
-license = "MIT"
+license-file = "LICENSE.md"
 repository = "https://github.com/GLK-Dev/Hey"
 readme = "README.md"
 keywords = ["gui", "ui", "framework", "desktop", "wgpu"]
