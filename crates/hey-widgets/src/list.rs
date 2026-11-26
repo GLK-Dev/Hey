@@ -9,11 +9,15 @@ use hey_layout::Style;
 use hey_style::WidgetState;
 use hey_text::layout;
 use std::cell::Cell;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 /// List of rows with single selection: wheel scrolling, arrows/Home/End/PageUp/PageDown,
 /// click to select. Only visible rows are drawn. Selection is a `Callback<Msg, usize>`.
 pub struct List<Msg> {
     items: Vec<String>,
+    /// Stable identity of each row (the row index for unkeyed lists).
+    keys: Vec<u64>,
     selected: Option<usize>,
     on_select: Callback<Msg, usize>,
     scroll: Cell<f32>,
@@ -26,11 +30,47 @@ pub struct List<Msg> {
 impl<Msg: 'static> List<Msg> {
     /// `rows` is the height in visible rows.
     pub fn add(ui: &mut Ui<Msg>, parent: NodeId, items: Vec<String>, width: f32, rows: usize, on_select: Callback<Msg, usize>) -> NodeId {
+        let keys = (0..items.len() as u64).collect();
+        Self::build(ui, parent, items, keys, width, rows, on_select)
+    }
+
+    /// Like [`List::add`], but every row has a stable key. When the view is rebuilt with a changed item list, the
+    /// selection and scroll position follow the row with the same key instead of staying at the same index.
+    /// The callback still receives the row index.
+    pub fn add_keyed<K: Hash>(
+        ui: &mut Ui<Msg>,
+        parent: NodeId,
+        items: Vec<(K, String)>,
+        width: f32,
+        rows: usize,
+        on_select: Callback<Msg, usize>,
+    ) -> NodeId {
+        let (keys, items): (Vec<u64>, Vec<String>) = items
+            .into_iter()
+            .map(|(k, s)| {
+                let mut h = DefaultHasher::new();
+                k.hash(&mut h);
+                (h.finish(), s)
+            })
+            .unzip();
+        Self::build(ui, parent, items, keys, width, rows, on_select)
+    }
+
+    fn build(
+        ui: &mut Ui<Msg>,
+        parent: NodeId,
+        items: Vec<String>,
+        keys: Vec<u64>,
+        width: f32,
+        rows: usize,
+        on_select: Callback<Msg, usize>,
+    ) -> NodeId {
         let env = ui.env.clone();
         let row_h = Self::row_height(&env);
         let h = row_h * rows as f32 + 2.0;
         let w = List {
             items,
+            keys,
             selected: None,
             on_select,
             scroll: Cell::new(0.0),
@@ -59,17 +99,22 @@ impl<Msg: 'static> List<Msg> {
 }
 
 impl<Msg: 'static> Widget<Msg> for List<Msg> {
-    fn a11y(&self) -> Option<A11y> {
-        Some(A11y::new(Role::List, "").value(self.selected.and_then(|i| self.items.get(i).cloned()).unwrap_or_default()))
-    }
     fn save_state(&self) -> Option<Box<dyn std::any::Any>> {
-        Some(Box::new(self.scroll.get()))
+        let key = self.selected.and_then(|i| self.keys.get(i).copied());
+        Some(Box::new((key, self.scroll.get())))
     }
+
     fn load_state(&mut self, state: Box<dyn std::any::Any>) {
-        if let Ok(s) = state.downcast::<f32>() {
-            self.scroll.set(*s);
+        if let Ok(s) = state.downcast::<(Option<u64>, f32)>() {
+            let (key, scroll) = *s;
+            self.selected = key.and_then(|k| self.keys.iter().position(|x| *x == k));
+            self.scroll.set(scroll.clamp(0.0, self.max_scroll()));
             self.follow.set(false);
         }
+    }
+
+    fn a11y(&self) -> Option<A11y> {
+        Some(A11y::new(Role::List, "").value(self.selected.and_then(|i| self.items.get(i).cloned()).unwrap_or_default()))
     }
     fn paint(&self, env: &Env, rect: Rect, state: WidgetState, out: &mut DisplayList) {
         let t = &env.theme;

@@ -35,7 +35,7 @@ Deferred by the owner (2026-11-26): crates.io work (name check, `cargo package` 
 Goal: enough to build a real application.
 
 - [x] Scroll containers (`Style::scroll`): clipping, wheel bubbling, draggable scrollbar thumb, track paging.
-- [ ] `List` item keys.
+- [x] `List::add_keyed`: selection and scroll follow the row key across view rebuilds.
 - [ ] `TextInput` Enter callback (submit).
 - [ ] DPI scale factor end to end (layout in logical units, raster in physical).
 - [ ] Theme loading from disk and hot reload; tick source for `Transition` redraws.
