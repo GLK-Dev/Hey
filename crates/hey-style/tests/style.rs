@@ -104,3 +104,12 @@ fn appearance_selects_theme_and_reduces_motion() {
     assert_eq!(hc.id, "high-contrast-light");
     assert_eq!((hc.fast_ms, hc.base_ms, hc.window_ms), (0.0, 0.0, 0.0));
 }
+
+#[test]
+fn theme_from_file_reads_and_reports_errors() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/assets/themes.json");
+    let t = Theme::from_file(path, "industrial-dark").unwrap();
+    assert_eq!(t.id, "industrial-dark");
+    assert!(matches!(Theme::from_file("no/such/file.json", "x"), Err(ThemeError::Io(_))));
+    assert!(matches!(Theme::from_file(path, "nope"), Err(ThemeError::Missing(_))));
+}

@@ -8,7 +8,10 @@ use std::collections::HashMap;
 const THEMES_JSON: &str = include_str!("../assets/themes.json");
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum ThemeError {
+    /// The theme file could not be read.
+    Io(String),
     Json(String),
     Missing(String),
     BadColor(String),
@@ -17,6 +20,7 @@ pub enum ThemeError {
 impl std::fmt::Display for ThemeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Io(e) => write!(f, "I/O: {e}"),
             Self::Json(e) => write!(f, "JSON: {e}"),
             Self::Missing(k) => write!(f, "missing field `{k}`"),
             Self::BadColor(k) => write!(f, "invalid color `{k}`"),
@@ -216,6 +220,12 @@ impl Theme {
         let root: Value = serde_json::from_str(json).map_err(|e| ThemeError::Json(e.to_string()))?;
         let t = root.get("themes").and_then(|t| t.get(id)).ok_or_else(|| ThemeError::Missing(id.into()))?;
         Self::from_value(id, t)
+    }
+
+    /// Loads theme `id` from a file in the `themes.json` format.
+    pub fn from_file(path: impl AsRef<std::path::Path>, id: &str) -> Result<Theme, ThemeError> {
+        let json = std::fs::read_to_string(path).map_err(|e| ThemeError::Io(e.to_string()))?;
+        Self::from_json(&json, id)
     }
 
     /// Built-in theme from `design/tokens/themes.json`: `industrial-dark`, `night-ops`, `zeta-remastered`.

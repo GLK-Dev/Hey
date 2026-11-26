@@ -20,9 +20,11 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - `List::add_keyed`: stable row keys; selection (previously lost on rebuild) and scroll follow the key.
 - `TextInput::add_submit`: `on_submit` callback fired by Enter.
 - DPI scaling: `Ui::set_scale` / `Ui::scale`, `DisplayList::scale_by`. Layout and widget events are logical; pointer positions come in physical pixels and `paint` returns physical ones. The shell applies the window scale factor, including the IME and accessibility rectangles.
+- `Theme::from_file` and `App::watch_theme`: load a theme from a `themes.json`-format file and hot-reload it on change (polled every 250 ms).
 
 ### Changed
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
 - `App::build`, `App::run` and `hey_shell::run` return `hey_shell::Error`; `I18n::add_ftl` returns `I18nError` (no more `String` errors, no winit type in the public API).
 - `GpuRenderer::set_vsync` no longer returns a `wgpu` type. The shell skips a frame on surface errors and exits cleanly if the window cannot be created, instead of panicking.
+- `ThemeError` is `#[non_exhaustive]` and gained an `Io` variant.
 - `missing_docs` enforced in hey-i18n, hey-icons, hey-render-cpu and hey-render-gpu.

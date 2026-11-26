@@ -83,6 +83,7 @@ pub struct App<M, Msg: Send + 'static> {
     view: Option<ViewFn<M, Msg>>,
     theme: Theme,
     auto_theme: bool,
+    theme_file: Option<(PathBuf, String)>,
     fonts: Vec<PathBuf>,
     window: WindowConfig,
     init: Command<Msg>,
@@ -96,6 +97,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             view: None,
             theme: Theme::dark(),
             auto_theme: false,
+            theme_file: None,
             fonts: Vec::new(),
             window: WindowConfig::default(),
             init: Command::None,
@@ -120,6 +122,14 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     /// Follow the system appearance (dark/light, high contrast, reduced motion) instead of the fixed theme.
     pub fn auto_theme(mut self, on: bool) -> Self {
         self.auto_theme = on;
+        self
+    }
+
+    /// Load theme `id` from a `themes.json`-format file and reload it whenever the file changes (hot reload).
+    /// A failed initial load keeps the `theme`; a failed reload keeps the current theme.
+    /// While watching, the loop wakes every ~16 ms to poll the file, so use it during development.
+    pub fn watch_theme(mut self, path: impl Into<PathBuf>, id: impl Into<String>) -> Self {
+        self.theme_file = Some((path.into(), id.into()));
         self
     }
 
@@ -165,7 +175,9 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             chain.push(fonts.add_bytes(DEFAULT_FONT).map_err(|e| Error::Font { path: None, message: format!("{e:?}") })?);
         }
         let sink = MsgSink::new();
-        let ui = Ui::new(self.theme, Arc::new(fonts), chain, sink.clone());
+        let watch = self.theme_file.map(|(path, id)| ThemeWatch::new(path, id));
+        let theme = watch.as_ref().and_then(|w| w.load().ok()).unwrap_or(self.theme);
+        let ui = Ui::new(theme, Arc::new(fonts), chain, sink.clone());
         let (tx, rx) = mpsc::channel();
         let mut rt = Runtime {
             model: self.model,
@@ -179,6 +191,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             size: Size::new(0.0, 0.0),
             clear: self.window.clear,
             auto_theme: self.auto_theme,
+            watch,
             dirty: true,
         };
         rt.run_command(self.init);
@@ -191,6 +204,45 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             WindowConfig { title: self.window.title.clone(), size: self.window.size, clear: self.window.clear, vsync: self.window.vsync };
         let rt = self.build()?;
         crate::run(cfg, rt)
+    }
+}
+
+/// Polls a theme file's modification time.
+struct ThemeWatch {
+    path: PathBuf,
+    id: String,
+    seen: Option<std::time::SystemTime>,
+    checked: std::time::Instant,
+}
+
+impl ThemeWatch {
+    const INTERVAL: std::time::Duration = std::time::Duration::from_millis(250);
+
+    fn new(path: PathBuf, id: String) -> Self {
+        let seen = Self::mtime(&path);
+        ThemeWatch { path, id, seen, checked: std::time::Instant::now() }
+    }
+
+    fn mtime(path: &std::path::Path) -> Option<std::time::SystemTime> {
+        std::fs::metadata(path).and_then(|m| m.modified()).ok()
+    }
+
+    fn load(&self) -> Result<Theme, hey_style::ThemeError> {
+        Theme::from_file(&self.path, &self.id)
+    }
+
+    /// A new theme if the file changed since the last check and parses.
+    fn changed(&mut self) -> Option<Theme> {
+        if self.checked.elapsed() < Self::INTERVAL {
+            return None;
+        }
+        self.checked = std::time::Instant::now();
+        let m = Self::mtime(&self.path)?;
+        if self.seen == Some(m) {
+            return None;
+        }
+        self.seen = Some(m);
+        self.load().ok()
     }
 }
 
@@ -208,6 +260,7 @@ pub struct Runtime<M, Msg: Send + 'static> {
     #[allow(dead_code)]
     clear: hey_core::Color,
     auto_theme: bool,
+    watch: Option<ThemeWatch>,
     dirty: bool,
 }
 
@@ -328,11 +381,17 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     }
 
     fn tick(&mut self) -> bool {
-        self.poll()
+        let mut redraw = self.poll();
+        if let Some(t) = self.watch.as_mut().and_then(ThemeWatch::changed) {
+            self.ui.set_theme(t);
+            self.dirty = true;
+            redraw = true;
+        }
+        redraw
     }
 
     fn pending(&self) -> bool {
-        self.in_flight.load(Ordering::SeqCst) > 0
+        self.watch.is_some() || self.in_flight.load(Ordering::SeqCst) > 0
     }
 
     fn cursor(&self) -> hey_core::CursorIcon {
