@@ -69,6 +69,9 @@ pub struct PlacedGlyph {
     pub advance: f32,
     /// Byte offset of the character in the source text (for caret and hit-test).
     pub byte: usize,
+    /// Byte offset just past the cluster this glyph stands for. It exceeds the end of the
+    /// first grapheme when the glyph is a ligature covering several graphemes.
+    pub end: usize,
     /// The glyph belongs to a right-to-left run.
     pub rtl: bool,
 }
@@ -190,10 +193,23 @@ fn word_units(fonts: &Fonts, chain: &[FontId], size: f32, word: &str, base: usiz
                 })
                 .collect()
         });
+        let run_end = run.chars.last().map_or(0, |&(b, c)| b + c.len_utf8());
+        let mut clusters: Vec<usize> = shaped.iter().map(|g| g.cluster).collect();
+        clusters.sort_unstable();
+        clusters.dedup();
         for g in shaped {
             let ui = units.partition_point(|u| u.byte <= g.cluster).saturating_sub(1);
+            let end = clusters.get(clusters.partition_point(|&c| c <= g.cluster)).copied().unwrap_or(run_end);
             let u = &mut units[ui];
-            u.glyphs.push(PlacedGlyph { font: run.font, id: g.id, x: u.w + g.x_offset, advance: g.advance, byte: g.cluster, rtl: false });
+            u.glyphs.push(PlacedGlyph {
+                font: run.font,
+                id: g.id,
+                x: u.w + g.x_offset,
+                advance: g.advance,
+                byte: g.cluster,
+                end,
+                rtl: false,
+            });
             u.w += g.advance;
         }
     }
@@ -359,6 +375,11 @@ impl Layout {
     /// X of the caret at logical byte offset `byte` on `line`. `None` for a line without glyphs.
     pub fn caret_x(&self, line: usize, byte: usize) -> Option<f32> {
         let ln = self.lines.get(line)?;
+        // Inside a ligature the caret is interpolated between its component graphemes.
+        if let Some(g) = ln.glyphs.iter().find(|g| g.advance > 0.0 && g.byte < byte && byte < g.end) {
+            let frac = (byte - g.byte) as f32 / (g.end - g.byte) as f32;
+            return Some(if g.rtl { g.x + g.advance * (1.0 - frac) } else { g.x + g.advance * frac });
+        }
         if let Some(g) = ln.glyphs.iter().filter(|g| g.byte >= byte).min_by_key(|g| g.byte) {
             return Some(if g.rtl { g.x + g.advance } else { g.x });
         }
@@ -372,6 +393,20 @@ impl Layout {
         let ln = self.lines.get(line)?;
         let after = |g: &PlacedGlyph| g.byte + text[g.byte..].graphemes(true).next().map_or(0, str::len);
         for g in ln.glyphs.iter().filter(|g| g.advance > 0.0) {
+            if g.end > after(g) && x < g.x + g.advance {
+                // A ligature: snap to the nearest boundary between its graphemes.
+                let span = (g.end - g.byte) as f32;
+                let at = |b: usize| {
+                    let f = (b - g.byte) as f32 / span;
+                    if g.rtl {
+                        g.x + g.advance * (1.0 - f)
+                    } else {
+                        g.x + g.advance * f
+                    }
+                };
+                let bounds = text[g.byte..g.end].grapheme_indices(true).map(|(i, _)| g.byte + i).chain([g.end]);
+                return bounds.min_by(|&a, &b| (at(a) - x).abs().total_cmp(&(at(b) - x).abs()));
+            }
             if x < g.x + g.advance / 2.0 {
                 return Some(if g.rtl { after(g) } else { g.byte });
             }

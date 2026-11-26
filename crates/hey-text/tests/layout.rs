@@ -225,3 +225,19 @@ fn brackets_mirror_in_rtl_text() {
     assert_eq!(ids[0], open, "closing bracket is drawn mirrored on the left");
     assert_eq!(ids[4], close, "opening bracket is drawn mirrored on the right");
 }
+
+#[test]
+fn caret_moves_inside_a_ligature() {
+    let Ok(bytes) = std::fs::read("C:/Windows/Fonts/arial.ttf") else { return }; // no Arabic-capable font here
+    let mut f = Fonts::new();
+    let arial = f.add_bytes(&bytes).unwrap();
+    let text = "لا"; // lam + alef form one mandatory ligature glyph
+    let l = layout(&f, text, &TextStyle::new(vec![arial], 32.0));
+    let g = &l.lines[0].glyphs;
+    let lig = g.iter().find(|g| g.end - g.byte > 2 && g.advance > 0.0).expect("lam-alef must ligate");
+    let mid = l.caret_x(0, lig.byte + 2).unwrap();
+    assert!(mid > lig.x + 0.5 && mid < lig.x + lig.advance - 0.5, "caret {mid} must fall inside the ligature");
+    assert_eq!(l.byte_at_x(text, 0, mid), Some(lig.byte + 2));
+    assert_eq!(l.byte_at_x(text, 0, lig.x + 0.1), Some(lig.end));
+    assert_eq!(l.byte_at_x(text, 0, lig.x + lig.advance - 0.1), Some(lig.byte));
+}

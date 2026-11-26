@@ -57,9 +57,9 @@ Goal: native feel on every OS. Needs hardware or CI runners per OS.
 
 Goal: correct text in every script.
 
-- [x] Real shaping via `harfrust` inside `hey-text/layout.rs` (kerning, ligatures, Arabic joining; ADR-8). Known limits: no shaping across whitespace, `y_offset` ignored, caret inside a ligature maps to the next glyph.
+- [x] Real shaping via `harfrust` inside `hey-text/layout.rs` (kerning, ligatures, Arabic joining; ADR-8). Known limits: no shaping across whitespace, `y_offset` ignored.
 - [x] Bidi mirroring of brackets in RTL runs (leading neutrals take the next strong direction).
-- [ ] Cluster-based caret/selection in ligatures.
+- [x] Cluster-based caret/selection in ligatures (caret and hit-testing snap to grapheme boundaries inside a ligature glyph).
 - [ ] Golden tests for RTL and complex scripts.
 
 ## Quality track (any release)
