@@ -60,7 +60,7 @@ Goal: correct text in every script.
 - [x] Real shaping via `harfrust` inside `hey-text/layout.rs` (kerning, ligatures, Arabic joining; ADR-8). Known limits: no shaping across whitespace, `y_offset` ignored.
 - [x] Bidi mirroring of brackets in RTL runs (leading neutrals take the next strong direction).
 - [x] Cluster-based caret/selection in ligatures (caret and hit-testing snap to grapheme boundaries inside a ligature glyph).
-- [ ] Golden tests for RTL and complex scripts.
+- [x] Golden tests for RTL and complex scripts (`text_rtl`: Arabic joining, Hebrew, mixed directions, mirrored brackets) on bundled Noto Sans Arabic/Hebrew.
 
 ## Quality track (any release)
 

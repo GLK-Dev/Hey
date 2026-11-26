@@ -99,7 +99,7 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 - **Срез вместо скругления.** `DrawCmd::Rect` получает `chamfer` (срез 45° сверху-слева и снизу-справа; размеры small/medium/large) вместо `radii`. Нужны поддержка в SDF-шейдере (GPU) и в CPU-растеризаторе (многоугольник из 6 точек, как `ChamferedRect` в `heos_design.h`).
 - **Три темы:** `industrial-dark` (flat), `night-ops` (outline, свечение ≤ 8 px), `zeta-remastered` (bevel). `Theme` содержит `ControlStyle {Flat, Outline, Bevel}`, `WindowEffect`, `chamfer`, `motion_ms`, `bevel`, ANSI-палитру. Размеры и отступы общие, отличается только отрисовка виджета.
 - **Тест токенов:** golden-тест сверяет `Theme` всех тем с `themes.json` (по образцу `tests/step1.rs` из дизайна).
-- **Шрифты:** Onest (UI, есть кириллица), JetBrains Mono (моно), Space Grotesk (только латиница, бренд) — `design/fonts`, лицензия OFL.
+- **Шрифты:** Onest (UI, есть кириллица), JetBrains Mono (моно), Space Grotesk (только латиница, бренд), Noto Sans Arabic и Noto Sans Hebrew (RTL-фолбэк, golden-тесты) — `design/fonts`, лицензия OFL.
 - **Анимации:** тайминги и кривые из темы; режим «уменьшить движение» отключает блик/мигание/развёртку; перерисовка только при активной анимации.
 - **Иконки:** SVG из `design/icons` (рендер через `resvg`/`tiny-skia` в атлас), курсоры — `design/cursors` (горячие точки в README).
 - **Слой стыковки окон («нейронная связь»)** — отдельный оверлей поверх окон; задача для фазы 9+.

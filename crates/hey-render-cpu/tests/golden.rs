@@ -119,3 +119,29 @@ fn golden_text() {
     cmds.push(DrawCmd::ClipPop);
     check_with("text", 240, 180, cmds, Some(std::sync::Arc::new(f)));
 }
+
+#[test]
+fn golden_text_rtl() {
+    use hey_text::{layout, Fonts, TextStyle};
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts");
+    let mut f = Fonts::new();
+    let onest = f.add_file(format!("{root}/onest/Onest[wght].ttf")).unwrap();
+    let arabic = f.add_file(format!("{root}/notosansarabic/NotoSansArabic[wdth,wght].ttf")).unwrap();
+    let hebrew = f.add_file(format!("{root}/notosanshebrew/NotoSansHebrew[wdth,wght].ttf")).unwrap();
+    let st = TextStyle::new(vec![onest, arabic, hebrew], 20.0);
+    let lines = [
+        "مرحبا بالعالم",  // Arabic joining
+        "שלום עולם",      // Hebrew
+        "Hey مرحبا 2026", // mixed directions and digits
+        "(שלום) [עולם]",  // mirrored brackets
+        "بيت لا",          // joined forms and lam-alef
+    ];
+    let mut cmds = Vec::new();
+    for (i, text) in lines.iter().enumerate() {
+        let mut st = st.clone();
+        st.max_width = Some(220.0);
+        let l = layout(&f, text, &st);
+        cmds.extend(l.to_runs(Point::new(10.0, 8.0 + i as f32 * 34.0), Color::hex(0xE6E8EE)).into_iter().map(DrawCmd::Text));
+    }
+    check_with("text_rtl", 240, 184, cmds, Some(std::sync::Arc::new(f)));
+}

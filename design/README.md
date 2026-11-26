@@ -14,7 +14,7 @@
 | `icons/small/` | 12 иконок × 16 и 24 px | ресурсы приложений, панели инструментов |
 | `icons/vendors/` | 12 табличек производителей, 200×72 | «Компьютер → Устройства», NVControl |
 | `sounds/` | 13 звуков v2, WAV 48 кГц стерео | пакет, события через `add_system_beep_event()` |
-| `fonts/` | Onest, JetBrains Mono, Space Grotesk + лицензии OFL | пакет `heos_fonts` → `/boot/system/data/fonts/ttfonts/` |
+| `fonts/` | Onest, JetBrains Mono, Space Grotesk, Noto Sans Arabic, Noto Sans Hebrew + лицензии OFL | пакет `heos_fonts` → `/boot/system/data/fonts/ttfonts/` |
 | `cursors/` | 8 курсоров: SVG + PNG 32 и 64 px, горячие точки в README | данные стандартных курсоров `app_server` |
 | `wallpapers/` | 3 темы: SVG + PNG 1920×1080, 2560×1440, 3840×2160 | пакет `heos_system`, по умолчанию — через `heos_init.sh` |
 | `boot/` | заставка загрузки, знак на прозрачном фоне, установщик, системные экраны | загрузчик, `src/apps/installer`, образцы для сверки |

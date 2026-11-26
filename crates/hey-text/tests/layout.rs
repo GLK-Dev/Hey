@@ -10,6 +10,14 @@ fn fonts() -> (Fonts, u32, u32) {
     (f, onest, mono)
 }
 
+/// Loads one bundled font from `design/fonts`.
+fn single_font(rel: &str) -> (Fonts, u32) {
+    let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts");
+    let mut f = Fonts::new();
+    let id = f.add_file(format!("{root}/{rel}")).unwrap();
+    (f, id)
+}
+
 #[test]
 fn measures_and_scales() {
     let (f, onest, _) = fonts();
@@ -195,10 +203,7 @@ fn contextual_alternates_substitute_glyphs() {
 
 #[test]
 fn arabic_letters_take_joined_forms() {
-    let path = "C:/Windows/Fonts/arial.ttf";
-    let Ok(bytes) = std::fs::read(path) else { return }; // no Arabic-capable font on this machine
-    let mut f = Fonts::new();
-    let arial = f.add_bytes(&bytes).unwrap();
+    let (f, arial) = single_font("notosansarabic/NotoSansArabic[wdth,wght].ttf");
     let text = "بيت";
     let l = layout(&f, text, &TextStyle::new(vec![arial], 24.0));
     let g = &l.lines[0].glyphs;
@@ -211,9 +216,7 @@ fn arabic_letters_take_joined_forms() {
 
 #[test]
 fn brackets_mirror_in_rtl_text() {
-    let Ok(bytes) = std::fs::read("C:/Windows/Fonts/arial.ttf") else { return };
-    let mut f = Fonts::new();
-    let arial = f.add_bytes(&bytes).unwrap();
+    let (f, arial) = single_font("notosanshebrew/NotoSansHebrew[wdth,wght].ttf");
     let open = f.glyph_index(arial, '(').unwrap();
     let close = f.glyph_index(arial, ')').unwrap();
     // Logical "(בית)": in an RTL paragraph the first glyph drawn on the right is the
@@ -228,16 +231,14 @@ fn brackets_mirror_in_rtl_text() {
 
 #[test]
 fn caret_moves_inside_a_ligature() {
-    let Ok(bytes) = std::fs::read("C:/Windows/Fonts/arial.ttf") else { return }; // no Arabic-capable font here
-    let mut f = Fonts::new();
-    let arial = f.add_bytes(&bytes).unwrap();
-    let text = "لا"; // lam + alef form one mandatory ligature glyph
-    let l = layout(&f, text, &TextStyle::new(vec![arial], 32.0));
+    let (f, grotesk) = single_font("spacegrotesk/SpaceGrotesk[wght].ttf");
+    let text = "fi"; // Space Grotesk draws f + i as one ligature glyph
+    let l = layout(&f, text, &TextStyle::new(vec![grotesk], 32.0));
     let g = &l.lines[0].glyphs;
-    let lig = g.iter().find(|g| g.end - g.byte > 2 && g.advance > 0.0).expect("lam-alef must ligate");
-    let mid = l.caret_x(0, lig.byte + 2).unwrap();
+    let lig = g.iter().find(|g| g.end - g.byte > 1 && g.advance > 0.0).expect("fi must ligate");
+    let mid = l.caret_x(0, lig.byte + 1).unwrap();
     assert!(mid > lig.x + 0.5 && mid < lig.x + lig.advance - 0.5, "caret {mid} must fall inside the ligature");
-    assert_eq!(l.byte_at_x(text, 0, mid), Some(lig.byte + 2));
-    assert_eq!(l.byte_at_x(text, 0, lig.x + 0.1), Some(lig.end));
-    assert_eq!(l.byte_at_x(text, 0, lig.x + lig.advance - 0.1), Some(lig.byte));
+    assert_eq!(l.byte_at_x(text, 0, mid), Some(lig.byte + 1));
+    assert_eq!(l.byte_at_x(text, 0, lig.x + 0.1), Some(lig.byte));
+    assert_eq!(l.byte_at_x(text, 0, lig.x + lig.advance - 0.1), Some(lig.end));
 }
