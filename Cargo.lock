@@ -1584,6 +1584,7 @@ dependencies = [
  "hey-widgets",
  "rfd",
  "softbuffer",
+ "windows-sys 0.61.2",
  "winit",
 ]
 
