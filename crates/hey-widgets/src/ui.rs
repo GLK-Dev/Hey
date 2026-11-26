@@ -597,7 +597,7 @@ impl<Msg: 'static> Ui<Msg> {
             UiEvent::PointerMove { pos } => UiEvent::PointerMove { pos: p(pos) },
             UiEvent::PointerDown { pos, button } => UiEvent::PointerDown { pos: p(pos), button: *button },
             UiEvent::PointerUp { pos, button } => UiEvent::PointerUp { pos: p(pos), button: *button },
-            UiEvent::Wheel { pos, dx, dy } => UiEvent::Wheel { pos: p(pos), dx: *dx, dy: *dy },
+            UiEvent::Wheel { pos, dx, dy } => UiEvent::Wheel { pos: p(pos), dx: *dx / s, dy: *dy / s },
             _ => return None,
         })
     }

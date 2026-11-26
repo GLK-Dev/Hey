@@ -80,6 +80,7 @@ pub enum UiEvent {
         button: MouseButton,
     },
     PointerLeave,
+    /// Wheel scroll. `pos` and the deltas are physical pixels; `Ui::event` divides them by the DPI scale.
     Wheel {
         pos: Point,
         dx: f32,

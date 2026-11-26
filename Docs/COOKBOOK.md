@@ -38,6 +38,10 @@ App::new(model).update(update).view(view).init(Command::msg(Msg::Load)).run()
 
 `App::auto_theme(true)` follows the OS (light/dark, high contrast, reduced motion). To switch manually, call `Ui::set_theme`.
 
+## Scrolling and DPI
+
+Layout and widget events use logical pixels; `Ui::paint` returns physical ones (`Ui::set_scale`, set by the shell from the window). Raw input given to `Ui::event` is physical: pointer positions and `UiEvent::Wheel` deltas are divided by the scale. In your own input code, send a wheel line step as `40.0 * scale`, which is what the shell does. Scroll offsets (`LayoutTree::scroll`) stay logical.
+
 ## Overlays: menus, dropdowns, modals, tooltips
 
 Widgets open overlays through `Ui::overlays()`. The stack handles outside-click dismissal and Escape; `Ui::trap_focus` keeps focus inside a modal. See `Dropdown`, `Menu`, `Modal` and `Tooltip` in `hey-widgets`.

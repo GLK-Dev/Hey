@@ -46,6 +46,15 @@ fn golden_rect() {
 }
 
 #[test]
+fn golden_scaled_2x() {
+    // A logical list scaled by `DisplayList::scale_by(2.0)`, as `Ui::paint` does at 200% DPI.
+    let mut l = DisplayList::new();
+    l.push(rect(Rect::new(4.0, 4.0, 24.0, 16.0), 0x2A6FDB, Some((1.0, 0xE0A030)), 4.0, None));
+    l.scale_by(2.0);
+    check("scaled_2x", 64, 48, l.cmds().to_vec());
+}
+
+#[test]
 fn golden_chamfer() {
     check(
         "chamfer",

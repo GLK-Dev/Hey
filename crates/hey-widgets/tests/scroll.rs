@@ -42,6 +42,17 @@ fn wheel_on_child_scrolls_container() {
 }
 
 #[test]
+fn wheel_deltas_are_physical_and_scaled_by_dpi() {
+    let (mut ui, sv) = setup();
+    ui.set_scale(2.0);
+    ui.paint(Size::new(600.0, 400.0));
+    let r = ui.tree.rect(sv);
+    // Pointer and delta both arrive in physical pixels: 60 physical = 30 logical.
+    assert!(ui.event(&UiEvent::Wheel { pos: Point::new((r.x + 20.0) * 2.0, (r.y + 20.0) * 2.0), dx: 0.0, dy: -60.0 }));
+    assert_eq!(ui.tree.scroll(sv).y, 30.0);
+}
+
+#[test]
 fn content_is_clipped_and_scrollbar_drawn_on_top() {
     let (mut ui, _) = setup();
     let list = ui.paint(VIEW);

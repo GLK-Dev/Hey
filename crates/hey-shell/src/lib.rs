@@ -315,6 +315,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
             return;
         }
         let mut redraw = false;
+        self.input.scale = g.window.scale_factor();
         for ev in self.input.translate(&event) {
             redraw |= self.app.event(ev);
         }

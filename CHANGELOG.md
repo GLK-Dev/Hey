@@ -22,10 +22,12 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - DPI scaling: `Ui::set_scale` / `Ui::scale`, `DisplayList::scale_by`. Layout and widget events are logical; pointer positions come in physical pixels and `paint` returns physical ones. The shell applies the window scale factor, including the IME and accessibility rectangles.
 - `Theme::from_file` and `App::watch_theme`: load a theme from a `themes.json`-format file and hot-reload it on change (polled every 250 ms).
 - State crossfade: hover, press and focus changes fade over `fast_ms` with the theme easing. `Ui::tick` / `Ui::animating`, `DisplayList::blend`; the shell drives them. Disabled by reduced motion.
+- Golden test at 2x DPI (`scaled_2x`) and a cookbook section on scrolling and DPI.
 
 ### Changed
 - `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
 - `App::build`, `App::run` and `hey_shell::run` return `hey_shell::Error`; `I18n::add_ftl` returns `I18nError` (no more `String` errors, no winit type in the public API).
 - `GpuRenderer::set_vsync` no longer returns a `wgpu` type. The shell skips a frame on surface errors and exits cleanly if the window cannot be created, instead of panicking.
 - `ThemeError` is `#[non_exhaustive]` and gained an `Io` variant.
+- Wheel deltas given to `Ui::event` are physical pixels, like pointer positions, and are divided by the scale. The shell scales wheel line steps by the window scale (`InputState::scale`).
 - `missing_docs` enforced in hey-i18n, hey-icons, hey-render-cpu and hey-render-gpu.

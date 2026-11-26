@@ -11,11 +11,13 @@ use winit::{
 /// Scroll pixels per mouse wheel "line".
 pub const LINE_PX: f32 = 40.0;
 
-/// Input state between events: cursor position and modifiers.
+/// Input state between events: cursor position, modifiers and the window scale factor.
 #[derive(Default)]
 pub struct InputState {
     pub pos: Point,
     pub mods: Modifiers,
+    /// Device pixels per logical pixel; wheel line steps are `LINE_PX` logical px. 0 is treated as 1.
+    pub scale: f64,
 }
 
 pub fn mods(s: ModifiersState) -> Modifiers {
@@ -67,7 +69,10 @@ impl InputState {
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let (dx, dy) = match delta {
-                    MouseScrollDelta::LineDelta(x, y) => (x * LINE_PX, y * LINE_PX),
+                    MouseScrollDelta::LineDelta(x, y) => {
+                        let k = LINE_PX * if self.scale > 0.0 { self.scale as f32 } else { 1.0 };
+                        (x * k, y * k)
+                    }
                     MouseScrollDelta::PixelDelta(p) => (p.x as f32, p.y as f32),
                 };
                 vec![UiEvent::Wheel { pos: self.pos, dx, dy }]
