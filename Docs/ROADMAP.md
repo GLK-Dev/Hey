@@ -40,7 +40,7 @@ Goal: enough to build a real application.
 - [x] DPI scale factor end to end: layout and events in logical units, `Ui::paint` returns physical pixels (`Ui::set_scale`, `DisplayList::scale_by`).
 - [x] Theme loading from disk and hot reload (`Theme::from_file`, `App::watch_theme`).
 - [ ] Tick source for `Transition` redraws (no widget animates yet; add together with the first animated widget).
-- [ ] Resolve the slice-size OPEN QUESTION in `DEVELOPMENT_PLAN.md` (`tokens.json` vs `themes.json`).
+- [x] Slice sizes: `themes.json` is the source of truth per theme (8/16/18, zeta-remastered 4/8/14).
 
 ## 0.3: platform
 
