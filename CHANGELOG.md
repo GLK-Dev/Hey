@@ -16,3 +16,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - Documentation: getting started, cookbook, API policy.
 - `Docs/ROADMAP.md`: release plan 0.1 to 1.0 and measured performance targets.
 - MIT `LICENSE` and crates.io package metadata; `hey_text::DEFAULT_FONT` (bundled Onest).
+
+### Changed
+- `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`.
+- `missing_docs` enforced in hey-i18n, hey-icons, hey-render-cpu and hey-render-gpu.

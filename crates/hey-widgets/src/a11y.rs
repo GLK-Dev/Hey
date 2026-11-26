@@ -6,6 +6,7 @@
 use hey_core::Rect;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Role {
     Generic,
     Label,

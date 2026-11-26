@@ -66,6 +66,7 @@ pub enum MouseButton {
 
 /// Normalized events independent of winit (positions are in physical pixels).
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum UiEvent {
     PointerMove {
         pos: Point,

@@ -38,4 +38,5 @@ Items marked `#[doc(hidden)]` are not part of the API.
 
 - `App::run` and `App::build` return `Result<_, String>`; a typed error is planned before 1.0.
 - `Widget` is a large trait; optional hooks (a11y, IME) may move to extension traits.
-- `UiEvent`, `DrawCmd` and `Role` should become `#[non_exhaustive]` once their variant sets stabilise.
+- `UiEvent`, `DrawCmd`, `Role` and `GpuError` are `#[non_exhaustive]`; downstream `match` needs a wildcard arm.
+- `#![warn(missing_docs)]` is on for i18n, icons, render-cpu and render-gpu; the other crates are being documented one by one.

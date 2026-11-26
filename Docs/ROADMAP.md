@@ -18,8 +18,8 @@ Open measurement gaps: Linux and macOS numbers, GPU frame time, and a first-fram
 Goal: the first publishable version.
 
 - [ ] API review using the checklist in `API_POLICY.md`:
-  - `#![warn(missing_docs)]` in every public crate, then fix the warnings.
-  - `#[non_exhaustive]` on `UiEvent`, `DrawCmd`, `Role` and other growing enums.
+  - `#![warn(missing_docs)]` in every public crate, then fix the warnings (done: i18n, icons, render-cpu, render-gpu; backlog ~500 items in the other seven).
+  - [x] `#[non_exhaustive]` on `UiEvent`, `DrawCmd`, `Role` and `GpuError`.
   - Typed errors for `App::run` / `App::build` instead of `Result<_, String>`.
   - No `unwrap` in library code outside tests.
   - No `taffy` / `winit` / `wgpu` / `fontdue` types in public signatures unless intended.

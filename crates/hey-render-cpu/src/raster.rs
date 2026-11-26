@@ -45,6 +45,7 @@ pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, images: Option<&ImageSt
             }
         }
         DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
+        _ => {}
     }
 }
 

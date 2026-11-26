@@ -37,6 +37,7 @@ pub struct GlyphRun {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+#[non_exhaustive]
 pub enum DrawCmd {
     /// `chamfer` is a 45° cut (px) on the top-left and bottom-right corners only (design from design/).
     Rect {

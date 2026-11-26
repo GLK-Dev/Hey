@@ -1,5 +1,6 @@
 // Copyright (c) Vitaly Golik (mjojo)
 //! hey-render-cpu: reference software renderer. Works without a window (headless).
+#![warn(missing_docs)]
 //!
 //! Conventions: pixel center is `(i+0.5, j+0.5)`; the border is centered on the edge
 //! of the rectangle; clipping is rounded to whole pixels; blending is straight-alpha "over".
@@ -14,32 +15,41 @@ use std::sync::Arc;
 use hey_core::Color;
 use hey_draw::{DisplayList, UiRenderer, Viewport};
 
+/// RGBA pixel buffer the CPU renderer draws into.
 pub struct Framebuffer {
+    /// Width in pixels.
     pub width: u32,
+    /// Height in pixels.
     pub height: u32,
     /// RGBA8, row by row, top to bottom.
     pub data: Vec<u8>,
 }
 
 impl Framebuffer {
+    /// Creates a transparent framebuffer of the given size.
     pub fn new(width: u32, height: u32) -> Self {
         Self { width, height, data: vec![0; (width * height * 4) as usize] }
     }
 
+    /// Fills the whole buffer with `c`.
     pub fn clear(&mut self, c: Color) {
         for px in self.data.chunks_exact_mut(4) {
             px.copy_from_slice(&[c.r, c.g, c.b, c.a]);
         }
     }
 
+    /// Returns the pixel at (`x`, `y`).
     pub fn pixel(&self, x: u32, y: u32) -> Color {
         let i = ((y * self.width + x) * 4) as usize;
         Color::rgba(self.data[i], self.data[i + 1], self.data[i + 2], self.data[i + 3])
     }
 }
 
+/// Reference software renderer; its output is the golden baseline.
 pub struct CpuRenderer {
+    /// Target framebuffer.
     pub fb: Framebuffer,
+    /// Colour the framebuffer is cleared to before each frame.
     pub clear_color: Color,
     /// Font registry; without it `DrawCmd::Text` is skipped.
     pub fonts: Option<Arc<Fonts>>,
@@ -48,6 +58,7 @@ pub struct CpuRenderer {
 }
 
 impl CpuRenderer {
+    /// Creates a renderer with a framebuffer of the given size.
     pub fn new(width: u32, height: u32) -> Self {
         Self { fb: Framebuffer::new(width, height), clear_color: Color::rgb(0, 0, 0), fonts: None, images: None }
     }
@@ -80,6 +91,7 @@ impl Framebuffer {
         out
     }
 
+    /// Writes the framebuffer to `path` as a PNG file.
     pub fn save_png(&self, path: impl AsRef<std::path::Path>) -> std::io::Result<()> {
         std::fs::write(path, self.encode_png())
     }

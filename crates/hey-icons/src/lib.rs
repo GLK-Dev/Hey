@@ -1,6 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
 //! SVG icon rasterization for the `ImageStore` (`resvg`, no text support needed).
+#![warn(missing_docs)]
 //! Icons are rendered to a fixed physical pixel size (ADR-3), so re-rasterize on scale change.
 
 use std::collections::HashMap;
@@ -66,6 +67,7 @@ pub struct IconCache {
 }
 
 impl IconCache {
+    /// Creates an empty cache.
     pub fn new() -> Self {
         Self::default()
     }
@@ -92,6 +94,7 @@ impl IconCache {
         Ok(n)
     }
 
+    /// Returns `true` if an icon called `name` is available.
     pub fn contains(&self, name: &str) -> bool {
         self.sources.contains_key(name)
     }
@@ -122,6 +125,7 @@ impl IconCache {
 /// An `IconCache` together with the `ImageStore` it fills. Renderers get the store through `images()`;
 /// the `Arc` changes only when a new icon was rasterized, so pointer comparison detects "needs re-upload".
 pub struct IconHost {
+    /// Rasterised icon cache.
     pub cache: IconCache,
     store: Arc<ImageStore>,
 }
@@ -133,6 +137,7 @@ impl Default for IconHost {
 }
 
 impl IconHost {
+    /// Creates a host with an empty icon cache and image store.
     pub fn new() -> Self {
         Self::default()
     }
@@ -148,6 +153,7 @@ impl IconHost {
         id
     }
 
+    /// Shared image store holding the rasterised icons.
     pub fn images(&self) -> Arc<ImageStore> {
         self.store.clone()
     }

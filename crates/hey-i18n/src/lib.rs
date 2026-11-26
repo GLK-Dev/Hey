@@ -1,6 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
 //! Localization on top of Fluent (`.ftl`) plus locale-aware number and date formatting.
+#![warn(missing_docs)]
 //!
 //! Lookup order for a message: active locale, its language-only bundle, the fallback locale,
 //! then the key itself (a missing translation is visible but never panics).
@@ -14,7 +15,9 @@ use unic_langid::LanguageIdentifier;
 /// Message argument value.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Arg {
+    /// A string argument.
     Str(String),
+    /// A numeric argument.
     Num(f64),
 }
 
@@ -42,10 +45,13 @@ impl From<i64> for Arg {
 /// Text direction of a locale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
+    /// Left-to-right.
     Ltr,
+    /// Right-to-left.
     Rtl,
 }
 
+/// Fluent message catalog for one active locale.
 pub struct I18n {
     fallback: String,
     active: String,
@@ -79,10 +85,12 @@ impl I18n {
         self.active = locale.to_owned();
     }
 
+    /// Active locale tag, e.g. `en-US`.
     pub fn locale(&self) -> &str {
         &self.active
     }
 
+    /// Text direction of the active locale.
     pub fn direction(&self) -> Direction {
         direction_of(&self.active)
     }
@@ -145,6 +153,7 @@ fn separators(locale: &str) -> (&'static str, &'static str) {
     }
 }
 
+/// Formats `n` with `decimals` fraction digits using the separators of `locale`.
 pub fn format_number(locale: &str, n: f64, decimals: usize) -> String {
     if !n.is_finite() {
         return n.to_string();
@@ -171,6 +180,7 @@ pub fn format_number(locale: &str, n: f64, decimals: usize) -> String {
     out
 }
 
+/// Formats a calendar date in the conventional order of `locale`.
 pub fn format_date(locale: &str, year: i32, month: u32, day: u32) -> String {
     match lang(locale) {
         "en" if locale.eq_ignore_ascii_case("en-GB") => format!("{day:02}/{month:02}/{year}"),

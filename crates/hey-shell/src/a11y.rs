@@ -36,6 +36,7 @@ fn role(r: Role) -> AkRole {
         Role::ComboBox => AkRole::ComboBox,
         Role::Tooltip => AkRole::Tooltip,
         Role::Dialog => AkRole::Dialog,
+        _ => AkRole::GenericContainer,
     }
 }
 

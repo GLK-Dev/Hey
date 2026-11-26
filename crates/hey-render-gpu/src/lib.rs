@@ -1,6 +1,7 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
 //! GPU renderer (wgpu). Draws the same `DisplayList` as the CPU reference (ADR-6) with an
+#![warn(missing_docs)]
 //! analytic-coverage instanced pipeline: one quad per primitive, the fragment shader reproduces
 //! the CPU math (box-filter rect coverage, chamfer, centered border, erf shadow, capsule line).
 //!
@@ -57,9 +58,14 @@ struct Globals {
 }
 
 #[derive(Debug)]
+/// Errors raised while creating the GPU renderer.
+#[non_exhaustive]
 pub enum GpuError {
+    /// No compatible GPU adapter was found.
     NoAdapter,
+    /// The device could not be created.
     Device(String),
+    /// The window surface could not be created or configured.
     Surface(String),
 }
 
@@ -127,6 +133,7 @@ pub struct GpuRenderer {
     format: wgpu::TextureFormat,
     width: u32,
     height: u32,
+    /// Colour the frame is cleared to.
     pub clear_color: Color,
 }
 
@@ -444,6 +451,7 @@ impl GpuRenderer {
         Some(want)
     }
 
+    /// Current surface size in pixels as `(width, height)`.
     pub fn size(&self) -> (u32, u32) {
         (self.width, self.height)
     }
@@ -608,6 +616,7 @@ impl GpuRenderer {
             }
             // Text and images are handled in `render` (they need renderer state).
             DrawCmd::Text(_) | DrawCmd::Image { .. } | DrawCmd::ClipPush(_) | DrawCmd::ClipPop => {}
+            _ => {}
         }
     }
 }
