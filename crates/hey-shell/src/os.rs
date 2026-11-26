@@ -1,12 +1,36 @@
-//! Native accessibility queries: high contrast and reduced motion.
+//! Native OS queries and tweaks: high contrast, reduced motion, dark title bar.
 
 /// `(high_contrast, reduce_motion)` as reported by the OS, `None` where there is no native query.
 pub(crate) fn native_flags() -> Option<(bool, bool)> {
     imp::flags()
 }
 
+/// Asks the OS to draw the window title bar dark or light (Windows only; a no-op elsewhere).
+pub(crate) fn set_dark_titlebar(window: &winit::window::Window, dark: bool) {
+    imp::set_dark_titlebar(window, dark);
+}
+
 #[cfg(windows)]
 mod imp {
+    use windows_sys::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
+    use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+
+    pub(super) fn set_dark_titlebar(window: &winit::window::Window, dark: bool) {
+        let Ok(handle) = window.window_handle() else { return };
+        let RawWindowHandle::Win32(h) = handle.as_raw() else { return };
+        let value: i32 = dark.into();
+        // SAFETY: the HWND belongs to the live window we hold; the attribute value is a BOOL
+        // passed by pointer with its exact size. A failure only leaves the title bar unchanged.
+        unsafe {
+            DwmSetWindowAttribute(
+                h.hwnd.get() as _,
+                DWMWA_USE_IMMERSIVE_DARK_MODE as u32,
+                (&value as *const i32).cast(),
+                std::mem::size_of::<i32>() as u32,
+            );
+        }
+    }
+
     use windows_sys::Win32::UI::{
         Accessibility::{HCF_HIGHCONTRASTON, HIGHCONTRASTW},
         WindowsAndMessaging::{SystemParametersInfoW, SPI_GETCLIENTAREAANIMATION, SPI_GETHIGHCONTRAST},
@@ -31,6 +55,8 @@ mod imp {
 
 #[cfg(not(windows))]
 mod imp {
+    pub(super) fn set_dark_titlebar(_window: &winit::window::Window, _dark: bool) {}
+
     pub(super) fn flags() -> Option<(bool, bool)> {
         None
     }

@@ -76,6 +76,12 @@ pub trait ShellApp {
         false
     }
 
+    /// Whether the app's current theme is dark, so the shell can match the native title bar to it
+    /// (Windows). `None` leaves the title bar to the OS.
+    fn titlebar_dark(&self) -> Option<bool> {
+        None
+    }
+
     /// Caret rectangle in physical pixels for the IME candidate window (`None` — no text input focused).
     fn ime_cursor_area(&self) -> Option<hey_core::Rect> {
         None
@@ -305,6 +311,9 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
         window.set_ime_allowed(true);
         self.app.appearance_changed(system_appearance(&window));
+        if let Some(dark) = self.app.titlebar_dark() {
+            os::set_dark_titlebar(&window, dark);
+        }
         window.request_redraw();
         self.gfx = Some(Gfx { window, backend: Some(backend), images: None, occluded: false });
     }
@@ -338,6 +347,9 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
             WindowEvent::ThemeChanged(_) => {
                 if self.app.appearance_changed(system_appearance(&g.window)) {
                     g.window.request_redraw();
+                }
+                if let Some(dark) = self.app.titlebar_dark() {
+                    os::set_dark_titlebar(&g.window, dark);
                 }
             }
             WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => g.window.request_redraw(),

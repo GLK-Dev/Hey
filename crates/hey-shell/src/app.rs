@@ -361,6 +361,13 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
         true
     }
 
+    fn titlebar_dark(&self) -> Option<bool> {
+        let bg = self.ui.env.theme.palette.desktop;
+        // Rec. 601 luma of the desktop color.
+        let luma = 0.299 * bg.r as f32 + 0.587 * bg.g as f32 + 0.114 * bg.b as f32;
+        Some(luma < 128.0)
+    }
+
     fn fonts(&self) -> Option<Arc<Fonts>> {
         Some(self.ui.env.fonts.clone())
     }

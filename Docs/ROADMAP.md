@@ -46,7 +46,8 @@ Goal: enough to build a real application.
 
 Goal: native feel on every OS. Needs hardware or CI runners per OS.
 
-- [ ] Windows: DPI awareness manifest, DWM titlebar.
+- [x] Windows: DWM dark title bar follows the app theme (`ShellApp::titlebar_dark`, applied at window creation and on system theme change). A DPI manifest is not needed: winit enables per-monitor DPI awareness itself.
+- [ ] Manual QA: dark title bar on a light OS theme (set a dark app theme, check the caption).
 - [ ] macOS: native menu bar.
 - [ ] Linux: `rfd` backend, Wayland/X11 clipboard and drag and drop.
 - [x] Native queries for high contrast and reduced motion: done on Windows (`SystemParametersInfoW`); macOS and Linux still use the `HEY_HIGH_CONTRAST` / `HEY_REDUCE_MOTION` env flags.
