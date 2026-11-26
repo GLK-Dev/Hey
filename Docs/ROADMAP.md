@@ -64,7 +64,7 @@ Goal: correct text in every script.
 
 - [ ] `cargo-fuzz` targets for the text editor and arena.
 - [ ] GPU frame benchmark; `tracing` with Tracy or puffin.
-- [ ] Optimise the rect rasterizer (2000 bordered chamfered rects: 70 ms at 1080p).
+- [x] Optimise the rect rasterizer: interior pixels skip per-pixel coverage (2000 bordered chamfered rects: 70 ms to 32 ms at 1080p, 301 ms to 80 ms at 4K; output unchanged).
 - [ ] Linux and macOS performance baselines.
 
 ## 1.0 criteria

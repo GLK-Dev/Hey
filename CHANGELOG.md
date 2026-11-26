@@ -23,6 +23,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - `Theme::from_file` and `App::watch_theme`: load a theme from a `themes.json`-format file and hot-reload it on change (polled every 250 ms).
 - State crossfade: hover, press and focus changes fade over `fast_ms` with the theme easing. `Ui::tick` / `Ui::animating`, `DisplayList::blend`; the shell drives them. Disabled by reduced motion.
 - Windows: high contrast and reduced motion are read from the OS (`SystemParametersInfoW`); the env flags still force them on. New dependency: `windows-sys` (Windows only).
+- CPU rasterizer: rectangle interiors take a fast path (about 2x faster at 1080p, 3.7x at 4K, pixel-identical).
 - Golden test at 2x DPI (`scaled_2x`) and a cookbook section on scrolling and DPI.
 
 ### Changed

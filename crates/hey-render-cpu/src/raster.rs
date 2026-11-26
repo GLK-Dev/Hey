@@ -14,12 +14,15 @@ pub fn draw(fb: &mut Framebuffer, fonts: Option<&Fonts>, images: Option<&ImageSt
                 draw_shadow(fb, rect, s, clip);
             }
             let c = chamfer.max(0.0);
-            paint(fb, rect.inflate(1.0), clip, |x, y| (*fill, shape_cov(rect, c, x, y)));
+            let zone = interior(rect, c);
+            paint_zone(fb, rect.inflate(1.0), clip, zone, Some(*fill), |x, y| (*fill, shape_cov(rect, c, x, y)));
             if let Some(Border { width, color }) = border {
                 let h = width / 2.0;
                 let outer = (rect.inflate(h), c + h * (2.0 - SQRT2));
                 let inner = (rect.inflate(-h), (c - h * (2.0 - SQRT2)).max(0.0));
-                paint(fb, rect.inflate(h), clip, |x, y| {
+                // Strictly inside the inner shape both coverages are 1, so the ring adds nothing.
+                let zone = interior(&inner.0, outer.1);
+                paint_zone(fb, rect.inflate(h), clip, zone, None, |x, y| {
                     let a = shape_cov(&outer.0, outer.1, x, y) - shape_cov(&inner.0, inner.1, x, y);
                     (*color, a.max(0.0))
                 });
@@ -139,8 +142,30 @@ fn draw_shadow(fb: &mut Framebuffer, rect: &Rect, s: &Shadow, clip: Option<Rect>
     });
 }
 
+/// Whole-pixel box `(x0, y0, x1, y1)` where `shape_cov(r, c, ..)` is exactly 1: pixels fully inside `r`,
+/// at least `c + 1` away from its edges so the chamfer cannot touch them.
+fn interior(r: &Rect, c: f32) -> Option<(i64, i64, i64, i64)> {
+    let m = c.max(0.0) + 1.0;
+    let (x0, y0) = ((r.x + m).ceil() as i64, (r.y + m).ceil() as i64);
+    let (x1, y1) = ((r.right() - m).floor() as i64, (r.bottom() - m).floor() as i64);
+    (x1 > x0 && y1 > y0).then_some((x0, y0, x1, y1))
+}
+
 /// Walks pixels of `area ∩ clip ∩ framebuffer`; `f(x, y)` -> (color, coverage).
 fn paint(fb: &mut Framebuffer, area: Rect, clip: Option<Rect>, f: impl Fn(f32, f32) -> (Color, f32)) {
+    paint_zone(fb, area, clip, None, None, f);
+}
+
+/// Like `paint`, but pixels inside `zone` have coverage exactly 1 when `solid` is set and exactly 0 when
+/// it is not, so `f` is skipped there.
+fn paint_zone(
+    fb: &mut Framebuffer,
+    area: Rect,
+    clip: Option<Rect>,
+    zone: Option<(i64, i64, i64, i64)>,
+    solid: Option<Color>,
+    f: impl Fn(f32, f32) -> (Color, f32),
+) {
     let mut x0 = area.x.floor().max(0.0) as i64;
     let mut y0 = area.y.floor().max(0.0) as i64;
     let mut x1 = (area.right().ceil() as i64).min(fb.width as i64);
@@ -152,7 +177,23 @@ fn paint(fb: &mut Framebuffer, area: Rect, clip: Option<Rect>, f: impl Fn(f32, f
         y1 = y1.min(c.bottom().round() as i64);
     }
     for y in y0..y1 {
-        for x in x0..x1 {
+        let span = zone.filter(|z| y >= z.1 && y < z.3).map(|z| (z.0.clamp(x0, x1), z.2.clamp(x0, x1)));
+        let (zs, ze) = span.unwrap_or((x1, x1));
+        for x in x0..zs {
+            let (color, cov) = f(x as f32, y as f32);
+            blend(fb, x as u32, y as u32, color, cov);
+        }
+        if let Some(color) = solid.filter(|_| ze > zs) {
+            for x in zs..ze {
+                if color.a == 255 {
+                    let i = ((y as u32 * fb.width + x as u32) * 4) as usize;
+                    fb.data[i..i + 4].copy_from_slice(&[color.r, color.g, color.b, 255]);
+                } else {
+                    blend(fb, x as u32, y as u32, color, 1.0);
+                }
+            }
+        }
+        for x in ze.max(zs)..x1 {
             let (color, cov) = f(x as f32, y as f32);
             blend(fb, x as u32, y as u32, color, cov);
         }
