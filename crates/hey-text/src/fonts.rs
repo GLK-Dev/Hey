@@ -50,9 +50,26 @@ impl std::fmt::Display for FontError {
 }
 impl std::error::Error for FontError {}
 
+/// One shaped glyph in logical order, scaled to pixels.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ShapedGlyph {
+    pub id: u16,
+    /// Byte offset (as passed by the caller) of the first character of the cluster.
+    pub cluster: usize,
+    pub advance: f32,
+    pub x_offset: f32,
+}
+
+/// Raw font bytes plus the cached shaper tables.
+struct ShapeFont {
+    bytes: Arc<[u8]>,
+    data: harfrust::ShaperData,
+}
+
 #[derive(Default)]
 pub struct Fonts {
     fonts: Vec<fontdue::Font>,
+    shaping: Vec<Option<ShapeFont>>,
     cache: Mutex<HashMap<(FontId, u16, u32), Arc<GlyphBitmap>>>,
 }
 
@@ -63,7 +80,10 @@ impl Fonts {
 
     pub fn add_bytes(&mut self, data: &[u8]) -> Result<FontId, FontError> {
         let font = fontdue::Font::from_bytes(data, fontdue::FontSettings::default()).map_err(FontError::Parse)?;
+        let bytes: Arc<[u8]> = Arc::from(data);
+        let shaping = harfrust::FontRef::new(&bytes).ok().map(|r| ShapeFont { data: harfrust::ShaperData::new(&r), bytes: bytes.clone() });
         self.fonts.push(font);
+        self.shaping.push(shaping);
         Ok((self.fonts.len() - 1) as FontId)
     }
 
@@ -89,6 +109,36 @@ impl Fonts {
     /// First font in the chain that contains `ch`; otherwise the first font (its .notdef).
     pub fn pick(&self, chain: &[FontId], ch: char) -> Option<(FontId, u16)> {
         chain.iter().find_map(|&f| self.glyph_index(f, ch).map(|g| (f, g))).or_else(|| chain.first().map(|&f| (f, 0)))
+    }
+
+    /// Shapes `chars` (byte offset, char) with one font: kerning, ligatures, contextual forms.
+    /// Glyphs come back in logical order. `None` if the font cannot be shaped.
+    pub fn shape(&self, font: FontId, chars: &[(usize, char)], rtl: bool, size_px: f32) -> Option<Vec<ShapedGlyph>> {
+        let sf = self.shaping.get(font as usize)?.as_ref()?;
+        let font_ref = harfrust::FontRef::new(&sf.bytes).ok()?;
+        let shaper = sf.data.shaper(&font_ref).build();
+        let mut buf = harfrust::UnicodeBuffer::new();
+        for &(byte, ch) in chars {
+            buf.add(ch, byte as u32);
+        }
+        buf.set_direction(if rtl { harfrust::Direction::RightToLeft } else { harfrust::Direction::LeftToRight });
+        buf.guess_segment_properties();
+        let out = shaper.shape(buf, &[]);
+        let scale = size_px / shaper.units_per_em() as f32;
+        let mut glyphs: Vec<ShapedGlyph> = out
+            .glyph_infos()
+            .iter()
+            .zip(out.glyph_positions())
+            .map(|(i, p)| ShapedGlyph {
+                id: i.glyph_id as u16,
+                cluster: i.cluster as usize,
+                advance: p.x_advance as f32 * scale,
+                x_offset: p.x_offset as f32 * scale,
+            })
+            .collect();
+        // RTL output is visual; a stable sort by cluster restores logical order and keeps glyphs of one cluster as they are.
+        glyphs.sort_by_key(|g| g.cluster);
+        Some(glyphs)
     }
 
     pub fn advance(&self, font: FontId, glyph: u16, size_px: f32) -> f32 {

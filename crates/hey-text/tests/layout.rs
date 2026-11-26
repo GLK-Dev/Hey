@@ -175,3 +175,36 @@ fn caret_and_hit_test_roundtrip_in_rtl_run() {
     assert!((l.caret_x(0, start).unwrap() - l.lines[0].width).abs() < 0.01);
     assert_eq!(l.caret_x(5, 0), None);
 }
+
+#[test]
+fn kerning_tightens_pairs() {
+    let (f, onest, _) = fonts();
+    let pair = measure(&f, "AV", &[onest], 48.0);
+    let apart = measure(&f, "A", &[onest], 48.0) + measure(&f, "V", &[onest], 48.0);
+    assert!(pair < apart - 0.5, "pair {pair} apart {apart}");
+}
+
+#[test]
+fn contextual_alternates_substitute_glyphs() {
+    let (f, _, mono) = fonts();
+    let l = layout(&f, "->", &TextStyle::new(vec![mono], 16.0));
+    let ids: Vec<u16> = l.lines[0].glyphs.iter().map(|g| g.id).collect();
+    let plain = [f.glyph_index(mono, '-').unwrap(), f.glyph_index(mono, '>').unwrap()];
+    assert_ne!(ids, plain, "the `->` ligature must replace the plain glyphs");
+}
+
+#[test]
+fn arabic_letters_take_joined_forms() {
+    let path = "C:/Windows/Fonts/arial.ttf";
+    let Ok(bytes) = std::fs::read(path) else { return }; // no Arabic-capable font on this machine
+    let mut f = Fonts::new();
+    let arial = f.add_bytes(&bytes).unwrap();
+    let text = "بيت";
+    let l = layout(&f, text, &TextStyle::new(vec![arial], 24.0));
+    let g = &l.lines[0].glyphs;
+    assert!(l.lines[0].rtl);
+    assert!(g.iter().all(|g| g.rtl));
+    let isolated: Vec<u16> = text.chars().map(|c| f.glyph_index(arial, c).unwrap()).collect();
+    let shaped: Vec<u16> = g.iter().map(|g| g.id).collect();
+    assert_ne!(shaped, isolated, "letters must take joined forms");
+}

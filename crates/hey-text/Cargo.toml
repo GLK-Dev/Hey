@@ -15,6 +15,7 @@ hey-draw = { path = "../hey-draw", version = "0.1.0" }
 unicode-segmentation = { workspace = true }
 unicode-bidi = { workspace = true }
 fontdue = { workspace = true }
+harfrust = { workspace = true }
 
 [dev-dependencies]
 cosmic-text = { workspace = true }

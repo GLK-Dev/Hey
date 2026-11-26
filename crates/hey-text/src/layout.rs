@@ -4,8 +4,8 @@
 //!
 //! Bidi: lines are reordered visually (UAX #9, levels from `unicode-bidi`); no glyph mirroring yet.
 //!
-//! No shaping: one character is one glyph, no kerning or ligatures (a fontdue limitation;
-//! see ADR-8 on moving to cosmic-text/parley). Wrapping units are graphemes.
+//! Shaping: words are shaped with harfrust (kerning, ligatures, Arabic joining) per font and
+//! direction run; fontdue only rasterizes by glyph id (see ADR-8). Wrapping units are graphemes.
 
 use crate::fonts::{FontId, Fonts};
 use hey_core::{Color, Point};
@@ -95,24 +95,100 @@ struct Unit {
     glyphs: Vec<PlacedGlyph>,
     w: f32,
     ws: bool,
+    /// Byte offset of the grapheme in the source text.
+    byte: usize,
 }
 
-fn unit(fonts: &Fonts, chain: &[FontId], size: f32, s: &str, base: usize) -> Unit {
-    let mut glyphs = Vec::new();
-    let mut w = 0.0;
-    for (i, ch) in s.char_indices() {
-        // Invisible bidi formatting characters take part in reordering but produce no glyph.
-        if matches!(ch, '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}') {
-            continue;
+fn is_bidi_control(ch: char) -> bool {
+    matches!(ch, '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+}
+
+/// A run of characters shaped together: one font, one direction.
+struct Run {
+    font: FontId,
+    rtl: bool,
+    chars: Vec<(usize, char)>,
+}
+
+/// Splits `chars` into runs by fallback font and by strong direction.
+/// The font and direction stick to neutral characters, marks and joiners.
+fn split_runs(fonts: &Fonts, chain: &[FontId], chars: &[(usize, char)]) -> Vec<Run> {
+    let mut runs: Vec<Run> = Vec::new();
+    for &(byte, ch) in chars {
+        let rtl_class = match unicode_bidi::bidi_class(ch) {
+            unicode_bidi::BidiClass::R | unicode_bidi::BidiClass::AL => Some(true),
+            unicode_bidi::BidiClass::L => Some(false),
+            _ => None,
+        };
+        if let Some(r) = runs.last_mut() {
+            // Marks and joiners stay with their base; other chars take the first chain font.
+            let attaches = matches!(unicode_bidi::bidi_class(ch), unicode_bidi::BidiClass::NSM | unicode_bidi::BidiClass::BN);
+            let same_font =
+                fonts.glyph_index(r.font, ch).is_some() && (attaches || fonts.pick(chain, ch).is_some_and(|(f, _)| f == r.font));
+            if same_font && rtl_class.is_none_or(|c| c == r.rtl) {
+                r.chars.push((byte, ch));
+                continue;
+            }
         }
-        let Some((font, id)) = fonts.pick(chain, ch) else { continue };
-        let advance = fonts.advance(font, id, size);
-        // Combining characters inside a grapheme do not advance the pen.
-        let advance = if i == 0 { advance } else { 0.0 };
-        glyphs.push(PlacedGlyph { font, id, x: w, advance, byte: base + i, rtl: false });
-        w += advance;
+        let Some((font, _)) = fonts.pick(chain, ch) else { continue };
+        let rtl = rtl_class.unwrap_or_else(|| runs.last().is_some_and(|r| r.rtl));
+        runs.push(Run { font, rtl, chars: vec![(byte, ch)] });
     }
-    Unit { glyphs, w, ws: s.chars().all(char::is_whitespace) }
+    runs
+}
+
+/// Maximal runs of whitespace / non-whitespace with their byte offsets.
+fn chunks(s: &str) -> impl Iterator<Item = (usize, &str)> {
+    let mut start = 0;
+    let mut it = s.char_indices().peekable();
+    std::iter::from_fn(move || {
+        let (i, c) = it.next()?;
+        let ws = c.is_whitespace();
+        let mut end = i + c.len_utf8();
+        while let Some(&(j, d)) = it.peek() {
+            if d.is_whitespace() != ws {
+                break;
+            }
+            end = j + d.len_utf8();
+            it.next();
+        }
+        let from = std::mem::replace(&mut start, end);
+        Some((from, &s[from..end]))
+    })
+}
+
+/// Wrapping units (one per grapheme) for `word`, shaped as a whole so that kerning,
+/// ligatures and contextual forms work. A ligature puts its glyph on the first grapheme;
+/// the following graphemes become empty zero-width units.
+fn word_units(fonts: &Fonts, chain: &[FontId], size: f32, word: &str, base: usize) -> Vec<Unit> {
+    let mut units: Vec<Unit> = word
+        .grapheme_indices(true)
+        .map(|(gi, g)| Unit { glyphs: Vec::new(), w: 0.0, ws: g.chars().all(char::is_whitespace), byte: base + gi })
+        .collect();
+    if units.is_empty() {
+        return units;
+    }
+    // Invisible bidi formatting characters take part in reordering but produce no glyph.
+    let chars: Vec<(usize, char)> = word.char_indices().filter(|&(_, c)| !is_bidi_control(c)).map(|(i, c)| (base + i, c)).collect();
+    for run in split_runs(fonts, chain, &chars) {
+        let shaped = fonts.shape(run.font, &run.chars, run.rtl, size).unwrap_or_else(|| {
+            // Fallback without shaping: one glyph per character.
+            run.chars
+                .iter()
+                .map(|&(byte, ch)| {
+                    let id = fonts.glyph_index(run.font, ch).unwrap_or(0);
+                    crate::fonts::ShapedGlyph { id, cluster: byte, advance: fonts.advance(run.font, id, size), x_offset: 0.0 }
+                })
+                .collect()
+        });
+        for g in shaped {
+            let ui = units.partition_point(|u| u.byte <= g.cluster).saturating_sub(1);
+            let u = &mut units[ui];
+            u.glyphs.push(PlacedGlyph { font: run.font, id: g.id, x: u.w + g.x_offset, advance: g.advance, byte: g.cluster, rtl: false });
+            u.w += g.advance;
+        }
+    }
+    units
 }
 
 fn line_width(units: &[Unit]) -> f32 {
@@ -156,8 +232,15 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
     for para in text.split('\n') {
         let mut cur: Vec<Unit> = Vec::new();
         let mut curw = 0.0;
+        // Shape whole whitespace-delimited chunks so that features may span punctuation
+        // (`->`); wrapping still happens on UAX #29 word boundaries.
+        let mut shaped = chunks(para).flat_map(|(ci, chunk)| word_units(fonts, &style.chain, size, chunk, base + ci)).peekable();
         for (wi, word) in para.split_word_bound_indices() {
-            let units: Vec<Unit> = word.grapheme_indices(true).map(|(gi, g)| unit(fonts, &style.chain, size, g, base + wi + gi)).collect();
+            let end = base + wi + word.len();
+            let mut units = Vec::new();
+            while let Some(u) = shaped.next_if(|u| u.byte < end) {
+                units.push(u);
+            }
             let ww = line_width(&units);
             let ws = units.iter().all(|u| u.ws);
             if !ws && curw + ww > limit && !cur.is_empty() {
@@ -198,12 +281,13 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
         let last = lines.last_mut().expect("at least one line");
         if truncated || line_width(last) > width_limit {
             trim_end(last);
-            let tail = last.last().map_or(text.len(), |u| u.glyphs[0].byte + 1);
-            let dots = unit(fonts, &style.chain, size, "…", tail);
-            while !last.is_empty() && line_width(last) + dots.w > width_limit {
+            let tail = last.last().map_or(text.len(), |u| u.byte + 1);
+            let dots = word_units(fonts, &style.chain, size, "…", tail);
+            let dots_w = line_width(&dots);
+            while !last.is_empty() && line_width(last) + dots_w > width_limit {
                 last.pop();
             }
-            last.push(dots);
+            last.extend(dots);
         }
     }
 
@@ -228,13 +312,12 @@ pub fn layout(fonts: &Fonts, text: &str, style: &TextStyle) -> Layout {
             let width = line_width(&units);
             let mut line_rtl = last_rtl;
             if let Some(info) = &info {
-                let first = units.iter().find_map(|u| u.glyphs.first()).map(|g| g.byte);
+                let first = units.first().map(|u| u.byte);
                 if let Some(para) = first.and_then(|b| info.paragraphs.iter().find(|p| p.range.contains(&b))) {
                     line_rtl = para.level.is_rtl();
                 }
                 let para_level = if line_rtl { Level::rtl() } else { Level::ltr() };
-                let levels: Vec<Level> =
-                    units.iter().map(|u| u.glyphs.first().and_then(|g| info.levels.get(g.byte)).copied().unwrap_or(para_level)).collect();
+                let levels: Vec<Level> = units.iter().map(|u| info.levels.get(u.byte).copied().unwrap_or(para_level)).collect();
                 for (u, l) in units.iter_mut().zip(&levels) {
                     u.glyphs.iter_mut().for_each(|g| g.rtl = l.is_rtl());
                 }

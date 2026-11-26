@@ -1,10 +1,14 @@
 # ADR-8: Text: `fontdue` to start, then a shaping engine
 
-**Status:** Accepted (spike done; migration deferred)
+**Status:** Accepted (amended: shaping done with `harfrust`)
 
 ## Decision
 
 Rasterization and metrics currently use `fontdue` (Cyrillic works). `cosmic-text` is the chosen replacement when shaping, bidi or complex scripts are needed. The migration happens entirely inside `hey-text`, not before such a need appears.
+
+## Amendment
+
+Instead of `cosmic-text` + `swash`, shaping is done by `harfrust` inside `hey-text/src/layout.rs`. Whitespace-delimited chunks are shaped per font/direction run; glyphs are mapped to graphemes by cluster. Our own wrapping, bidi, fallback, ellipsis and hit-testing stay, and rasterization stays on `fontdue` by glyph id, so no `swash` is needed. `cosmic-text` remains only as a spike dev-dependency. Limits: no shaping across whitespace, `y_offset` ignored, caret inside a ligature maps to the next glyph.
 
 ## Rationale
 
