@@ -37,7 +37,7 @@ Goal: enough to build a real application.
 - [x] Scroll containers (`Style::scroll`): clipping, wheel bubbling, draggable scrollbar thumb, track paging.
 - [x] `List::add_keyed`: selection and scroll follow the row key across view rebuilds.
 - [x] `TextInput::add_submit`: Enter callback.
-- [ ] DPI scale factor end to end (layout in logical units, raster in physical).
+- [x] DPI scale factor end to end: layout and events in logical units, `Ui::paint` returns physical pixels (`Ui::set_scale`, `DisplayList::scale_by`).
 - [ ] Theme loading from disk and hot reload; tick source for `Transition` redraws.
 - [ ] Resolve the slice-size OPEN QUESTION in `DEVELOPMENT_PLAN.md` (`tokens.json` vs `themes.json`).
 

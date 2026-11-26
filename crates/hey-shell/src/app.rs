@@ -283,6 +283,7 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
 
 impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList) {
+        self.ui.set_scale(viewport.scale);
         *list = self.frame(Size::new(viewport.width as f32, viewport.height as f32));
     }
 
@@ -313,7 +314,12 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     }
 
     fn a11y_tree(&mut self) -> Option<hey_widgets::A11yTree> {
-        Some(self.ui.a11y_tree())
+        let mut t = self.ui.a11y_tree();
+        let s = self.ui.scale() as f32;
+        for n in &mut t.nodes {
+            n.rect = hey_core::Rect::new(n.rect.x * s, n.rect.y * s, n.rect.w * s, n.rect.h * s);
+        }
+        Some(t)
     }
 
     fn a11y_action(&mut self, action: hey_widgets::A11yAction) -> bool {

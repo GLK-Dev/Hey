@@ -161,6 +161,8 @@ pub struct Ui<Msg> {
     file_hover: bool,
     /// Scrollbar thumb drag: container, axis is vertical, pointer offset inside the thumb.
     sb_drag: Option<(NodeId, bool, f32)>,
+    /// Device pixels per logical pixel. Layout and widget events are logical; `paint` returns physical pixels.
+    scale: f64,
 }
 
 const MULTI_CLICK: Duration = Duration::from_millis(500);
@@ -183,6 +185,7 @@ impl<Msg: 'static> Ui<Msg> {
             file_drop: None,
             file_hover: false,
             sb_drag: None,
+            scale: 1.0,
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -390,9 +393,11 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Caret rectangle of the focused widget (for the IME candidate window).
+    /// Caret rectangle of the focused widget in physical pixels (for the IME candidate window).
     pub fn ime_area(&self) -> Option<Rect> {
-        self.focus.and_then(|f| self.nodes.get(&f)).and_then(|n| n.widget.ime_area())
+        let s = self.scale as f32;
+        let r = self.focus.and_then(|f| self.nodes.get(&f)).and_then(|n| n.widget.ime_area())?;
+        Some(Rect::new(r.x * s, r.y * s, r.w * s, r.h * s))
     }
 
     pub fn focused(&self) -> Option<NodeId> {
@@ -543,8 +548,43 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
-    /// Handles an event. Returns `true` if a redraw is needed.
+    /// Device pixels per logical pixel (1.0 by default).
+    pub fn scale(&self) -> f64 {
+        self.scale
+    }
+
+    /// Sets the DPI scale factor. Non-finite or non-positive values are ignored.
+    pub fn set_scale(&mut self, scale: f64) {
+        if scale.is_finite() && scale > 0.0 {
+            self.scale = scale;
+        }
+    }
+
+    /// Pointer positions arrive in physical pixels; widgets work in logical ones.
+    fn to_logical(&self, ev: &UiEvent) -> Option<UiEvent> {
+        if self.scale == 1.0 {
+            return None;
+        }
+        let s = self.scale as f32;
+        let p = |pos: &Point| Point::new(pos.x / s, pos.y / s);
+        Some(match ev {
+            UiEvent::PointerMove { pos } => UiEvent::PointerMove { pos: p(pos) },
+            UiEvent::PointerDown { pos, button } => UiEvent::PointerDown { pos: p(pos), button: *button },
+            UiEvent::PointerUp { pos, button } => UiEvent::PointerUp { pos: p(pos), button: *button },
+            UiEvent::Wheel { pos, dx, dy } => UiEvent::Wheel { pos: p(pos), dx: *dx, dy: *dy },
+            _ => return None,
+        })
+    }
+
+    /// Handles an event. Pointer positions are in physical pixels. Returns `true` if a redraw is needed.
     pub fn event(&mut self, ev: &UiEvent) -> bool {
+        if let UiEvent::ScaleFactor(s) = ev {
+            let changed = *s != self.scale && s.is_finite() && *s > 0.0;
+            self.set_scale(*s);
+            return changed;
+        }
+        let converted = self.to_logical(ev);
+        let ev = converted.as_ref().unwrap_or(ev);
         let r = match self.event_overlay(ev) {
             Some(r) => r,
             None => self.event_tree(ev),
@@ -684,8 +724,16 @@ impl<Msg: 'static> Ui<Msg> {
         true
     }
 
-    /// Layout and paint of all widgets in tree order.
+    /// Layout and paint of all widgets in tree order. `viewport` is in physical pixels; the
+    /// layout runs in logical pixels (`viewport / scale`) and the list is scaled back.
     pub fn paint(&mut self, viewport: Size) -> DisplayList {
+        let s = self.scale as f32;
+        let mut out = self.paint_logical(Size::new(viewport.w / s, viewport.h / s));
+        out.scale_by(s);
+        out
+    }
+
+    fn paint_logical(&mut self, viewport: Size) -> DisplayList {
         self.tree.compute(viewport);
         let mut out = DisplayList::new();
         let mut stack = vec![(self.tree.root(), false)];

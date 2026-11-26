@@ -29,6 +29,43 @@ impl DisplayList {
         self.cmds.clear();
     }
 
+    /// Multiplies every coordinate, size, radius and font size by `s` (logical to physical pixels).
+    pub fn scale_by(&mut self, s: f32) {
+        if s == 1.0 {
+            return;
+        }
+        let rect = |r: &mut Rect| *r = Rect::new(r.x * s, r.y * s, r.w * s, r.h * s);
+        for c in &mut self.cmds {
+            match c {
+                DrawCmd::Rect { rect: r, border, chamfer, shadow, .. } => {
+                    rect(r);
+                    *chamfer *= s;
+                    if let Some(b) = border {
+                        b.width *= s;
+                    }
+                    if let Some(sh) = shadow {
+                        sh.offset = hey_core::Point::new(sh.offset.x * s, sh.offset.y * s);
+                        sh.blur *= s;
+                    }
+                }
+                DrawCmd::Line { a, b, width, .. } => {
+                    *a = hey_core::Point::new(a.x * s, a.y * s);
+                    *b = hey_core::Point::new(b.x * s, b.y * s);
+                    *width *= s;
+                }
+                DrawCmd::Text(run) => {
+                    run.size_px *= s;
+                    for g in &mut run.glyphs {
+                        g.x *= s;
+                        g.y *= s;
+                    }
+                }
+                DrawCmd::Image { rect: r, .. } | DrawCmd::ClipPush(r) => rect(r),
+                _ => {}
+            }
+        }
+    }
+
     pub fn cmds(&self) -> &[DrawCmd] {
         &self.cmds
     }
