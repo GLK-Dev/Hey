@@ -141,3 +141,26 @@ fn text_scale_scales_font_and_spacing() {
     assert_eq!(base.clone().with_text_scale(100.0).text_scale, 4.0);
     assert_eq!(base.with_text_scale(0.0).text_scale, 0.5);
 }
+
+#[test]
+fn contrast_ratio_matches_wcag_extremes() {
+    let white = Color::hex(0xFFFFFF);
+    let black = Color::hex(0x000000);
+    assert!((contrast_ratio(white, black) - 21.0).abs() < 0.01);
+    assert!((contrast_ratio(white, white) - 1.0).abs() < 1e-4);
+}
+
+#[test]
+fn builtin_themes_pass_contrast_audit() {
+    for id in ["industrial-dark", "night-ops", "zeta-remastered"] {
+        assert_eq!(Theme::builtin(id).unwrap().audit_contrast(), vec![], "{id}");
+    }
+    // Known finding: the amber accent on the cream light panel is about 1.8:1 (needs 3:1).
+    // Fixing it is a design decision; tighten this assertion to `vec![]` once the light accent is darkened.
+    let light = Theme::light().audit_contrast();
+    assert_eq!(light.len(), 1, "{light:?}");
+    assert_eq!((light[0].foreground, light[0].background), ("accent", "panel"));
+    let mut bad = Theme::dark();
+    bad.palette.text = bad.palette.panel;
+    assert!(bad.audit_contrast().iter().any(|i| i.foreground == "text" && i.background == "panel"));
+}

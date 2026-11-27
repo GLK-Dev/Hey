@@ -4,6 +4,9 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+- `Theme::audit_contrast`, `contrast_ratio` and `relative_luminance` in `hey-style`: WCAG AA check of the colour pairs widgets draw. Known finding: the light theme accent on the panel is about 1.8:1.
+
 ## [0.1.0] - 2026-11-27
 
 ### Added
