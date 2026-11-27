@@ -24,6 +24,7 @@ pub use input::{InputState, LINE_PX};
 use hey_core::{Color, UiEvent};
 use hey_draw::{DisplayList, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
+#[cfg(feature = "gpu")]
 use hey_render_gpu::GpuRenderer;
 use hey_text::Fonts;
 use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
@@ -197,7 +198,11 @@ pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), Error> {
 }
 
 enum Backend {
-    Cpu { surface: softbuffer::Surface<Arc<Window>, Arc<Window>>, renderer: CpuRenderer },
+    Cpu {
+        surface: softbuffer::Surface<Arc<Window>, Arc<Window>>,
+        renderer: CpuRenderer,
+    },
+    #[cfg(feature = "gpu")]
     Gpu(Box<GpuRenderer>),
 }
 
@@ -211,6 +216,12 @@ struct Gfx {
     occluded: bool,
 }
 
+#[cfg(not(feature = "gpu"))]
+fn create_gpu(_window: &Arc<Window>, _clear: Color, _fonts: Option<Arc<Fonts>>, _vsync: bool) -> Result<Backend, Error> {
+    Err(Error::Gpu("built without the `gpu` feature".into()))
+}
+
+#[cfg(feature = "gpu")]
 fn create_gpu(window: &Arc<Window>, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) -> Result<Backend, Error> {
     let sz = window.inner_size();
     let mut r = GpuRenderer::new_for_window(window.clone(), sz.width.max(1), sz.height.max(1)).map_err(|e| Error::Gpu(e.to_string()))?;
@@ -239,6 +250,17 @@ fn is_switch_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
 }
 
 impl Gfx {
+    fn is_gpu(&self) -> bool {
+        #[cfg(feature = "gpu")]
+        {
+            matches!(self.backend, Some(Backend::Gpu(_)))
+        }
+        #[cfg(not(feature = "gpu"))]
+        {
+            false
+        }
+    }
+
     fn switch_backend(&mut self, clear: Color, fonts: Option<Arc<Fonts>>, vsync: bool) {
         let to_gpu = matches!(self.backend, Some(Backend::Cpu { .. }));
         self.images = None; // the new renderer has no images yet
@@ -252,7 +274,7 @@ impl Gfx {
                 create_cpu(&self.window, clear, fonts)
             }
         });
-        eprintln!("hey: renderer = {}", if matches!(self.backend, Some(Backend::Gpu(_))) { "gpu" } else { "cpu" });
+        eprintln!("hey: renderer = {}", if self.is_gpu() { "gpu" } else { "cpu" });
         self.window.request_redraw();
     }
 }
@@ -484,6 +506,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                 };
                 if changed {
                     match g.backend.as_mut().expect("backend") {
+                        #[cfg(feature = "gpu")]
                         Backend::Gpu(r) => r.set_images(images.clone()),
                         Backend::Cpu { renderer, .. } => renderer.images = images.clone(),
                     }
@@ -491,6 +514,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                 }
                 let _render = tracing::info_span!("render").entered();
                 match g.backend.as_mut().expect("backend") {
+                    #[cfg(feature = "gpu")]
                     Backend::Gpu(r) => {
                         r.resize(sz.width, sz.height);
                         r.render(list, vp);

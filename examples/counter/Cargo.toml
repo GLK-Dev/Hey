@@ -10,4 +10,9 @@ hey-core = { path = "../../crates/hey-core" }
 hey-layout = { path = "../../crates/hey-layout" }
 hey-style = { path = "../../crates/hey-style" }
 hey-widgets = { path = "../../crates/hey-widgets" }
-hey-shell = { path = "../../crates/hey-shell" }
+hey-shell = { path = "../../crates/hey-shell", default-features = false }
+
+[features]
+# Size benchmark: `cargo build --release -p counter --no-default-features` builds the CPU-only variant.
+default = ["gpu"]
+gpu = ["hey-shell/gpu"]
