@@ -52,7 +52,7 @@ Goal: native feel on every OS. Needs hardware or CI runners per OS.
 - [ ] macOS: native menu bar.
 - [~] Linux: `rfd` (gtk3) backend compiles; clipboard verified on Wayland and X11 (WSLg) with `arboard` `wayland-data-control`. Not verified by hand: native file dialogs and drag and drop (winit delivers `DroppedFile` on both).
 - [x] Native queries for high contrast and reduced motion: done on Windows (`SystemParametersInfoW`); macOS and Linux still use the `HEY_HIGH_CONTRAST` / `HEY_REDUCE_MOTION` env flags.
-- [ ] Multi-window.
+- [~] Multi-window: `hey-shell` routes events per window (`WindowKey`, `take_new_windows`, `window_closed`; example `multi_window`). The MVU `App` runtime does not use it yet; only checked by build, not by hand.
 
 ## 0.4: text
 

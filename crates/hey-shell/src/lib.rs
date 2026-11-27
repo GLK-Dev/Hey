@@ -23,7 +23,7 @@ use hey_draw::{DisplayList, UiRenderer, Viewport};
 use hey_render_cpu::CpuRenderer;
 use hey_render_gpu::GpuRenderer;
 use hey_text::Fonts;
-use std::{num::NonZeroU32, sync::Arc};
+use std::{collections::HashMap, num::NonZeroU32, sync::Arc};
 use winit::{
     application::ApplicationHandler,
     dpi::LogicalSize,
@@ -51,8 +51,28 @@ fn system_appearance(window: &Window) -> hey_style::Appearance {
     }
 }
 
+/// Identifies a window of the app. The first window is [`MAIN_WINDOW`]; extra windows get keys chosen by the app.
+pub type WindowKey = u32;
+
+/// Key of the first window; closing it exits the event loop.
+pub const MAIN_WINDOW: WindowKey = 0;
+
 /// App for the shell: builds a display list for every frame.
+///
+/// Single-window apps ignore the multi-window hooks ([`focus_window`](ShellApp::focus_window),
+/// [`take_new_windows`](ShellApp::take_new_windows), [`window_closed`](ShellApp::window_closed)).
 pub trait ShellApp {
+    /// The shell is about to call `draw`, `event`, `cursor`, `a11y_*` and the like on behalf of this window.
+    fn focus_window(&mut self, _key: WindowKey) {}
+
+    /// Extra windows the app wants opened; polled after every event and tick. Keys must be unique and not [`MAIN_WINDOW`].
+    fn take_new_windows(&mut self) -> Vec<(WindowKey, WindowConfig)> {
+        Vec::new()
+    }
+
+    /// An extra window was closed by the user (closing [`MAIN_WINDOW`] exits instead).
+    fn window_closed(&mut self, _key: WindowKey) {}
+
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList);
 
     /// Normalized input event; return `true` to request a redraw.
@@ -157,7 +177,7 @@ pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), Error> {
     let event_loop = EventLoop::<a11y::UserEvent>::with_user_event().build().map_err(|e| Error::EventLoop(e.to_string()))?;
     let proxy = event_loop.create_proxy();
     event_loop.set_control_flow(ControlFlow::Wait);
-    let mut shell = Shell { cfg, app, gfx: None, list: DisplayList::new(), input: InputState::default(), adapter: None, proxy };
+    let mut shell = Shell { cfg, app, windows: HashMap::new(), proxy };
     event_loop.run_app(&mut shell).map_err(|e| Error::EventLoop(e.to_string()))
 }
 
@@ -240,33 +260,108 @@ fn renderer_pref() -> (bool, bool) {
     }
 }
 
+/// One OS window with its own renderer, input state and accessibility adapter.
+struct Win {
+    key: WindowKey,
+    title: String,
+    clear: Color,
+    vsync: bool,
+    gfx: Gfx,
+    list: DisplayList,
+    input: InputState,
+    adapter: accesskit_winit::Adapter,
+}
+
 struct Shell<A> {
     cfg: WindowConfig,
     app: A,
-    gfx: Option<Gfx>,
-    list: DisplayList,
-    input: InputState,
-    adapter: Option<accesskit_winit::Adapter>,
+    windows: HashMap<WindowId, Win>,
     proxy: winit::event_loop::EventLoopProxy<a11y::UserEvent>,
+}
+
+impl<A: ShellApp> Shell<A> {
+    fn create_win(&mut self, el: &ActiveEventLoop, key: WindowKey, cfg: &WindowConfig) -> bool {
+        let attrs = Window::default_attributes()
+            .with_title(cfg.title.clone())
+            .with_inner_size(LogicalSize::new(cfg.size.0, cfg.size.1))
+            .with_visible(false);
+        let window = match el.create_window(attrs) {
+            Ok(w) => Arc::new(w),
+            Err(e) => {
+                eprintln!("hey: cannot create the window: {e}");
+                return false;
+            }
+        };
+        // The adapter must exist before the window becomes visible.
+        let adapter = accesskit_winit::Adapter::with_event_loop_proxy(el, &window, self.proxy.clone());
+        window.set_visible(true);
+        let (try_gpu, allow_cpu) = renderer_pref();
+        let (clear, fonts) = (cfg.clear, self.app.fonts());
+        let mut backend = None;
+        if try_gpu {
+            match create_gpu(&window, clear, fonts.clone(), vsync_setting(cfg.vsync)) {
+                Ok(b) => backend = Some(b),
+                Err(e) if allow_cpu => eprintln!("hey: GPU unavailable ({e}), using the CPU renderer"),
+                Err(e) => panic!("hey: GPU renderer requested but unavailable: {e}"),
+            }
+        }
+        let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
+        window.set_ime_allowed(true);
+        self.app.focus_window(key);
+        self.app.appearance_changed(system_appearance(&window));
+        if let Some(dark) = self.app.titlebar_dark() {
+            os::set_dark_titlebar(&window, dark);
+        }
+        window.request_redraw();
+        let id = window.id();
+        let gfx = Gfx { window, backend: Some(backend), images: None, occluded: false };
+        let win = Win {
+            key,
+            title: cfg.title.clone(),
+            clear,
+            vsync: cfg.vsync,
+            gfx,
+            list: DisplayList::new(),
+            input: InputState::default(),
+            adapter,
+        };
+        self.windows.insert(id, win);
+        true
+    }
+
+    /// Opens the windows the app asked for.
+    fn spawn_requested(&mut self, el: &ActiveEventLoop) {
+        for (key, cfg) in self.app.take_new_windows() {
+            if key == MAIN_WINDOW || self.windows.values().any(|w| w.key == key) {
+                eprintln!("hey: window key {key} is already in use");
+                continue;
+            }
+            self.create_win(el, key, &cfg);
+        }
+    }
+
+    fn redraw_all(&self) {
+        for w in self.windows.values() {
+            w.gfx.window.request_redraw();
+        }
+    }
 }
 
 impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
     fn user_event(&mut self, _el: &ActiveEventLoop, event: a11y::UserEvent) {
         let a11y::UserEvent::Access(ev) = event;
-        let title = self.cfg.title.clone();
+        let Some(win) = self.windows.get_mut(&ev.window_id) else { return };
+        self.app.focus_window(win.key);
+        let title = win.title.clone();
         match ev.window_event {
             accesskit_winit::WindowEvent::InitialTreeRequested => {
                 let upd = self.app.a11y_tree().map(|t| a11y::to_update(&t, &title)).unwrap_or_else(|| a11y::placeholder(&title));
-                if let Some(ad) = self.adapter.as_mut() {
-                    ad.update_if_active(|| upd);
-                }
+                win.adapter.update_if_active(|| upd);
             }
             accesskit_winit::WindowEvent::ActionRequested(req) => {
                 if let Some(a) = a11y::action(&req) {
                     if self.app.a11y_action(a) {
-                        if let Some(g) = &self.gfx {
-                            g.window.request_redraw();
-                        }
+                        win.gfx.window.request_redraw();
                     }
                 }
             }
@@ -279,10 +374,9 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         // so pending == false guarantees that tick has already seen all results.
         let pending = self.app.pending();
         if self.app.tick() {
-            if let Some(g) = &self.gfx {
-                g.window.request_redraw();
-            }
+            self.redraw_all();
         }
+        self.spawn_requested(el);
         el.set_control_flow(if pending {
             ControlFlow::WaitUntil(std::time::Instant::now() + std::time::Duration::from_millis(16))
         } else {
@@ -291,80 +385,54 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
     }
 
     fn resumed(&mut self, el: &ActiveEventLoop) {
-        if self.gfx.is_some() {
+        if !self.windows.is_empty() {
             return;
         }
-        let attrs = Window::default_attributes()
-            .with_title(self.cfg.title.clone())
-            .with_inner_size(LogicalSize::new(self.cfg.size.0, self.cfg.size.1))
-            .with_visible(false);
-        let window = match el.create_window(attrs) {
-            Ok(w) => Arc::new(w),
-            Err(e) => {
-                eprintln!("hey: cannot create the window: {e}");
-                el.exit();
-                return;
-            }
-        };
-        // The adapter must exist before the window becomes visible.
-        self.adapter = Some(accesskit_winit::Adapter::with_event_loop_proxy(el, &window, self.proxy.clone()));
-        window.set_visible(true);
-        let (try_gpu, allow_cpu) = renderer_pref();
-        let (clear, fonts) = (self.cfg.clear, self.app.fonts());
-        let mut backend = None;
-        if try_gpu {
-            match create_gpu(&window, clear, fonts.clone(), vsync_setting(self.cfg.vsync)) {
-                Ok(b) => backend = Some(b),
-                Err(e) if allow_cpu => eprintln!("hey: GPU unavailable ({e}), using the CPU renderer"),
-                Err(e) => panic!("hey: GPU renderer requested but unavailable: {e}"),
-            }
+        let cfg = WindowConfig { title: self.cfg.title.clone(), size: self.cfg.size, clear: self.cfg.clear, vsync: self.cfg.vsync };
+        if !self.create_win(el, MAIN_WINDOW, &cfg) {
+            el.exit();
         }
-        let backend = backend.unwrap_or_else(|| create_cpu(&window, clear, fonts));
-        window.set_ime_allowed(true);
-        self.app.appearance_changed(system_appearance(&window));
-        if let Some(dark) = self.app.titlebar_dark() {
-            os::set_dark_titlebar(&window, dark);
-        }
-        window.request_redraw();
-        self.gfx = Some(Gfx { window, backend: Some(backend), images: None, occluded: false });
     }
 
-    fn window_event(&mut self, el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        let Some(g) = self.gfx.as_mut() else { return };
-        if let Some(ad) = self.adapter.as_mut() {
-            ad.process_event(&g.window, &event);
-        }
-        if is_switch_hotkey(&event, self.input.mods) {
-            g.switch_backend(self.cfg.clear, self.app.fonts(), vsync_setting(self.cfg.vsync));
+    fn window_event(&mut self, el: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        let Some(g) = self.windows.get_mut(&id) else { return };
+        self.app.focus_window(g.key);
+        g.adapter.process_event(&g.gfx.window, &event);
+        if is_switch_hotkey(&event, g.input.mods) {
+            g.gfx.switch_backend(g.clear, self.app.fonts(), vsync_setting(g.vsync));
             return;
         }
         let mut redraw = false;
-        self.input.scale = g.window.scale_factor();
-        for ev in self.input.translate(&event) {
+        g.input.scale = g.gfx.window.scale_factor();
+        for ev in g.input.translate(&event) {
             redraw |= self.app.event(ev);
         }
-        if redraw {
-            g.window.request_redraw();
-        }
-        g.window.set_cursor(cursor_icon(self.app.cursor()));
+        g.gfx.window.set_cursor(cursor_icon(self.app.cursor()));
         match event {
-            WindowEvent::CloseRequested => el.exit(),
-            WindowEvent::Occluded(hidden) => {
-                g.occluded = hidden;
-                if !hidden {
-                    g.window.request_redraw();
+            WindowEvent::CloseRequested => {
+                if g.key == MAIN_WINDOW {
+                    el.exit();
+                } else {
+                    let key = g.key;
+                    self.windows.remove(&id);
+                    self.app.window_closed(key);
+                    self.redraw_all();
                 }
+                return;
+            }
+            WindowEvent::Occluded(hidden) => {
+                g.gfx.occluded = hidden;
+                redraw |= !hidden;
             }
             WindowEvent::ThemeChanged(_) => {
-                if self.app.appearance_changed(system_appearance(&g.window)) {
-                    g.window.request_redraw();
-                }
+                redraw |= self.app.appearance_changed(system_appearance(&g.gfx.window));
                 if let Some(dark) = self.app.titlebar_dark() {
-                    os::set_dark_titlebar(&g.window, dark);
+                    os::set_dark_titlebar(&g.gfx.window, dark);
                 }
             }
-            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => g.window.request_redraw(),
+            WindowEvent::Resized(_) | WindowEvent::ScaleFactorChanged { .. } => redraw = true,
             WindowEvent::RedrawRequested => {
+                let Win { gfx: g, list, adapter, title, .. } = g;
                 if g.occluded {
                     return;
                 }
@@ -374,15 +442,17 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                 };
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
                 let _frame = tracing::info_span!("frame").entered();
-                self.list.clear();
+                list.clear();
                 {
                     let _span = tracing::info_span!("app_draw").entered();
-                    self.app.draw(vp, &mut self.list);
+                    self.app.draw(vp, list);
                 }
-                if let Some(ad) = self.adapter.as_mut() {
+                {
                     // The snapshot is only built while assistive technology is connected.
-                    let (app, title) = (&mut self.app, &self.cfg.title);
-                    ad.update_if_active(|| app.a11y_tree().map(|t| a11y::to_update(&t, title)).unwrap_or_else(|| a11y::placeholder(title)));
+                    let app = &mut self.app;
+                    adapter.update_if_active(|| {
+                        app.a11y_tree().map(|t| a11y::to_update(&t, title)).unwrap_or_else(|| a11y::placeholder(title))
+                    });
                 }
                 if let Some(r) = self.app.ime_cursor_area() {
                     g.window.set_ime_cursor_area(
@@ -407,13 +477,13 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                 match g.backend.as_mut().expect("backend") {
                     Backend::Gpu(r) => {
                         r.resize(sz.width, sz.height);
-                        r.render(&self.list, vp);
+                        r.render(list, vp);
                     }
                     Backend::Cpu { surface, renderer } => {
                         if (renderer.fb.width, renderer.fb.height) != (sz.width, sz.height) {
                             renderer.resize(sz.width, sz.height);
                         }
-                        renderer.render(&self.list, vp);
+                        renderer.render(list, vp);
                         // A lost or resizing surface only drops this frame; the next redraw retries.
                         if surface.resize(w, h).is_err() {
                             return;
@@ -427,8 +497,14 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                         }
                     }
                 }
+                return;
             }
             _ => {}
         }
+        if redraw {
+            // An event may change state shown by other windows too.
+            self.redraw_all();
+        }
+        self.spawn_requested(el);
     }
 }
