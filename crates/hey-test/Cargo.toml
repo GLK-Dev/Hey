@@ -11,6 +11,7 @@ description = "Headless input simulation and golden screenshots for Hey UIs"
 
 [dependencies]
 hey-core = { path = "../hey-core", version = "0.1.0" }
+hey-layout = { path = "../hey-layout", version = "0.1.0" }
 hey-style = { path = "../hey-style", version = "0.1.0" }
 hey-text = { path = "../hey-text", version = "0.1.0" }
 hey-draw = { path = "../hey-draw", version = "0.1.0" }

@@ -13,9 +13,11 @@
 //! ```
 
 mod audit;
+mod layout;
 
 pub use audit::{audit_tree, Issue, IssueKind, MIN_TARGET};
 pub use hey_core::{Entry, ParseError, Recording};
+pub use layout::{audit_layout, LayoutIssue, LayoutIssueKind};
 
 /// A replayed frame hash differed from the recorded one.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -87,6 +89,27 @@ impl<Msg: 'static> Harness<Msg> {
     pub fn audit(&mut self) -> Vec<Issue> {
         self.frame();
         audit_tree(&self.ui.a11y_tree())
+    }
+
+    /// Layout lints over the current tree: clipped children and overlapping siblings.
+    pub fn audit_layout(&mut self) -> Vec<LayoutIssue> {
+        self.frame();
+        audit_layout(&self.ui.tree)
+    }
+
+    /// Run `check` once per text scale (percent, e.g. `[100, 150, 200]`) with the theme rescaled
+    /// and a fresh frame laid out. The original theme scale is restored afterwards.
+    /// Combine with [`audit_layout`](Self::audit_layout) for a one-call matrix:
+    /// `h.text_scale_matrix(&[100, 150, 200], |h| assert!(h.audit_layout().is_empty()))`.
+    pub fn text_scale_matrix(&mut self, percents: &[u32], mut check: impl FnMut(&mut Self)) {
+        let base = self.ui.env.theme.clone();
+        for &p in percents {
+            self.ui.set_theme(base.clone().with_text_scale(p as f32 / 100.0));
+            self.frame();
+            check(self);
+        }
+        self.ui.set_theme(base);
+        self.frame();
     }
 
     /// Run layout and paint once (needed before hit-testing new nodes).

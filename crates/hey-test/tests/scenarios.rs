@@ -157,3 +157,26 @@ fn inspector_is_off_by_default_and_diffs_frames() {
     assert_eq!(h.ui.paint(h.viewport).len(), h.ui.paint(h.viewport).len());
     assert!(h.ui.inspector_diff().is_empty());
 }
+
+#[test]
+fn layout_matrix_over_text_scale_and_scripts() {
+    use hey_style::Variant;
+    use hey_test::LayoutIssueKind;
+    use hey_widgets::{Button, Label};
+
+    // Latin and Arabic labels: the matrix must stay free of clipping and overlap.
+    for text in ["Save changes", "\u{62d}\u{641}\u{638} \u{627}\u{644}\u{62a}\u{63a}\u{64a}\u{64a}\u{631}\u{627}\u{62a}"] {
+        let mut h = Harness::<String>::new(640.0, 240.0);
+        let root = h.ui.root();
+        Label::add(&mut h.ui, root, text);
+        Button::add(&mut h.ui, root, text, Variant::Primary, Callback::new(|_| String::new()));
+        TextInput::add(&mut h.ui, root, "", 200.0, Callback::new(|s| s));
+        let mut seen = 0;
+        h.text_scale_matrix(&[100, 150, 200], |h| {
+            seen += 1;
+            let issues = h.audit_layout();
+            assert!(issues.iter().all(|i| i.kind != LayoutIssueKind::Overlap), "{text}: {issues:?}");
+        });
+        assert_eq!(seen, 3);
+    }
+}

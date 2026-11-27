@@ -1726,6 +1726,7 @@ version = "0.1.0"
 dependencies = [
  "hey-core",
  "hey-draw",
+ "hey-layout",
  "hey-render-cpu",
  "hey-style",
  "hey-text",
