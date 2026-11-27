@@ -5,6 +5,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- Linux: clipboard works on pure Wayland sessions (`arboard` `wayland-data-control`); ignored `system_clipboard_roundtrip` test for desktop sessions.
 - Optional `tracing` spans (`frame`, `app_draw`, `render`, `ui_paint`, `layout`); enable timings on stderr with `--features hey-shell/profiling` and `RUST_LOG`.
 - GPU frame benchmark (`cargo bench -p hey-render-gpu`).
 - `cargo-fuzz` targets `text_edit` and `arena` in `fuzz/` (separate workspace, nightly).

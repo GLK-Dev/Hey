@@ -36,3 +36,5 @@ windows-sys = { version = "0.61", features = ["Win32_Graphics_Dwm", "Win32_UI_Ac
 
 [target.'cfg(all(unix, not(target_os = "macos")))'.dependencies]
 rfd = { workspace = true, features = ["gtk3"] }
+# Without this arboard only talks to X11, which fails on pure Wayland sessions.
+arboard = { workspace = true, features = ["wayland-data-control"] }

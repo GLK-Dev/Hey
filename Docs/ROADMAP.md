@@ -50,7 +50,7 @@ Goal: native feel on every OS. Needs hardware or CI runners per OS.
 - [x] Windows: DWM dark title bar follows the app theme (`ShellApp::titlebar_dark`, applied at window creation and on system theme change). A DPI manifest is not needed: winit enables per-monitor DPI awareness itself.
 - [ ] Manual QA: dark title bar on a light OS theme (set a dark app theme, check the caption).
 - [ ] macOS: native menu bar.
-- [ ] Linux: `rfd` backend, Wayland/X11 clipboard and drag and drop.
+- [~] Linux: `rfd` (gtk3) backend compiles; clipboard verified on Wayland and X11 (WSLg) with `arboard` `wayland-data-control`. Not verified by hand: native file dialogs and drag and drop (winit delivers `DroppedFile` on both).
 - [x] Native queries for high contrast and reduced motion: done on Windows (`SystemParametersInfoW`); macOS and Linux still use the `HEY_HIGH_CONTRAST` / `HEY_REDUCE_MOTION` env flags.
 - [ ] Multi-window.
 
@@ -69,7 +69,7 @@ Goal: correct text in every script.
 - [x] GPU frame benchmark (`crates/hey-render-gpu/benches/gpu_frame.rs`).
 - [x] `tracing` spans (`frame`, `app_draw`, `render`, `ui_paint`, `layout`) behind the optional `hey-shell/profiling` feature; Tracy or puffin attach as a `tracing` layer.
 - [x] Optimise the rect rasterizer: interior pixels skip per-pixel coverage (2000 bordered chamfered rects: 70 ms to 32 ms at 1080p, 301 ms to 80 ms at 4K; output unchanged).
-- [ ] Linux and macOS performance baselines.
+- [x] Linux performance baseline (WSL2 Ubuntu, Ryzen 9 5950X, release; see `DEVELOPMENT_PLAN.md`). macOS baseline still needs a Mac.
 
 ## 1.0 criteria
 

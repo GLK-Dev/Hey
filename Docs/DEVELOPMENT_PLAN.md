@@ -196,6 +196,7 @@ OS event (winit) → Input normalizer → HitTest/Focus → Action/Msg
 
 ### Фаза 10. Качество, производительность, документация (3 Н)
 - [~] Бенчмарки (`criterion`): layout 10k узлов, paint, CPU-растеризация 4K. Done: `hey-layout/benches/layout.rs`, `hey-widgets/benches/frame.rs` (`cargo bench -p hey-layout --bench layout`, `-p hey-widgets --bench frame`). GPU frame: `hey-render-gpu/benches/gpu_frame.rs`. `tracing` spans behind `hey-shell/profiling` (`cargo run -p counter --features hey-shell/profiling`, filter via `RUST_LOG`); Tracy/puffin attach as a `tracing` layer.
+  - Baseline (Linux, WSL2 Ubuntu, Ryzen 9 5950X, release): layout 10k full 2.0 ms, cached 3 ns, hit-test 117 µs, build 10k 0.46 ms; typical UI paint 3.2 ms; GPU 2000 rects 12 ms at 1080p, 37 ms at 4K (Mesa software path in WSL2, so not representative of real GPUs). The Windows UI-paint number below is stale: it measures 4.6 ms today.
   - Baseline (Windows, release): layout 10k full 1.34 ms, cached 2 ns, hit-test 57 µs; typical UI paint 0.27 ms, CPU frame 1080p 8.6 ms; synthetic 2000 bordered chamfered rects: 70 ms at 1080p, 275 ms at 4K (rect rasterizer is the hotspot, optimize later).
 - [~] Цели (измерено на Windows, см. `Docs/ROADMAP.md`; Linux/macOS не измерены): ввод→кадр ≤ 16 мс при 1080p/60 FPS на CPU-бэкенде для типового UI; холостой CPU ≈ 0%; холодный старт < 300 мс.
 - [x] Fuzz/property-тесты текстового редактора и арены. Done: `proptest` suites (`hey-text/tests/edit_props.rs`, `hey-core/tests/arena_props.rs`). `cargo-fuzz` targets in `fuzz/` (`text_edit`, `arena`).
