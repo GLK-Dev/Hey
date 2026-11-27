@@ -260,6 +260,12 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         self
     }
 
+    /// Smallest logical size the user can resize the main window to.
+    pub fn min_size(mut self, width: f64, height: f64) -> Self {
+        self.window.min_size = Some((width, height));
+        self
+    }
+
     /// Command run at startup (e.g. the initial load).
     pub fn init(mut self, cmd: Command<Msg>) -> Self {
         self.init = cmd;
@@ -320,8 +326,13 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     }
 
     pub fn run(self) -> Result<(), Error> {
-        let cfg =
-            WindowConfig { title: self.window.title.clone(), size: self.window.size, clear: self.window.clear, vsync: self.window.vsync };
+        let cfg = WindowConfig {
+            title: self.window.title.clone(),
+            size: self.window.size,
+            clear: self.window.clear,
+            vsync: self.window.vsync,
+            min_size: self.window.min_size,
+        };
         let rt = self.build()?;
         crate::run(cfg, rt)
     }

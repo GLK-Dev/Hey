@@ -7,7 +7,11 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ### Fixed
 - Text scale applied after the first build (system `TextScaleFactor` at window creation, or a live change) left widgets sized for 100%: `Ui::reconcile` kept leaves whose props were unchanged. A size-affecting `set_theme` (font size or scale) now rebuilds leaves, with state and focus carried over; a dark/light switch still keeps them.
 
+### Changed
+- The light theme accent is darker (`#C47400`), so it passes the 3:1 contrast audit on the panel and keeps 4.5:1 for text on accent. `builtin_themes_pass_contrast_audit` now requires an empty result for the light theme; the site screenshots were regenerated.
+
 ### Added
+- `WindowConfig::min_size` and `App::min_size(w, h)`: the smallest logical size the user can resize a window to.
 - Dockable panels in `hey-widgets`: `Dock` (split tree of tabbed groups plus floating roots keyed by window number) with `select`, `close`, `move_panel(panel, target, DropZone)`, `float`, `dock_back` and `set_ratio`; `dock_view` renders a root as `View`s with the app's titles and content. Pure data, so it works with `window_view` and `Command::open_window` (example `docking`). Dragging is left to the app.
 - MVU multi-window in `hey-shell`: `App::window_view(|key, &model| ...)` is the view function for every extra window, `Command::open_window(key, cfg)` / `Command::close_window(key)` open and close them from `update`, and `App::on_window_closed` turns a user-closed window into a message. `ShellApp::take_closed_windows` lets a runtime close windows. The `multi_window` example now uses this API.
 - Time-travel debugging in `hey-shell`: `App::time_travel()` (needs `Model: Clone`, `Msg: Debug`) keeps a snapshot of the model after every message (capped at 1000, oldest dropped). `Runtime::seek(Seek::Back|Forward|Start|Live)`, `history_len`, `history_cursor` and `time_travel_seek` rewind and re-render any frame; `update` and commands are never re-run, because a snapshot is swapped in. While rewound, a status bar (`Ui::set_note`) shows the position, and incoming messages (including background task results) are dropped until `Seek::Live`. Hotkeys: Ctrl+Shift+Left/Right/Home/End.

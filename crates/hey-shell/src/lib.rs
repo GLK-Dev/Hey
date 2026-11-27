@@ -188,11 +188,13 @@ pub struct WindowConfig {
     pub clear: hey_core::Color,
     /// Wait for vertical sync on the GPU backend (`HEY_VSYNC=0|1` overrides).
     pub vsync: bool,
+    /// Smallest logical size the user can resize the window to (`None`: no limit).
+    pub min_size: Option<(f64, f64)>,
 }
 
 impl Default for WindowConfig {
     fn default() -> Self {
-        Self { title: "Hey".into(), size: (960.0, 600.0), clear: hey_core::Color::hex(0x0B0C10), vsync: true }
+        Self { title: "Hey".into(), size: (960.0, 600.0), clear: hey_core::Color::hex(0x0B0C10), vsync: true, min_size: None }
     }
 }
 
@@ -411,10 +413,13 @@ struct Shell<A> {
 
 impl<A: ShellApp> Shell<A> {
     fn create_win(&mut self, el: &ActiveEventLoop, key: WindowKey, cfg: &WindowConfig) -> bool {
-        let attrs = Window::default_attributes()
+        let mut attrs = Window::default_attributes()
             .with_title(cfg.title.clone())
             .with_inner_size(LogicalSize::new(cfg.size.0, cfg.size.1))
             .with_visible(false);
+        if let Some((w, h)) = cfg.min_size {
+            attrs = attrs.with_min_inner_size(LogicalSize::new(w, h));
+        }
         let window = match el.create_window(attrs) {
             Ok(w) => Arc::new(w),
             Err(e) => {
@@ -523,7 +528,13 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         if !self.windows.is_empty() {
             return;
         }
-        let cfg = WindowConfig { title: self.cfg.title.clone(), size: self.cfg.size, clear: self.cfg.clear, vsync: self.cfg.vsync };
+        let cfg = WindowConfig {
+            title: self.cfg.title.clone(),
+            size: self.cfg.size,
+            clear: self.cfg.clear,
+            vsync: self.cfg.vsync,
+            min_size: self.cfg.min_size,
+        };
         if !self.create_win(el, MAIN_WINDOW, &cfg) {
             el.exit();
         }

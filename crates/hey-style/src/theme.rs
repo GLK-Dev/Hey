@@ -256,6 +256,7 @@ impl Theme {
         p.text = Color::hex(0x14161B);
         p.text_muted = Color::hex(0x5B6270);
         p.text_disabled = Color::hex(0x9AA0AB);
+        p.accent = Color::hex(0xC47400);
         p.accent_dark = Color::hex(0x8A5200);
         p.error = Color::hex(0xD81B4A);
         p.success = Color::hex(0x0B9B45);
