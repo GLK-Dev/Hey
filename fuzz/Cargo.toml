@@ -1,0 +1,29 @@
+[package]
+name = "hey-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+hey-core = { path = "../crates/hey-core" }
+hey-text = { path = "../crates/hey-text" }
+
+[[bin]]
+name = "text_edit"
+path = "fuzz_targets/text_edit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "arena"
+path = "fuzz_targets/arena.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
