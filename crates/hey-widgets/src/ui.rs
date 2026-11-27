@@ -753,6 +753,7 @@ impl<Msg: 'static> Ui<Msg> {
     /// Layout and paint of all widgets in tree order. `viewport` is in physical pixels; the
     /// layout runs in logical pixels (`viewport / scale`) and the list is scaled back.
     pub fn paint(&mut self, viewport: Size) -> DisplayList {
+        let _span = tracing::info_span!("ui_paint").entered();
         let s = self.scale as f32;
         let mut out = self.paint_logical(Size::new(viewport.w / s, viewport.h / s));
         out.scale_by(s);
@@ -760,7 +761,10 @@ impl<Msg: 'static> Ui<Msg> {
     }
 
     fn paint_logical(&mut self, viewport: Size) -> DisplayList {
-        self.tree.compute(viewport);
+        {
+            let _span = tracing::info_span!("layout").entered();
+            self.tree.compute(viewport);
+        }
         let mut out = DisplayList::new();
         let mut stack = vec![(self.tree.root(), false)];
         while let Some((id, leave)) = stack.pop() {

@@ -5,6 +5,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- Optional `tracing` spans (`frame`, `app_draw`, `render`, `ui_paint`, `layout`); enable timings on stderr with `--features hey-shell/profiling` and `RUST_LOG`.
 - GPU frame benchmark (`cargo bench -p hey-render-gpu`).
 - `cargo-fuzz` targets `text_edit` and `arena` in `fuzz/` (separate workspace, nightly).
 - RTL golden test `text_rtl` and bundled Noto Sans Arabic and Noto Sans Hebrew (OFL) in `design/fonts`; layout tests no longer depend on system Arial.

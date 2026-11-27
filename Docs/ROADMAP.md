@@ -67,7 +67,7 @@ Goal: correct text in every script.
 
 - [x] `cargo-fuzz` targets for the text editor and arena (`fuzz/`, nightly, run with `cargo +nightly fuzz run text_edit`).
 - [x] GPU frame benchmark (`crates/hey-render-gpu/benches/gpu_frame.rs`).
-- [ ] `tracing` with Tracy or puffin.
+- [x] `tracing` spans (`frame`, `app_draw`, `render`, `ui_paint`, `layout`) behind the optional `hey-shell/profiling` feature; Tracy or puffin attach as a `tracing` layer.
 - [x] Optimise the rect rasterizer: interior pixels skip per-pixel coverage (2000 bordered chamfered rects: 70 ms to 32 ms at 1080p, 301 ms to 80 ms at 4K; output unchanged).
 - [ ] Linux and macOS performance baselines.
 

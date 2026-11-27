@@ -142,6 +142,17 @@ impl Default for WindowConfig {
 }
 
 pub fn run<A: ShellApp>(cfg: WindowConfig, app: A) -> Result<(), Error> {
+    #[cfg(feature = "profiling")]
+    {
+        use tracing_subscriber::fmt::format::FmtSpan;
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter(
+                tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "hey_shell=info,hey_widgets=info".into()),
+            )
+            .with_span_events(FmtSpan::CLOSE)
+            .with_writer(std::io::stderr)
+            .try_init();
+    }
     install_system_clipboard();
     let event_loop = EventLoop::<a11y::UserEvent>::with_user_event().build().map_err(|e| Error::EventLoop(e.to_string()))?;
     let proxy = event_loop.create_proxy();
@@ -362,8 +373,12 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                     return; // minimized
                 };
                 let vp = Viewport { width: sz.width, height: sz.height, scale: g.window.scale_factor() };
+                let _frame = tracing::info_span!("frame").entered();
                 self.list.clear();
-                self.app.draw(vp, &mut self.list);
+                {
+                    let _span = tracing::info_span!("app_draw").entered();
+                    self.app.draw(vp, &mut self.list);
+                }
                 if let Some(ad) = self.adapter.as_mut() {
                     // The snapshot is only built while assistive technology is connected.
                     let (app, title) = (&mut self.app, &self.cfg.title);
@@ -388,6 +403,7 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                     }
                     g.images = images;
                 }
+                let _render = tracing::info_span!("render").entered();
                 match g.backend.as_mut().expect("backend") {
                     Backend::Gpu(r) => {
                         r.resize(sz.width, sz.height);
