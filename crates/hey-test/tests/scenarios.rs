@@ -50,3 +50,23 @@ fn hidpi_screenshot_at_scale_two() {
     h.type_text("Hello");
     h.screenshot(GOLDEN, "typed_2x");
 }
+
+#[test]
+fn audit_passes_for_named_controls_and_flags_unnamed_ones() {
+    use hey_style::Variant;
+    use hey_test::IssueKind;
+    use hey_widgets::Button;
+
+    let mut h = Harness::<String>::new(400.0, 200.0);
+    let root = h.ui.root();
+    Button::add(&mut h.ui, root, "Save", Variant::Primary, Callback::new(|_| String::new()));
+    TextInput::add(&mut h.ui, root, "", 200.0, Callback::new(|s| s));
+    let issues = h.audit();
+    assert!(issues.iter().all(|i| i.kind == IssueKind::Unnamed), "unexpected findings: {issues:?}");
+    let before = issues.len();
+
+    Button::add(&mut h.ui, root, "", Variant::Primary, Callback::new(|_| String::new()));
+    let issues = h.audit();
+    assert_eq!(issues.len(), before + 1, "{issues:?}");
+    assert!(issues.iter().any(|i| i.kind == IssueKind::Unnamed && i.label.is_empty()));
+}

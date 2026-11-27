@@ -12,6 +12,10 @@
 //! h.screenshot(concat!(env!("CARGO_MANIFEST_DIR"), "/tests/golden"), "after_undo");
 //! ```
 
+mod audit;
+
+pub use audit::{audit_tree, Issue, IssueKind, MIN_TARGET};
+
 use hey_core::{Color, Modifiers, MouseButton, MsgSink, NodeId, Point, Size, UiEvent};
 use hey_draw::{UiRenderer, Viewport};
 use hey_render_cpu::{CpuRenderer, Framebuffer};
@@ -50,6 +54,13 @@ impl<Msg: 'static> Harness<Msg> {
     pub fn set_scale(&mut self, scale: f64) {
         self.ui.set_scale(scale);
         self.frame();
+    }
+
+    /// Accessibility lints over the current tree: unnamed, undersized or keyboard-unreachable controls.
+    /// An empty list means the UI passes; use `assert!(h.audit().is_empty(), ...)` in tests.
+    pub fn audit(&mut self) -> Vec<Issue> {
+        self.frame();
+        audit_tree(&self.ui.a11y_tree())
     }
 
     /// Run layout and paint once (needed before hit-testing new nodes).
