@@ -164,3 +164,36 @@ fn builtin_themes_pass_contrast_audit() {
     bad.palette.text = bad.palette.panel;
     assert!(bad.audit_contrast().iter().any(|i| i.foreground == "text" && i.background == "panel"));
 }
+
+const BUILTIN_JSON: &str = include_str!("../assets/themes.json");
+
+#[test]
+fn builtin_tokens_are_a_valid_contract() {
+    assert_eq!(validate_tokens(BUILTIN_JSON), vec![]);
+}
+
+#[test]
+fn design_tokens_copy_matches_builtin() {
+    let design = include_str!("../../../design/tokens/themes.json");
+    assert!(design == BUILTIN_JSON, "design/tokens/themes.json and crates/hey-style/assets/themes.json differ");
+}
+
+#[test]
+fn validation_reports_every_problem() {
+    let broken = BUILTIN_JSON.replacen("\"focus\":", "\"focusX\":", 1).replacen("\"width\":", "\"width\": 99, \"w0\":", 1);
+    let paths: Vec<String> = validate_tokens(&broken).into_iter().map(|i| i.path).collect();
+    assert!(paths.iter().any(|p| p == "focus.width"), "{paths:?}");
+    assert!(validate_tokens("{").iter().any(|i| i.path == "json"));
+    assert!(validate_tokens("{}").iter().any(|i| i.path == "themes"));
+}
+
+#[test]
+fn exports_css_and_design_tokens() {
+    let css = export_css(BUILTIN_JSON).unwrap();
+    assert!(css.contains("[data-theme=\"industrial-dark\"]"));
+    assert!(css.contains("--hey-color-text-muted: #"));
+    assert!(css.contains("--hey-ansi-15: #"));
+    let figma: serde_json::Value = serde_json::from_str(&export_figma(BUILTIN_JSON).unwrap()).unwrap();
+    assert_eq!(figma["industrial-dark"]["color"]["textMuted"]["$type"], "color");
+    assert_eq!(figma["industrial-dark"]["motion"]["fast"]["$type"], "duration");
+}

@@ -124,7 +124,7 @@ fn num(v: &Value, k: &str) -> Result<f32, ThemeError> {
     get(v, k)?.as_f64().map(|x| x as f32).ok_or_else(|| ThemeError::Missing(k.into()))
 }
 
-const KNOWN: [&str; 21] = [
+pub(crate) const KNOWN: [&str; 21] = [
     "desktop",
     "desktopDeep",
     "panel",

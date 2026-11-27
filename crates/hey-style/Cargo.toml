@@ -12,3 +12,7 @@ description = "Design tokens and themes for the Hey UI framework"
 [dependencies]
 hey-core = { path = "../hey-core", version = "0.1.0" }
 serde_json = { workspace = true }
+
+[[bin]]
+name = "hey-style"
+path = "src/cli.rs"
