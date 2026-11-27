@@ -1,58 +1,68 @@
 // Copyright (c) Vitaly Golik (mjojo)
 
-//! Click anywhere to open another window; close extra windows independently, close the first to quit.
+//! MVU multi-window: a button opens another window with its own view function. Each extra window
+//! can close itself; closing the first window quits.
 
-use hey_core::{Color, Rect, UiEvent};
-use hey_draw::{DisplayList, DrawCmd, Viewport};
-use hey_shell::{run, ShellApp, WindowConfig, WindowKey, MAIN_WINDOW};
+use hey_core::Callback;
+use hey_shell::{App, Command, WindowConfig, WindowKey};
+use hey_style::Variant;
+use hey_widgets::{Button, Label, View};
 
-struct Demo {
-    current: WindowKey,
-    open: Vec<WindowKey>,
-    next_key: WindowKey,
-    requests: Vec<(WindowKey, WindowConfig)>,
+#[derive(Debug)]
+enum Msg {
+    Open,
+    Close(WindowKey),
+    Closed(WindowKey),
 }
 
-impl ShellApp for Demo {
-    fn focus_window(&mut self, key: WindowKey) {
-        self.current = key;
-    }
+#[derive(Default)]
+struct Model {
+    next_key: WindowKey,
+    open: Vec<WindowKey>,
+}
 
-    fn draw(&mut self, vp: Viewport, list: &mut DisplayList) {
-        // Every window gets its own tint so the routing is visible.
-        let hue = (self.current * 70 % 200) as u8;
-        let s = vp.scale as f32;
-        list.push(DrawCmd::Rect {
-            rect: Rect::new(40.0 * s, 40.0 * s, 200.0 * s, 120.0 * s),
-            fill: Color::rgb(40 + hue, 90, 220 - hue),
-            border: None,
-            chamfer: 12.0 * s,
-            shadow: None,
-        });
-    }
-
-    fn event(&mut self, ev: UiEvent) -> bool {
-        if matches!(ev, UiEvent::PointerDown { .. }) {
-            let key = self.next_key;
-            self.next_key += 1;
-            self.open.push(key);
+fn update(m: &mut Model, msg: Msg) -> Command<Msg> {
+    match msg {
+        Msg::Open => {
+            m.next_key += 1;
+            let key = m.next_key;
+            m.open.push(key);
             let cfg = WindowConfig { title: format!("Hey window {key}"), size: (420.0, 300.0), ..WindowConfig::default() };
-            self.requests.push((key, cfg));
+            Command::open_window(key, cfg)
         }
-        false
+        Msg::Close(key) => {
+            m.open.retain(|k| *k != key);
+            Command::close_window(key)
+        }
+        Msg::Closed(key) => {
+            m.open.retain(|k| *k != key);
+            Command::none()
+        }
     }
+}
 
-    fn take_new_windows(&mut self) -> Vec<(WindowKey, WindowConfig)> {
-        std::mem::take(&mut self.requests)
-    }
+fn main_view(m: &Model) -> Vec<View<Msg>> {
+    let n = m.open.len();
+    vec![
+        View::leaf("count", n, move |ui, p| Label::add(ui, p, &format!("Extra windows: {n}"))),
+        View::leaf("open", (), |ui, p| Button::add(ui, p, "Open window", Variant::Primary, Callback::new(|_| Msg::Open))),
+    ]
+}
 
-    fn window_closed(&mut self, key: WindowKey) {
-        self.open.retain(|k| *k != key);
-        eprintln!("closed window {key}, {} extra left", self.open.len());
-    }
+fn extra_view(key: WindowKey, _: &Model) -> Vec<View<Msg>> {
+    vec![
+        View::leaf("title", key, move |ui, p| Label::add(ui, p, &format!("Window {key}"))),
+        View::leaf("close", key, move |ui, p| Button::add(ui, p, "Close", Variant::Primary, Callback::new(move |_| Msg::Close(key)))),
+    ]
 }
 
 fn main() {
-    let app = Demo { current: MAIN_WINDOW, open: Vec::new(), next_key: 1, requests: Vec::new() };
-    run(WindowConfig { title: "Hey multi-window".into(), ..WindowConfig::default() }, app).unwrap();
+    App::new(Model::default())
+        .title("Hey multi-window")
+        .update(update)
+        .view(main_view)
+        .window_view(extra_view)
+        .on_window_closed(Msg::Closed)
+        .run()
+        .unwrap();
 }

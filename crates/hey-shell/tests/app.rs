@@ -181,3 +181,99 @@ fn time_travel_rewinds_100_messages_without_rerunning_commands() {
     assert!(rt.time_travel_seek(Seek::Start));
     assert_eq!(rt.model().0, 0);
 }
+
+#[derive(Debug)]
+enum WMsg {
+    Open(u32),
+    Close(u32),
+    Closed(u32),
+}
+
+#[derive(Default)]
+struct WModel {
+    open: Vec<u32>,
+    closed_by_user: Vec<u32>,
+}
+
+fn w_update(m: &mut WModel, msg: WMsg) -> Command<WMsg> {
+    match msg {
+        WMsg::Open(k) => {
+            m.open.push(k);
+            Command::open_window(k, hey_shell::WindowConfig::default())
+        }
+        WMsg::Close(k) => {
+            m.open.retain(|o| *o != k);
+            Command::close_window(k)
+        }
+        WMsg::Closed(k) => {
+            m.open.retain(|o| *o != k);
+            m.closed_by_user.push(k);
+            Command::none()
+        }
+    }
+}
+
+fn w_main(_: &WModel) -> Vec<View<WMsg>> {
+    vec![View::leaf("open", (), |ui, p| Button::add(ui, p, "Open", Variant::Primary, Callback::new(|_| WMsg::Open(1))))]
+}
+
+fn w_extra(key: u32, _: &WModel) -> Vec<View<WMsg>> {
+    vec![
+        View::leaf("close", key, move |ui, p| Button::add(ui, p, "Close", Variant::Primary, Callback::new(move |_| WMsg::Close(key)))),
+        View::leaf("other", (), |ui, p| Button::add(ui, p, "Other", Variant::Primary, Callback::new(|_| WMsg::Open(2)))),
+    ]
+}
+
+#[test]
+fn extra_windows_have_own_views_and_close() {
+    let font = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf");
+    let mut rt = App::new(WModel::default())
+        .update(w_update)
+        .view(w_main)
+        .window_view(w_extra)
+        .on_window_closed(WMsg::Closed)
+        .font(font)
+        .build()
+        .unwrap();
+    let vp = Size::new(400.0, 300.0);
+    rt.frame(vp);
+    assert_eq!(rt.window_count(), 1);
+
+    // Main window: click "Open" -> a second window is requested.
+    let r = rt.ui.tree.rect(rt.ui.tree.children(rt.ui.root())[0]);
+    click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
+    assert_eq!(rt.window_count(), 2);
+    let new = rt.take_new_windows();
+    assert_eq!(new.len(), 1);
+    assert_eq!(new[0].0, 1);
+
+    // The shell focuses the new window before drawing it: it has its own two-button view.
+    rt.focus_window(1);
+    rt.frame(vp);
+    assert_eq!(rt.ui.tree.children(rt.ui.root()).len(), 2);
+    rt.focus_window(hey_shell::MAIN_WINDOW);
+    assert_eq!(rt.ui.tree.children(rt.ui.root()).len(), 1);
+
+    // Closing from inside the extra window removes it and reports it to the shell.
+    rt.focus_window(1);
+    let r = rt.ui.tree.rect(rt.ui.tree.children(rt.ui.root())[0]);
+    click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
+    assert_eq!(rt.window_count(), 1);
+    assert_eq!(rt.take_closed_windows(), vec![1]);
+    assert!(rt.model().open.is_empty());
+
+    // A window closed by the user produces `on_window_closed`.
+    rt.focus_window(hey_shell::MAIN_WINDOW);
+    rt.frame(vp);
+    let r = rt.ui.tree.rect(rt.ui.tree.children(rt.ui.root())[0]);
+    click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
+    assert_eq!(rt.window_count(), 2);
+    rt.window_closed(1);
+    let t = Instant::now();
+    while rt.model().closed_by_user.is_empty() && t.elapsed() < Duration::from_secs(5) {
+        rt.tick();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(rt.window_count(), 1);
+    assert_eq!(rt.model().closed_by_user, vec![1]);
+}

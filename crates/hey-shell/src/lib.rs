@@ -86,6 +86,12 @@ pub trait ShellApp {
         Vec::new()
     }
 
+    /// Extra windows the app wants closed (polled together with [`take_new_windows`](ShellApp::take_new_windows));
+    /// [`window_closed`](ShellApp::window_closed) is not called for these. [`MAIN_WINDOW`] is ignored.
+    fn take_closed_windows(&mut self) -> Vec<WindowKey> {
+        Vec::new()
+    }
+
     /// An extra window was closed by the user (closing [`MAIN_WINDOW`] exits instead).
     fn window_closed(&mut self, _key: WindowKey) {}
 
@@ -456,6 +462,10 @@ impl<A: ShellApp> Shell<A> {
 
     /// Opens the windows the app asked for.
     fn spawn_requested(&mut self, el: &ActiveEventLoop) {
+        let closed = self.app.take_closed_windows();
+        if !closed.is_empty() {
+            self.windows.retain(|_, w| w.key == MAIN_WINDOW || !closed.contains(&w.key));
+        }
         for (key, cfg) in self.app.take_new_windows() {
             if key == MAIN_WINDOW || self.windows.values().any(|w| w.key == key) {
                 eprintln!("hey: window key {key} is already in use");

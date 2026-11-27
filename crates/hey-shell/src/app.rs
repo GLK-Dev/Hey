@@ -6,12 +6,13 @@
 //! `view(&model)` → `Ui::reconcile`. Background tasks (`Command::perform`) run on threads,
 //! results come back via `mpsc` and are polled in `tick()`.
 
-use crate::{Error, ShellApp, WindowConfig};
+use crate::{Error, ShellApp, WindowConfig, WindowKey, MAIN_WINDOW};
 use hey_core::{MsgSink, Size, UiEvent};
 use hey_draw::{DisplayList, Viewport};
 use hey_style::Theme;
 use hey_text::{FontId, Fonts};
 use hey_widgets::{Ui, View};
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
@@ -52,6 +53,11 @@ pub enum Command<Msg> {
     /// Run work on a background thread; the result is turned into a `Msg`.
     Task(Job<Msg>),
     Batch(Vec<Command<Msg>>),
+    /// Open an extra window; its content comes from `App::window_view`. Ignored for
+    /// `MAIN_WINDOW`, a key that is already open, or when no window view is set.
+    OpenWindow(WindowKey, WindowConfig),
+    /// Close an extra window by key (`MAIN_WINDOW` cannot be closed this way).
+    CloseWindow(WindowKey),
 }
 
 impl<Msg: Send + 'static> Command<Msg> {
@@ -68,6 +74,16 @@ impl<Msg: Send + 'static> Command<Msg> {
         Command::Task(Box::new(move || map(work())))
     }
 
+    /// Open the extra window `key` (see `App::window_view`).
+    pub fn open_window(key: WindowKey, cfg: WindowConfig) -> Self {
+        Command::OpenWindow(key, cfg)
+    }
+
+    /// Close the extra window `key`.
+    pub fn close_window(key: WindowKey) -> Self {
+        Command::CloseWindow(key)
+    }
+
     pub fn batch(cmds: impl IntoIterator<Item = Command<Msg>>) -> Self {
         Command::Batch(cmds.into_iter().collect())
     }
@@ -75,6 +91,8 @@ impl<Msg: Send + 'static> Command<Msg> {
 
 type UpdateFn<M, Msg> = Box<dyn FnMut(&mut M, Msg) -> Command<Msg>>;
 type ViewFn<M, Msg> = Box<dyn Fn(&M) -> Vec<View<Msg>>>;
+type WindowViewFn<M, Msg> = Box<dyn Fn(WindowKey, &M) -> Vec<View<Msg>>>;
+type ClosedFn<Msg> = Box<dyn Fn(WindowKey) -> Msg>;
 
 /// Time-travel scrubber moves (dev hotkeys Ctrl+Shift+Left / Right / Home / End).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -124,6 +142,8 @@ pub struct App<M, Msg: Send + 'static> {
     model: M,
     update: Option<UpdateFn<M, Msg>>,
     view: Option<ViewFn<M, Msg>>,
+    window_view: Option<WindowViewFn<M, Msg>>,
+    on_window_closed: Option<ClosedFn<Msg>>,
     theme: Theme,
     auto_theme: bool,
     theme_file: Option<(PathBuf, String)>,
@@ -141,6 +161,8 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             model,
             update: None,
             view: None,
+            window_view: None,
+            on_window_closed: None,
             theme: Theme::dark(),
             auto_theme: false,
             theme_file: None,
@@ -180,6 +202,20 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
 
     pub fn view(mut self, f: impl Fn(&M) -> Vec<View<Msg>> + 'static) -> Self {
         self.view = Some(Box::new(f));
+        self
+    }
+
+    /// View of every extra window (opened with `Command::open_window`), chosen by its key. All
+    /// windows share one model and one `update`; `view` stays the view of `MAIN_WINDOW`.
+    pub fn window_view(mut self, f: impl Fn(WindowKey, &M) -> Vec<View<Msg>> + 'static) -> Self {
+        self.window_view = Some(Box::new(f));
+        self
+    }
+
+    /// Message sent when the user closes an extra window, so the model can forget it.
+    /// Not sent for windows closed with `Command::close_window`.
+    pub fn on_window_closed(mut self, f: impl Fn(WindowKey) -> Msg + 'static) -> Self {
+        self.on_window_closed = Some(Box::new(f));
         self
     }
 
@@ -246,7 +282,7 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         let sink = MsgSink::new();
         let watch = self.theme_file.map(|(path, id)| ThemeWatch::new(path, id));
         let theme = watch.as_ref().and_then(|w| w.load().ok()).unwrap_or(self.theme);
-        let ui = Ui::new(theme, Arc::new(fonts), chain, sink.clone());
+        let ui = Ui::new(theme, Arc::new(fonts), chain.clone(), sink.clone());
         let (tx, rx) = mpsc::channel();
         let tt = self.time_travel.map(|(clone, label)| TimeTravel {
             history: vec![("init".to_string(), clone(&self.model))],
@@ -259,6 +295,13 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             model: self.model,
             update,
             view,
+            window_view: self.window_view,
+            on_window_closed: self.on_window_closed,
+            chain,
+            parked: HashMap::new(),
+            current: MAIN_WINDOW,
+            opened: Vec::new(),
+            closed: Vec::new(),
             ui,
             sink,
             tx,
@@ -329,6 +372,15 @@ pub struct Runtime<M, Msg: Send + 'static> {
     model: M,
     update: UpdateFn<M, Msg>,
     view: ViewFn<M, Msg>,
+    window_view: Option<WindowViewFn<M, Msg>>,
+    on_window_closed: Option<ClosedFn<Msg>>,
+    chain: Vec<FontId>,
+    /// `Ui` of every window except the focused one; `focus_window` swaps it with `ui`.
+    parked: HashMap<WindowKey, Ui<Msg>>,
+    current: WindowKey,
+    opened: Vec<(WindowKey, WindowConfig)>,
+    closed: Vec<WindowKey>,
+    /// `Ui` of the focused window (`MAIN_WINDOW` until the shell focuses another one).
     pub ui: Ui<Msg>,
     sink: MsgSink<Msg>,
     tx: mpsc::Sender<Msg>,
@@ -348,11 +400,65 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
         &self.model
     }
 
+    fn views_for(&self, key: WindowKey) -> Vec<View<Msg>> {
+        match (key, &self.window_view) {
+            (MAIN_WINDOW, _) => (self.view)(&self.model),
+            (key, Some(f)) => f(key, &self.model),
+            (_, None) => Vec::new(),
+        }
+    }
+
     fn rebuild(&mut self) {
-        let views = (self.view)(&self.model);
+        let views = self.views_for(self.current);
         let root = self.ui.root();
         self.ui.reconcile(root, views);
+        let keys: Vec<WindowKey> = self.parked.keys().copied().collect();
+        for key in keys {
+            let views = self.views_for(key);
+            if let Some(ui) = self.parked.get_mut(&key) {
+                let root = ui.root();
+                ui.reconcile(root, views);
+            }
+        }
         self.dirty = false;
+    }
+
+    /// Makes `key` the window that `ui` and the `ShellApp` methods refer to. Unknown keys are ignored.
+    fn focus(&mut self, key: WindowKey) {
+        if key == self.current {
+            return;
+        }
+        if let Some(next) = self.parked.remove(&key) {
+            let prev = std::mem::replace(&mut self.ui, next);
+            self.parked.insert(self.current, prev);
+            self.current = key;
+        }
+    }
+
+    fn open_window(&mut self, key: WindowKey, cfg: WindowConfig) {
+        if key == MAIN_WINDOW || key == self.current || self.parked.contains_key(&key) || self.window_view.is_none() {
+            return;
+        }
+        let mut ui = Ui::new(self.ui.env.theme.clone(), self.ui.env.fonts.clone(), self.chain.clone(), self.sink.clone());
+        ui.set_scale(self.ui.scale());
+        self.parked.insert(key, ui);
+        self.opened.push((key, cfg));
+        self.dirty = true;
+    }
+
+    fn close_window(&mut self, key: WindowKey) {
+        if key == MAIN_WINDOW {
+            return;
+        }
+        self.focus(MAIN_WINDOW);
+        if self.parked.remove(&key).is_some() {
+            self.closed.push(key);
+        }
+    }
+
+    /// Number of open windows, the main one included.
+    pub fn window_count(&self) -> usize {
+        1 + self.parked.len()
     }
 
     fn run_command(&mut self, cmd: Command<Msg>) {
@@ -360,6 +466,8 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
             Command::None => {}
             Command::Msg(m) => self.sink.send(m),
             Command::Batch(v) => v.into_iter().for_each(|c| self.run_command(c)),
+            Command::OpenWindow(key, cfg) => self.open_window(key, cfg),
+            Command::CloseWindow(key) => self.close_window(key),
             Command::Task(job) => {
                 let tx = self.tx.clone();
                 let n = self.in_flight.clone();
@@ -425,6 +533,9 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
         t.cursor = index;
         self.model = (t.clone)(&t.history[index].1);
         let note = t.note();
+        for ui in self.parked.values_mut() {
+            ui.set_note(note.clone());
+        }
         self.ui.set_note(note);
         self.dirty = true;
         true
@@ -463,6 +574,27 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
 }
 
 impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
+    fn focus_window(&mut self, key: WindowKey) {
+        self.focus(key);
+    }
+
+    fn take_new_windows(&mut self) -> Vec<(WindowKey, WindowConfig)> {
+        std::mem::take(&mut self.opened)
+    }
+
+    fn take_closed_windows(&mut self) -> Vec<WindowKey> {
+        std::mem::take(&mut self.closed)
+    }
+
+    fn window_closed(&mut self, key: WindowKey) {
+        self.focus(MAIN_WINDOW);
+        if self.parked.remove(&key).is_some() {
+            if let Some(f) = &self.on_window_closed {
+                self.sink.send(f(key));
+            }
+        }
+    }
+
     fn draw(&mut self, viewport: Viewport, list: &mut DisplayList) {
         self.ui.set_scale(viewport.scale);
         let was = self.ui.animating();
@@ -486,11 +618,18 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
             if scaled.text_scale == self.ui.env.theme.text_scale {
                 return false;
             }
+            for ui in self.parked.values_mut() {
+                ui.set_theme(scaled.clone());
+            }
             self.ui.set_theme(scaled);
             self.dirty = true;
             return true;
         }
-        self.ui.set_theme(Theme::for_appearance(a));
+        let t = Theme::for_appearance(a);
+        for ui in self.parked.values_mut() {
+            ui.set_theme(t.clone());
+        }
+        self.ui.set_theme(t);
         self.dirty = true;
         true
     }
@@ -544,6 +683,9 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
     fn tick(&mut self) -> bool {
         let mut redraw = self.poll();
         if let Some(t) = self.watch.as_mut().and_then(ThemeWatch::changed) {
+            for ui in self.parked.values_mut() {
+                ui.set_theme(t.clone());
+            }
             self.ui.set_theme(t);
             self.dirty = true;
             redraw = true;
@@ -556,11 +698,15 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
             self.ui.tick(dt.min(50.0));
             redraw = true;
         }
+        for ui in self.parked.values_mut().filter(|u| u.animating()) {
+            ui.tick(dt.min(50.0));
+            redraw = true;
+        }
         redraw
     }
 
     fn pending(&self) -> bool {
-        self.watch.is_some() || self.ui.animating() || self.in_flight.load(Ordering::SeqCst) > 0
+        self.watch.is_some() || self.ui.animating() || self.parked.values().any(Ui::animating) || self.in_flight.load(Ordering::SeqCst) > 0
     }
 
     fn cursor(&self) -> hey_core::CursorIcon {
