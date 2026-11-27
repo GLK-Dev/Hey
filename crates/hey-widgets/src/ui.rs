@@ -773,6 +773,25 @@ impl<Msg: 'static> Ui<Msg> {
         out
     }
 
+    /// Renders the UI with the CPU reference renderer, without a window. `viewport` is in physical
+    /// pixels, so a 2x screenshot of a 400x300 layout is `set_scale(2.0)` and `Size::new(800.0, 600.0)`.
+    /// The frame is cleared to the theme's desktop colour; the bytes are the same on every platform.
+    pub fn render(&mut self, viewport: Size) -> hey_render_cpu::Framebuffer {
+        use hey_draw::{UiRenderer, Viewport};
+        let (w, h) = (viewport.w.max(1.0) as u32, viewport.h.max(1.0) as u32);
+        let list = self.paint(Size::new(w as f32, h as f32));
+        let mut r = hey_render_cpu::CpuRenderer::new(w, h);
+        r.fonts = Some(self.env.fonts.clone());
+        r.clear_color = self.env.theme.palette.desktop;
+        r.render(&list, Viewport { width: w, height: h, scale: self.scale });
+        r.fb
+    }
+
+    /// [`Ui::render`] encoded as a PNG: for documentation, bug reports and social cards.
+    pub fn render_png(&mut self, viewport: Size) -> Vec<u8> {
+        self.render(viewport).encode_png()
+    }
+
     fn paint_logical(&mut self, viewport: Size) -> DisplayList {
         {
             let _span = tracing::info_span!("layout").entered();
