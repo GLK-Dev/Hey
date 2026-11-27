@@ -5,6 +5,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- GPU frame benchmark (`cargo bench -p hey-render-gpu`).
 - `cargo-fuzz` targets `text_edit` and `arena` in `fuzz/` (separate workspace, nightly).
 - RTL golden test `text_rtl` and bundled Noto Sans Arabic and Noto Sans Hebrew (OFL) in `design/fonts`; layout tests no longer depend on system Arial.
 - Caret and selection hit-testing work inside ligatures: `PlacedGlyph` carries the cluster end, `caret_x` interpolates across the glyph and `byte_at_x` snaps to grapheme boundaries.

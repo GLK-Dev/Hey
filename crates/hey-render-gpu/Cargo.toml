@@ -19,3 +19,8 @@ pollster = { workspace = true }
 
 [dev-dependencies]
 hey-render-cpu = { path = "../hey-render-cpu", version = "0.1.0" }
+criterion = { workspace = true }
+
+[[bench]]
+name = "gpu_frame"
+harness = false

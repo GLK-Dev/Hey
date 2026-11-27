@@ -9,9 +9,10 @@ Phases 0-9 are closed and Phase 10 is mostly done (see `DEVELOPMENT_PLAN.md`). T
 | Input to frame, 1080p, CPU backend | <= 16 ms | 8.6 ms (typical UI) |
 | Idle redraws | none | 1 frame in 14 s (event loop is `ControlFlow::Wait`) |
 | Idle CPU | ~0% | 0.5-2.5% in `Process.TotalProcessorTime` samples; no redraws, so this is OS-side message and accessibility overhead |
+| GPU frame, 2000 rects incl. readback (dev machine, `cargo bench -p hey-render-gpu`) | n/a | 4.1 ms at 1080p, 14.6 ms at 4K |
 | Cold start to visible window | < 300 ms | 137-146 ms warm; 363 ms on the first run after a build (cold disk cache) |
 
-Open measurement gaps: Linux and macOS numbers, GPU frame time, and a first-frame marker (the window-handle probe above is approximate).
+Open measurement gaps: Linux and macOS numbers and a first-frame marker (the window-handle probe above is approximate).
 
 ## 0.1.0: release gate
 
@@ -65,7 +66,8 @@ Goal: correct text in every script.
 ## Quality track (any release)
 
 - [x] `cargo-fuzz` targets for the text editor and arena (`fuzz/`, nightly, run with `cargo +nightly fuzz run text_edit`).
-- [ ] GPU frame benchmark; `tracing` with Tracy or puffin.
+- [x] GPU frame benchmark (`crates/hey-render-gpu/benches/gpu_frame.rs`).
+- [ ] `tracing` with Tracy or puffin.
 - [x] Optimise the rect rasterizer: interior pixels skip per-pixel coverage (2000 bordered chamfered rects: 70 ms to 32 ms at 1080p, 301 ms to 80 ms at 4K; output unchanged).
 - [ ] Linux and macOS performance baselines.
 

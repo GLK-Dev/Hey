@@ -117,8 +117,9 @@ Measured on Windows, release build, `examples/counter` (details in the [Roadmap]
 | Input to frame, 1080p, CPU backend | 8.6 ms (typical UI) |
 | Cold start to visible window | 137-146 ms warm |
 | Idle redraws | none; the event loop waits for input |
+| GPU frame, 2000 rects incl. readback | 4.1 ms at 1080p, 14.6 ms at 4K |
 
-Linux and macOS numbers and GPU frame time are not measured yet.
+Linux and macOS numbers are not measured yet.
 
 ## Platforms
 
