@@ -25,6 +25,27 @@ impl<Msg: 'static> Ui<Msg> {
         }
     }
 
+    /// Shows (or with `None` hides) a one-line status bar along the bottom edge, used by the shell's
+    /// time-travel scrubber. Returns whether the text changed.
+    pub fn set_note(&mut self, note: Option<String>) -> bool {
+        let changed = self.note != note;
+        self.note = note;
+        changed
+    }
+
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
+    }
+
+    pub(super) fn paint_note(&mut self, viewport: Size, out: &mut DisplayList) {
+        let Some(text) = &self.note else { return };
+        let env = self.env.clone();
+        let line_h = env.font_px * 1.4;
+        let r = Rect::new(8.0, (viewport.h - line_h - 20.0).max(0.0), (viewport.w - 16.0).max(0.0), line_h + 12.0);
+        panel(&env, r, out);
+        push_text(&env, text, Point::new(r.x + 8.0, r.y + 6.0), env.theme.palette.text, out);
+    }
+
     pub fn inspector_enabled(&self) -> bool {
         self.inspector.is_some()
     }

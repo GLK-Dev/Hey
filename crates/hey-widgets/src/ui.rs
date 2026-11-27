@@ -173,6 +173,8 @@ pub struct Ui<Msg> {
     fades: HashMap<NodeId, Fade>,
     /// Display-list inspector; `None` (the default) costs nothing.
     inspector: Option<inspect::Inspector>,
+    /// Dev status bar drawn over the frame (time-travel scrubber); `None` costs nothing.
+    note: Option<String>,
 }
 
 /// Crossfade from the previous visual state of a node to its current one.
@@ -206,6 +208,7 @@ impl<Msg: 'static> Ui<Msg> {
             shown: HashMap::new(),
             fades: HashMap::new(),
             inspector: None,
+            note: None,
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -847,6 +850,9 @@ impl<Msg: 'static> Ui<Msg> {
         }
         if self.inspector.is_some() {
             self.paint_inspector(viewport, &mut out);
+        }
+        if self.note.is_some() {
+            self.paint_note(viewport, &mut out);
         }
         out
     }

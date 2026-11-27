@@ -15,7 +15,7 @@ mod input;
 /// Version of the Hey framework (the workspace version).
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub use app::{App, Command, TaskState};
+pub use app::{App, Command, Seek, TaskState};
 pub use clipboard::{install_system_clipboard, SystemClipboard};
 pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};
 pub use error::Error;
@@ -116,6 +116,12 @@ pub trait ShellApp {
     /// Ctrl+Shift+F9 pins the current frame as its diff baseline (`snapshot == true`).
     /// `true` requests a redraw.
     fn inspector_key(&mut self, _snapshot: bool) -> bool {
+        false
+    }
+
+    /// Dev hotkeys Ctrl+Shift+Left / Right / Home / End step the time-travel history
+    /// (`App::time_travel`). `true` requests a redraw.
+    fn time_travel_key(&mut self, _to: Seek) -> bool {
         false
     }
 
@@ -273,6 +279,21 @@ fn inspector_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> Option<bo
     match k.logical_key {
         Key::Named(NamedKey::F10) => Some(false),
         Key::Named(NamedKey::F9) => Some(true),
+        _ => None,
+    }
+}
+
+/// Dev hotkeys Ctrl+Shift+Left / Right / Home / End (key repeat scrubs).
+fn time_travel_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> Option<Seek> {
+    let WindowEvent::KeyboardInput { event: k, .. } = event else { return None };
+    if k.state != ElementState::Pressed || !mods.ctrl || !mods.shift {
+        return None;
+    }
+    match k.logical_key {
+        Key::Named(NamedKey::ArrowLeft) => Some(Seek::Back),
+        Key::Named(NamedKey::ArrowRight) => Some(Seek::Forward),
+        Key::Named(NamedKey::Home) => Some(Seek::Start),
+        Key::Named(NamedKey::End) => Some(Seek::Live),
         _ => None,
     }
 }
@@ -512,6 +533,12 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         }
         if let Some(snapshot) = inspector_hotkey(&event, g.input.mods) {
             if self.app.inspector_key(snapshot) {
+                g.gfx.window.request_redraw();
+            }
+            return;
+        }
+        if let Some(to) = time_travel_hotkey(&event, g.input.mods) {
+            if self.app.time_travel_key(to) {
                 g.gfx.window.request_redraw();
             }
             return;

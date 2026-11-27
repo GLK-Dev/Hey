@@ -76,6 +76,49 @@ impl<Msg: Send + 'static> Command<Msg> {
 type UpdateFn<M, Msg> = Box<dyn FnMut(&mut M, Msg) -> Command<Msg>>;
 type ViewFn<M, Msg> = Box<dyn Fn(&M) -> Vec<View<Msg>>>;
 
+/// Time-travel scrubber moves (dev hotkeys Ctrl+Shift+Left / Right / Home / End).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Seek {
+    /// One message back.
+    Back,
+    /// One message forward.
+    Forward,
+    /// The initial model.
+    Start,
+    /// The live model (leaves the rewound state).
+    Live,
+}
+
+/// Most snapshots kept; the oldest are dropped first.
+const HISTORY_CAP: usize = 1000;
+
+type CloneFn<M> = Box<dyn Fn(&M) -> M>;
+type LabelFn<Msg> = Box<dyn Fn(&Msg) -> String>;
+
+/// Model snapshots taken after every message. Rewinding swaps in a snapshot, so no `update` and no
+/// command runs again: the log is replayed as data, not re-executed.
+struct TimeTravel<M, Msg> {
+    /// `(message that led here, model after it)`; entry 0 is the initial model.
+    history: Vec<(String, M)>,
+    /// Index of the shown entry; `history.len() - 1` is live.
+    cursor: usize,
+    clone: CloneFn<M>,
+    label: LabelFn<Msg>,
+}
+
+impl<M, Msg> TimeTravel<M, Msg> {
+    fn rewound(&self) -> bool {
+        self.cursor + 1 < self.history.len()
+    }
+
+    fn note(&self) -> Option<String> {
+        self.rewound().then(|| {
+            let (label, _) = &self.history[self.cursor];
+            format!("time travel {}/{}: {}", self.cursor, self.history.len() - 1, label)
+        })
+    }
+}
+
 /// Application builder.
 pub struct App<M, Msg: Send + 'static> {
     model: M,
@@ -87,7 +130,10 @@ pub struct App<M, Msg: Send + 'static> {
     fonts: Vec<PathBuf>,
     window: WindowConfig,
     init: Command<Msg>,
+    time_travel: Option<TtHooks<M, Msg>>,
 }
+
+type TtHooks<M, Msg> = (CloneFn<M>, LabelFn<Msg>);
 
 impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
     pub fn new(model: M) -> Self {
@@ -101,7 +147,30 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
             fonts: Vec::new(),
             window: WindowConfig::default(),
             init: Command::None,
+            time_travel: None,
         }
+    }
+
+    /// Dev feature: keep a model snapshot after every message (the last 1000) so Ctrl+Shift+Left /
+    /// Right / Home / End step through history and re-render any frame. Stepping back restores a
+    /// snapshot; `update` and commands do not run again. While rewound, new messages are dropped.
+    pub fn time_travel(mut self) -> Self
+    where
+        M: Clone,
+        Msg: std::fmt::Debug,
+    {
+        self.time_travel = Some((
+            Box::new(M::clone),
+            Box::new(|m: &Msg| {
+                let s = format!("{m:?}");
+                if s.chars().count() > 60 {
+                    format!("{}...", s.chars().take(57).collect::<String>())
+                } else {
+                    s
+                }
+            }),
+        ));
+        self
     }
 
     pub fn update(mut self, f: impl FnMut(&mut M, Msg) -> Command<Msg> + 'static) -> Self {
@@ -179,7 +248,14 @@ impl<M: 'static, Msg: Send + 'static> App<M, Msg> {
         let theme = watch.as_ref().and_then(|w| w.load().ok()).unwrap_or(self.theme);
         let ui = Ui::new(theme, Arc::new(fonts), chain, sink.clone());
         let (tx, rx) = mpsc::channel();
+        let tt = self.time_travel.map(|(clone, label)| TimeTravel {
+            history: vec![("init".to_string(), clone(&self.model))],
+            cursor: 0,
+            clone,
+            label,
+        });
         let mut rt = Runtime {
+            tt,
             model: self.model,
             update,
             view,
@@ -249,6 +325,7 @@ impl ThemeWatch {
 
 /// App runtime: implements `ShellApp`.
 pub struct Runtime<M, Msg: Send + 'static> {
+    tt: Option<TimeTravel<M, Msg>>,
     model: M,
     update: UpdateFn<M, Msg>,
     view: ViewFn<M, Msg>,
@@ -306,7 +383,18 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
             }
             any = true;
             for m in msgs {
+                if self.tt.as_ref().is_some_and(TimeTravel::rewound) {
+                    continue; // history is read-only while rewound
+                }
+                let label = self.tt.as_ref().map(|t| (t.label)(&m));
                 let cmd = (self.update)(&mut self.model, m);
+                if let (Some(t), Some(label)) = (&mut self.tt, label) {
+                    t.history.push((label, (t.clone)(&self.model)));
+                    if t.history.len() > HISTORY_CAP {
+                        t.history.remove(0);
+                    }
+                    t.cursor = t.history.len() - 1;
+                }
                 self.run_command(cmd);
             }
         }
@@ -314,6 +402,44 @@ impl<M: 'static, Msg: Send + 'static> Runtime<M, Msg> {
             self.dirty = true;
         }
         any
+    }
+
+    /// Number of recorded messages (0 without `App::time_travel`).
+    pub fn history_len(&self) -> usize {
+        self.tt.as_ref().map_or(0, |t| t.history.len() - 1)
+    }
+
+    /// Shown position: `0` is the initial model, `history_len()` is live.
+    pub fn history_cursor(&self) -> usize {
+        self.tt.as_ref().map_or(0, |t| t.cursor)
+    }
+
+    /// Jumps to snapshot `index` (clamped) and marks the view for rebuild. No `update` runs and no
+    /// command is started. `false` without time travel or when nothing changed.
+    pub fn seek(&mut self, index: usize) -> bool {
+        let Some(t) = &mut self.tt else { return false };
+        let index = index.min(t.history.len() - 1);
+        if index == t.cursor {
+            return false;
+        }
+        t.cursor = index;
+        self.model = (t.clone)(&t.history[index].1);
+        let note = t.note();
+        self.ui.set_note(note);
+        self.dirty = true;
+        true
+    }
+
+    /// Hotkey-style move; see [`Seek`].
+    pub fn time_travel_seek(&mut self, to: Seek) -> bool {
+        let Some(t) = &self.tt else { return false };
+        let target = match to {
+            Seek::Back => t.cursor.saturating_sub(1),
+            Seek::Forward => t.cursor + 1,
+            Seek::Start => 0,
+            Seek::Live => usize::MAX,
+        };
+        self.seek(target)
     }
 
     /// Build a frame for the `size` area (physical pixels).
@@ -376,6 +502,10 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
             self.ui.set_inspector(!self.ui.inspector_enabled());
             true
         }
+    }
+
+    fn time_travel_key(&mut self, to: Seek) -> bool {
+        self.time_travel_seek(to)
     }
 
     fn titlebar_dark(&self) -> Option<bool> {
