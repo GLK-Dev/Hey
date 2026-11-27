@@ -58,3 +58,22 @@ fn rtl_detection() {
     i.set_locale("ar");
     assert_eq!(i.direction(), Direction::Rtl);
 }
+
+#[test]
+fn pseudo_locale_expands_and_brackets() {
+    assert_eq!(hey_i18n::pseudo_localize("Save"), "[Šàʋé ~~]");
+    assert_eq!(hey_i18n::pseudo_localize(""), "[]");
+    let mut i = sample().pseudo();
+    assert!(i.is_pseudo());
+    let plain = {
+        let mut p = sample();
+        p.set_pseudo(false);
+        p.tr("hello")
+    };
+    let fake = i.tr("hello");
+    assert!(fake.starts_with('[') && fake.ends_with(']'));
+    assert!(fake.chars().count() as f32 >= plain.chars().count() as f32 * 1.4);
+    assert_eq!(i.tr("no-such-key"), "no-such-key", "missing keys stay visible");
+    i.set_pseudo(false);
+    assert_eq!(i.tr("hello"), plain);
+}

@@ -81,6 +81,79 @@ impl From<i64> for Arg {
     }
 }
 
+/// Accents Latin letters, pads the text by about 40% and wraps it in brackets: `Save` becomes `[Šàvé ~~]`.
+/// The result is only meant for looking at; it is not a real locale.
+pub fn pseudo_localize(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() * 2 + 4);
+    out.push('[');
+    let mut letters = 0usize;
+    for c in text.chars() {
+        let m = match c {
+            'a' => 'à',
+            'b' => 'ß',
+            'c' => 'ç',
+            'd' => 'ð',
+            'e' => 'é',
+            'f' => 'ƒ',
+            'g' => 'ĝ',
+            'h' => 'ĥ',
+            'i' => 'ï',
+            'j' => 'ĵ',
+            'k' => 'ķ',
+            'l' => 'ļ',
+            'm' => 'ḿ',
+            'n' => 'ñ',
+            'o' => 'ö',
+            'p' => 'þ',
+            'q' => 'ǧ',
+            'r' => 'ŕ',
+            's' => 'š',
+            't' => 'ţ',
+            'u' => 'ü',
+            'v' => 'ʋ',
+            'w' => 'ŵ',
+            'x' => 'ҳ',
+            'y' => 'ý',
+            'z' => 'ž',
+            'A' => 'À',
+            'B' => 'ß',
+            'C' => 'Ç',
+            'D' => 'Ð',
+            'E' => 'É',
+            'F' => 'Ƒ',
+            'G' => 'Ĝ',
+            'H' => 'Ĥ',
+            'I' => 'Ï',
+            'J' => 'Ĵ',
+            'K' => 'Ķ',
+            'L' => 'Ļ',
+            'M' => 'Ḿ',
+            'N' => 'Ñ',
+            'O' => 'Ö',
+            'P' => 'Þ',
+            'Q' => 'Ǧ',
+            'R' => 'Ŕ',
+            'S' => 'Š',
+            'T' => 'Ţ',
+            'U' => 'Ü',
+            'V' => 'Ʋ',
+            'W' => 'Ŵ',
+            'X' => 'Ҳ',
+            'Y' => 'Ý',
+            'Z' => 'Ž',
+            other => other,
+        };
+        letters += 1;
+        out.push(m);
+    }
+    if letters > 0 {
+        out.push(' ');
+        out.extend(std::iter::repeat_n('~', (letters * 2).div_ceil(5)));
+    }
+    out.push(']');
+    out
+}
+
 /// Text direction of a locale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Direction {
@@ -95,6 +168,7 @@ pub struct I18n {
     fallback: String,
     active: String,
     bundles: HashMap<String, FluentBundle<FluentResource>>,
+    pseudo: bool,
 }
 
 fn lang(tag: &str) -> &str {
@@ -103,8 +177,28 @@ fn lang(tag: &str) -> &str {
 
 impl I18n {
     /// `fallback` is the locale that is initially active and used for missing messages.
+    /// Pseudo-localization starts enabled when the environment variable `HEY_PSEUDO_LOCALE` is `1`.
     pub fn new(fallback: &str) -> Self {
-        I18n { fallback: fallback.to_owned(), active: fallback.to_owned(), bundles: HashMap::new() }
+        let pseudo = std::env::var("HEY_PSEUDO_LOCALE").is_ok_and(|v| v == "1");
+        I18n { fallback: fallback.to_owned(), active: fallback.to_owned(), bundles: HashMap::new(), pseudo }
+    }
+
+    /// Enables pseudo-localization: every translated message gets accented letters, about 40% extra
+    /// length and `[` `]` markers, so truncated or hard-coded text shows up before translators work.
+    /// Keys with no translation stay as they are, which makes them easy to spot.
+    pub fn pseudo(mut self) -> Self {
+        self.pseudo = true;
+        self
+    }
+
+    /// Turns pseudo-localization on or off at run time.
+    pub fn set_pseudo(&mut self, on: bool) {
+        self.pseudo = on;
+    }
+
+    /// Whether pseudo-localization is active.
+    pub fn is_pseudo(&self) -> bool {
+        self.pseudo
     }
 
     /// Adds (or extends) the messages of `locale` from FTL source.
@@ -147,7 +241,11 @@ impl I18n {
 
     fn resolve(&self, key: &str, args: Option<&FluentArgs>) -> String {
         let chain = [self.active.as_str(), lang(&self.active), self.fallback.as_str()];
-        chain.iter().find_map(|l| self.lookup(l, key, args)).unwrap_or_else(|| key.to_owned())
+        match chain.iter().find_map(|l| self.lookup(l, key, args)) {
+            Some(text) if self.pseudo => pseudo_localize(&text),
+            Some(text) => text,
+            None => key.to_owned(),
+        }
     }
 
     /// Translates `key` without arguments.
