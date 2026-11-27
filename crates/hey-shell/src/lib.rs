@@ -112,6 +112,13 @@ pub trait ShellApp {
         false
     }
 
+    /// Dev hotkeys: Ctrl+Shift+F10 toggles the display-list inspector (`snapshot == false`),
+    /// Ctrl+Shift+F9 pins the current frame as its diff baseline (`snapshot == true`).
+    /// `true` requests a redraw.
+    fn inspector_key(&mut self, _snapshot: bool) -> bool {
+        false
+    }
+
     /// Whether the app's current theme is dark, so the shell can match the native title bar to it
     /// (Windows). `None` leaves the title bar to the OS.
     fn titlebar_dark(&self) -> Option<bool> {
@@ -255,6 +262,19 @@ fn is_record_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
         if k.state == ElementState::Pressed && !k.repeat && k.logical_key == Key::Named(NamedKey::F11))
         && mods.ctrl
         && mods.shift
+}
+
+/// Dev hotkeys Ctrl+Shift+F10 (toggle inspector) and Ctrl+Shift+F9 (pin snapshot): `Some(is_snapshot)`.
+fn inspector_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> Option<bool> {
+    let WindowEvent::KeyboardInput { event: k, .. } = event else { return None };
+    if k.state != ElementState::Pressed || k.repeat || !mods.ctrl || !mods.shift {
+        return None;
+    }
+    match k.logical_key {
+        Key::Named(NamedKey::F10) => Some(false),
+        Key::Named(NamedKey::F9) => Some(true),
+        _ => None,
+    }
 }
 
 /// Output path for a finished recording: `$HEY_SESSION_FILE`, else `hey-<unix seconds>.hey-session`.
@@ -488,6 +508,12 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
         }
         if is_record_hotkey(&event, g.input.mods) {
             g.toggle_recording();
+            return;
+        }
+        if let Some(snapshot) = inspector_hotkey(&event, g.input.mods) {
+            if self.app.inspector_key(snapshot) {
+                g.gfx.window.request_redraw();
+            }
             return;
         }
         let mut redraw = false;

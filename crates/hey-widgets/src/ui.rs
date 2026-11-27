@@ -13,6 +13,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 
+mod inspect;
+
 /// Paint/measure context shared by all widgets.
 pub struct Env {
     pub theme: Theme,
@@ -169,6 +171,8 @@ pub struct Ui<Msg> {
     shown: HashMap<NodeId, WidgetState>,
     /// Running state crossfades.
     fades: HashMap<NodeId, Fade>,
+    /// Display-list inspector; `None` (the default) costs nothing.
+    inspector: Option<inspect::Inspector>,
 }
 
 /// Crossfade from the previous visual state of a node to its current one.
@@ -201,6 +205,7 @@ impl<Msg: 'static> Ui<Msg> {
             theme_gen: 0,
             shown: HashMap::new(),
             fades: HashMap::new(),
+            inspector: None,
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
         }
     }
@@ -820,6 +825,9 @@ impl<Msg: 'static> Ui<Msg> {
             st.set(WidgetState::PRESSED, o.pressed && o.hover);
             st.set(WidgetState::FOCUSED, top == Some(i));
             o.widget.paint(&self.env, o.rect, st, &mut out);
+        }
+        if self.inspector.is_some() {
+            self.paint_inspector(viewport, &mut out);
         }
         out
     }

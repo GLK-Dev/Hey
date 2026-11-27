@@ -106,6 +106,47 @@ impl DisplayList {
         DisplayList { cmds }
     }
 
+    /// One line per command in a stable text form, for inspection and diffs. Not a serialization
+    /// format: it is lossy for glyph runs (positions are summarized by count and first glyph).
+    pub fn dump(&self) -> String {
+        let mut s = String::new();
+        for (i, c) in self.cmds.iter().enumerate() {
+            s.push_str(&format!(
+                "{i:4} {}
+",
+                cmd_line(c)
+            ));
+        }
+        s
+    }
+
+    /// Line diff between two frames: `-` lines only in `self`, `+` lines only in `other`
+    /// (longest common subsequence, so a shifted block shows as removed and added).
+    pub fn diff(&self, other: &DisplayList) -> Vec<String> {
+        let a: Vec<String> = self.cmds.iter().map(cmd_line).collect();
+        let b: Vec<String> = other.cmds.iter().map(cmd_line).collect();
+        let mut t = vec![vec![0u32; b.len() + 1]; a.len() + 1];
+        for i in (0..a.len()).rev() {
+            for j in (0..b.len()).rev() {
+                t[i][j] = if a[i] == b[j] { t[i + 1][j + 1] + 1 } else { t[i + 1][j].max(t[i][j + 1]) };
+            }
+        }
+        let (mut i, mut j, mut out) = (0, 0, Vec::new());
+        while i < a.len() || j < b.len() {
+            if i < a.len() && j < b.len() && a[i] == b[j] {
+                i += 1;
+                j += 1;
+            } else if j >= b.len() || (i < a.len() && t[i + 1][j] >= t[i][j + 1]) {
+                out.push(format!("- {}", a[i]));
+                i += 1;
+            } else {
+                out.push(format!("+ {}", b[j]));
+                j += 1;
+            }
+        }
+        out
+    }
+
     pub fn cmds(&self) -> &[DrawCmd] {
         &self.cmds
     }
@@ -158,6 +199,36 @@ impl DisplayList {
             }
             other => Some((other, cur)),
         })
+    }
+}
+
+fn cmd_line(c: &DrawCmd) -> String {
+    let r = |r: &Rect| format!("{:.1},{:.1} {:.1}x{:.1}", r.x, r.y, r.w, r.h);
+    let col = |c: &hey_core::Color| format!("#{:02x}{:02x}{:02x}{:02x}", c.r, c.g, c.b, c.a);
+    match c {
+        DrawCmd::Rect { rect, fill, border, chamfer, shadow } => {
+            let mut s = format!("rect {} fill {}", r(rect), col(fill));
+            if let Some(b) = border {
+                s.push_str(&format!(" border {:.1} {}", b.width, col(&b.color)));
+            }
+            if *chamfer > 0.0 {
+                s.push_str(&format!(" chamfer {chamfer:.1}"));
+            }
+            if shadow.is_some() {
+                s.push_str(" shadow");
+            }
+            s
+        }
+        DrawCmd::Line { a, b, width, color } => {
+            format!("line {:.1},{:.1} -> {:.1},{:.1} w {width:.1} {}", a.x, a.y, b.x, b.y, col(color))
+        }
+        DrawCmd::Text(run) => {
+            let first = run.glyphs.first().map_or(String::new(), |g| format!(" at {:.1},{:.1}", g.x, g.y));
+            format!("text {} glyphs {:.1}px {}{first}", run.glyphs.len(), run.size_px, col(&run.color))
+        }
+        DrawCmd::Image { rect, image } => format!("image #{} {}", image.0, r(rect)),
+        DrawCmd::ClipPush(rect) => format!("clip {}", r(rect)),
+        DrawCmd::ClipPop => "unclip".to_string(),
     }
 }
 

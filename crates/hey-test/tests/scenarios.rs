@@ -128,3 +128,32 @@ fn committed_session_replays() {
     }
     input_harness().replay_file(path).unwrap();
 }
+
+#[test]
+fn inspector_is_off_by_default_and_diffs_frames() {
+    use hey_style::Variant;
+    use hey_widgets::Button;
+    let mut h = Harness::<String>::new(300.0, 120.0);
+    let root = h.ui.root();
+    let b = Button::add(&mut h.ui, root, "Save", Variant::Primary, Callback::new(|_| String::new()));
+    h.frame();
+    let plain = h.ui.paint(h.viewport);
+    assert!(!h.ui.inspector_enabled());
+    assert!(h.ui.inspector_diff().is_empty());
+
+    h.ui.set_inspector(true);
+    let with = h.ui.paint(h.viewport);
+    assert!(with.len() > plain.len(), "overlay adds commands");
+    assert!(h.ui.inspector_snapshot());
+    assert!(h.ui.inspector_diff().is_empty());
+
+    h.click(b);
+    let info = h.ui.inspect_node(b);
+    assert!(info[0].contains("Save"), "{info:?}");
+    assert!(!h.ui.inspector_diff().is_empty(), "hover/press changes the frame");
+    assert!(h.ui.dump_tree().contains("Save"));
+
+    h.ui.set_inspector(false);
+    assert_eq!(h.ui.paint(h.viewport).len(), h.ui.paint(h.viewport).len());
+    assert!(h.ui.inspector_diff().is_empty());
+}

@@ -19,13 +19,13 @@ fn text_width(env: &Env, s: &str) -> f32 {
     layout(&env.fonts, s, &text_style(env, None, false)).width.ceil()
 }
 
-fn push_text(env: &Env, s: &str, origin: Point, color: hey_core::Color, out: &mut DisplayList) {
+pub(crate) fn push_text(env: &Env, s: &str, origin: Point, color: hey_core::Color, out: &mut DisplayList) {
     for run in layout(&env.fonts, s, &text_style(env, None, false)).to_runs(origin, color) {
         out.push(DrawCmd::Text(run));
     }
 }
 
-fn panel(env: &Env, rect: Rect, out: &mut DisplayList) {
+pub(crate) fn panel(env: &Env, rect: Rect, out: &mut DisplayList) {
     let p = &env.theme.palette;
     out.push(DrawCmd::Rect {
         rect,

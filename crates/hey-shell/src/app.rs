@@ -369,6 +369,15 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
         true
     }
 
+    fn inspector_key(&mut self, snapshot: bool) -> bool {
+        if snapshot {
+            self.ui.inspector_snapshot()
+        } else {
+            self.ui.set_inspector(!self.ui.inspector_enabled());
+            true
+        }
+    }
+
     fn titlebar_dark(&self) -> Option<bool> {
         let bg = self.ui.env.theme.palette.desktop;
         // Rec. 601 luma of the desktop color.
