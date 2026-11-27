@@ -12,6 +12,9 @@ mod clipboard;
 mod dialog;
 mod error;
 mod input;
+/// Version of the Hey framework (the workspace version).
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub use app::{App, Command, TaskState};
 pub use clipboard::{install_system_clipboard, SystemClipboard};
 pub use dialog::{confirm, message, open_file, open_files, pick_folder, save_file};

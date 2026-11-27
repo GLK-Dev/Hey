@@ -3,6 +3,7 @@ resolver = "2"
 members = ["crates/*", "examples/*"]
 
 [workspace.package]
+version = "0.1.0"
 edition = "2021"
 license-file = "LICENSE.md"
 repository = "https://github.com/GLK-Dev/Hey"

@@ -7,6 +7,7 @@
   <a href="https://glk-dev.github.io/Hey/"><img src="https://img.shields.io/badge/site-glk--dev.github.io%2FHey-F5A623" alt="Website"></a>
   <a href="https://glk-dev.github.io/Hey/wiki/"><img src="https://img.shields.io/badge/docs-wiki-00E5FF" alt="Wiki"></a>
   <a href="LICENSE.md"><img src="https://img.shields.io/badge/license-GUIL--1.0-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/version-0.1.0-F5A623" alt="Version 0.1.0">
   <img src="https://img.shields.io/badge/rust-stable-orange" alt="Rust stable">
 </p>
 
