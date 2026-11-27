@@ -163,6 +163,8 @@ pub struct Ui<Msg> {
     sb_drag: Option<(NodeId, bool, f32)>,
     /// Device pixels per logical pixel. Layout and widget events are logical; `paint` returns physical pixels.
     scale: f64,
+    /// Bumped when a theme change alters sizes; leaves built under an older value are rebuilt by `reconcile`.
+    pub(crate) theme_gen: u64,
     /// State each node was last painted with, to detect changes.
     shown: HashMap<NodeId, WidgetState>,
     /// Running state crossfades.
@@ -196,6 +198,7 @@ impl<Msg: 'static> Ui<Msg> {
             file_hover: false,
             sb_drag: None,
             scale: 1.0,
+            theme_gen: 0,
             shown: HashMap::new(),
             fades: HashMap::new(),
             queue: Overlays(Rc::new(RefCell::new(Queue { next: 0, open: Vec::new(), close: Vec::new(), viewport: Size::new(0.0, 0.0) }))),
@@ -206,6 +209,9 @@ impl<Msg: 'static> Ui<Msg> {
     /// Fonts, chain and cached icon sources are kept; the next frame is painted with the new theme.
     pub fn set_theme(&mut self, theme: Theme) {
         let font_px = theme.font_px();
+        if font_px != self.env.font_px || theme.scale() != self.env.theme.scale() {
+            self.theme_gen += 1;
+        }
         let icons = self.env.icons.take();
         self.env =
             Rc::new(Env { theme, fonts: self.env.fonts.clone(), chain: self.env.chain.clone(), font_px, icons: RefCell::new(icons) });

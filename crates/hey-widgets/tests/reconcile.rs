@@ -71,3 +71,21 @@ fn reconcile_preserves_widget_state_and_focus() {
     assert_eq!(ui.focused(), Some(id2));
     ui.paint(Size::new(400.0, 300.0));
 }
+
+#[test]
+fn text_scale_change_rebuilds_leaves_but_dark_light_switch_keeps_them() {
+    let mut ui = setup();
+    let root = ui.root();
+    ui.reconcile(root, vec![btn("a", "A")]);
+    let first = ui.tree.children(root)[0];
+
+    // Same sizes (colours only): the leaf is kept.
+    ui.set_theme(Theme::light());
+    ui.reconcile(root, vec![btn("a", "A")]);
+    assert_eq!(ui.tree.children(root)[0], first);
+
+    // Larger text scale: sizes captured at build time are stale, so the leaf is rebuilt.
+    ui.set_theme(Theme::light().with_text_scale(1.6));
+    ui.reconcile(root, vec![btn("a", "A")]);
+    assert_ne!(ui.tree.children(root)[0], first);
+}

@@ -59,29 +59,33 @@ impl<Msg: 'static> Ui<Msg> {
         for v in views {
             let found = pool.remove(&v.key).map(|id| (id, self.keys[&id].1));
             let id = match v.kind {
-                Kind::Leaf { hash, build } => match found {
-                    Some((id, h)) if h == hash => id,
-                    other => {
-                        let (state, had_focus) = match other {
-                            Some((old_id, _)) => {
-                                let st = self.nodes.get(&old_id).and_then(|n| n.widget.save_state());
-                                let f = self.focused() == Some(old_id);
-                                self.remove_subtree(old_id);
-                                (st, f)
+                Kind::Leaf { hash, build } => {
+                    // Leaves capture sizes and the env at build time: a size-affecting theme change must rebuild them.
+                    let hash = (hash ^ (self.theme_gen << 1)) | 1;
+                    match found {
+                        Some((id, h)) if h == hash => id,
+                        other => {
+                            let (state, had_focus) = match other {
+                                Some((old_id, _)) => {
+                                    let st = self.nodes.get(&old_id).and_then(|n| n.widget.save_state());
+                                    let f = self.focused() == Some(old_id);
+                                    self.remove_subtree(old_id);
+                                    (st, f)
+                                }
+                                None => (None, false),
+                            };
+                            let id = build(self, parent);
+                            if let (Some(st), Some(n)) = (state, self.nodes.get_mut(&id)) {
+                                n.widget.load_state(st);
                             }
-                            None => (None, false),
-                        };
-                        let id = build(self, parent);
-                        if let (Some(st), Some(n)) = (state, self.nodes.get_mut(&id)) {
-                            n.widget.load_state(st);
+                            if had_focus {
+                                self.focus(id);
+                            }
+                            self.keys.insert(id, (v.key, hash));
+                            id
                         }
-                        if had_focus {
-                            self.focus(id);
-                        }
-                        self.keys.insert(id, (v.key, hash));
-                        id
                     }
-                },
+                }
                 Kind::Container { style, children } => {
                     let id = match found {
                         Some((id, CONTAINER)) => {
