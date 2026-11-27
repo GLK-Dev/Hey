@@ -354,7 +354,15 @@ impl<M: 'static, Msg: Send + 'static> ShellApp for Runtime<M, Msg> {
 
     fn appearance_changed(&mut self, a: hey_style::Appearance) -> bool {
         if !self.auto_theme {
-            return false;
+            // The theme is fixed by the app, but the user's text scale still applies.
+            let factor = a.text_scale as f32 / 100.0;
+            let scaled = self.ui.env.theme.clone().with_text_scale(factor);
+            if scaled.text_scale == self.ui.env.theme.text_scale {
+                return false;
+            }
+            self.ui.set_theme(scaled);
+            self.dirty = true;
+            return true;
         }
         self.ui.set_theme(Theme::for_appearance(a));
         self.dirty = true;

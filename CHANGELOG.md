@@ -5,6 +5,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 ## [Unreleased]
 
 ### Added
+- System text scale: `Appearance::text_scale` (percent) and `Theme::with_text_scale`/`scale`/`font_px`. The shell reads it from Windows (`TextScaleFactor`), Linux (`QT_FONT_DPI`, GNOME `text-scaling-factor`) or `HEY_TEXT_SCALE`, re-reads it on window focus, and applies it even when `auto_theme` is off. The Onest font is unchanged; only the size factor changes. Spacing, `Icon`, `Slider`, `ProgressBar`, `TextInput` widths and the select chevron scale with it. At 100% rendering is byte-identical.
 - Multi-window in `hey-shell`: `ShellApp::focus_window`, `take_new_windows`, `window_closed`, `WindowKey`/`MAIN_WINDOW`; each window has its own renderer, input and accessibility adapter. Example `multi_window`.
 - Linux: clipboard works on pure Wayland sessions (`arboard` `wayland-data-control`); ignored `system_clipboard_roundtrip` test for desktop sessions.
 - Optional `tracing` spans (`frame`, `app_draw`, `render`, `ui_paint`, `layout`); enable timings on stderr with `--features hey-shell/profiling` and `RUST_LOG`.

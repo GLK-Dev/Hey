@@ -96,12 +96,17 @@ fn auto_theme_follows_system_appearance() {
     let mut fixed = build(false);
     assert!(!fixed.appearance_changed(Appearance { dark: false, ..Appearance::default() }));
     assert_eq!(fixed.ui.env.theme.id, Theme::dark().id);
+    // A fixed theme still follows the system text scale.
+    assert!(fixed.appearance_changed(Appearance { text_scale: 150, ..Appearance::default() }));
+    assert_eq!(fixed.ui.env.theme.text_scale, 1.5);
+    assert_eq!(fixed.ui.env.font_px, 21.0);
+    assert!(!fixed.appearance_changed(Appearance { text_scale: 150, ..Appearance::default() }));
 
     let mut auto = build(true);
-    assert!(auto.appearance_changed(Appearance { dark: false, high_contrast: false, reduce_motion: true }));
+    assert!(auto.appearance_changed(Appearance { dark: false, high_contrast: false, reduce_motion: true, ..Appearance::default() }));
     assert_eq!(auto.ui.env.theme.palette, Theme::light().palette);
     assert_eq!(auto.ui.env.theme.base_ms, 0.0);
-    assert!(auto.appearance_changed(Appearance { dark: true, high_contrast: true, reduce_motion: false }));
+    assert!(auto.appearance_changed(Appearance { dark: true, high_contrast: true, reduce_motion: false, ..Appearance::default() }));
     assert_eq!(auto.ui.env.theme.id, "high-contrast-dark");
     auto.draw(hey_draw::Viewport { width: 200, height: 100, scale: 1.0 }, &mut hey_draw::DisplayList::default());
 }

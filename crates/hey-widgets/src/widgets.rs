@@ -55,6 +55,7 @@ pub struct Icon {
 
 impl Icon {
     pub fn add<Msg: 'static>(ui: &mut Ui<Msg>, parent: NodeId, name: &str, size: f32) -> NodeId {
+        let size = ui.env.theme.space(size);
         let mut style = Style::leaf();
         style.width = hey_layout::Dim::Px(size);
         style.height = hey_layout::Dim::Px(size);
@@ -351,7 +352,7 @@ impl<Msg: 'static> TextInput<Msg> {
         let env = ui.env.clone();
         let measure_fn = move |_w: Option<f32>| {
             let h = layout(&env.fonts, "Ag", &text_style(&env, None, false)).height.ceil();
-            Size::new(width, h + 2.0 * env.theme.space(7.0))
+            Size::new(env.theme.space(width), h + 2.0 * env.theme.space(7.0))
         };
         let w = TextInput {
             edit: TextEditState::new(text),

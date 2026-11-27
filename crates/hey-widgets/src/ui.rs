@@ -179,7 +179,7 @@ const MULTI_CLICK: Duration = Duration::from_millis(500);
 
 impl<Msg: 'static> Ui<Msg> {
     pub fn new(theme: Theme, fonts: std::sync::Arc<Fonts>, chain: Vec<FontId>, sink: MsgSink<Msg>) -> Self {
-        let font_px = theme.space(14.0);
+        let font_px = theme.font_px();
         Ui {
             tree: LayoutTree::new(Style::column()),
             env: Rc::new(Env { theme, fonts, chain, font_px, icons: RefCell::default() }),
@@ -205,10 +205,12 @@ impl<Msg: 'static> Ui<Msg> {
     /// Replaces the theme at runtime (system dark/light switch, high contrast, reduced motion).
     /// Fonts, chain and cached icon sources are kept; the next frame is painted with the new theme.
     pub fn set_theme(&mut self, theme: Theme) {
-        let font_px = theme.space(14.0);
+        let font_px = theme.font_px();
         let icons = self.env.icons.take();
         self.env =
             Rc::new(Env { theme, fonts: self.env.fonts.clone(), chain: self.env.chain.clone(), font_px, icons: RefCell::new(icons) });
+        // Sizes depend on the theme (density, text scale): measure again.
+        self.tree.invalidate();
     }
 
     /// Handle for opening overlays from widgets.

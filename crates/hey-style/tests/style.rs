@@ -100,7 +100,7 @@ fn appearance_selects_theme_and_reduces_motion() {
     assert!(d.base_ms > 0.0);
     let l = Theme::for_appearance(Appearance { dark: false, ..Appearance::default() });
     assert_eq!(l.palette, Theme::light().palette);
-    let hc = Theme::for_appearance(Appearance { dark: false, high_contrast: true, reduce_motion: true });
+    let hc = Theme::for_appearance(Appearance { dark: false, high_contrast: true, reduce_motion: true, ..Appearance::default() });
     assert_eq!(hc.id, "high-contrast-light");
     assert_eq!((hc.fast_ms, hc.base_ms, hc.window_ms), (0.0, 0.0, 0.0));
 }
@@ -128,4 +128,16 @@ fn builtin_themes_match_chamfer_tokens() {
             "chamfer parity mismatch for {id}"
         );
     }
+}
+
+#[test]
+fn text_scale_scales_font_and_spacing() {
+    let base = Theme::dark();
+    assert_eq!(base.font_px(), 14.0);
+    let big = Theme::for_appearance(Appearance { text_scale: 150, ..Appearance::default() });
+    assert_eq!(big.text_scale, 1.5);
+    assert_eq!(big.font_px(), 21.0);
+    assert_eq!(big.space(10.0), 15.0);
+    assert_eq!(base.clone().with_text_scale(100.0).text_scale, 4.0);
+    assert_eq!(base.with_text_scale(0.0).text_scale, 0.5);
 }

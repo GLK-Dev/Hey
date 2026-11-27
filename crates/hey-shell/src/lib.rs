@@ -39,6 +39,17 @@ fn env_flag(name: &str) -> bool {
     std::env::var(name).is_ok_and(|v| matches!(v.trim(), "1" | "true" | "TRUE" | "yes"))
 }
 
+/// System text scale in percent: `HEY_TEXT_SCALE` (e.g. `1.5` or `150`) overrides the OS value.
+fn text_scale_percent() -> u16 {
+    let env = std::env::var("HEY_TEXT_SCALE").ok().and_then(|v| v.trim().parse::<f32>().ok());
+    let pct = match env {
+        Some(v) if v > 0.0 && v <= 10.0 => v * 100.0,
+        Some(v) if v > 0.0 => v,
+        _ => os::system_text_scale() * 100.0,
+    };
+    pct.round().clamp(50.0, 400.0) as u16
+}
+
 /// Dark/light comes from the window system. High contrast and reduced motion come from the OS
 /// where a native query exists (Windows); `HEY_HIGH_CONTRAST=1` / `HEY_REDUCE_MOTION=1` force
 /// them on everywhere.
@@ -48,6 +59,7 @@ fn system_appearance(window: &Window) -> hey_style::Appearance {
         dark: window.theme() != Some(winit::window::Theme::Light),
         high_contrast: hc || env_flag("HEY_HIGH_CONTRAST"),
         reduce_motion: rm || env_flag("HEY_REDUCE_MOTION"),
+        text_scale: text_scale_percent(),
     }
 }
 
@@ -424,7 +436,8 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
                 g.gfx.occluded = hidden;
                 redraw |= !hidden;
             }
-            WindowEvent::ThemeChanged(_) => {
+            // The text scale has no change notification; re-read it when the user returns to the window.
+            WindowEvent::Focused(true) | WindowEvent::ThemeChanged(_) => {
                 redraw |= self.app.appearance_changed(system_appearance(&g.gfx.window));
                 if let Some(dark) = self.app.titlebar_dark() {
                     os::set_dark_titlebar(&g.gfx.window, dark);

@@ -79,11 +79,13 @@ pub struct Appearance {
     pub dark: bool,
     pub high_contrast: bool,
     pub reduce_motion: bool,
+    /// System text scale in percent (100 = no scaling); clamped to 50..=400 when applied.
+    pub text_scale: u16,
 }
 
 impl Default for Appearance {
     fn default() -> Self {
-        Appearance { dark: true, high_contrast: false, reduce_motion: false }
+        Appearance { dark: true, high_contrast: false, reduce_motion: false, text_scale: 100 }
     }
 }
 
@@ -108,6 +110,8 @@ pub struct Theme {
     pub terminal_cursor: Color,
     pub ansi: [Color; 16],
     pub density: Density,
+    /// User text scale factor (1.0 = none); multiplies sizes and paddings together with the density.
+    pub text_scale: f32,
 }
 
 fn get<'a>(v: &'a Value, k: &str) -> Result<&'a Value, ThemeError> {
@@ -211,6 +215,7 @@ impl Theme {
             terminal_cursor: color(term, "cursor")?,
             ansi,
             density: Density::Normal,
+            text_scale: 1.0,
         })
     }
 
@@ -334,11 +339,28 @@ impl Theme {
             (false, true) => Self::dark(),
             (false, false) => Self::light(),
         };
+        let t = t.with_text_scale(a.text_scale as f32 / 100.0);
         if a.reduce_motion {
             t.reduced_motion()
         } else {
             t
         }
+    }
+
+    /// Sets the text scale factor (clamped to 0.5..=4.0).
+    pub fn with_text_scale(mut self, factor: f32) -> Theme {
+        self.text_scale = if factor.is_finite() { factor.clamp(0.5, 4.0) } else { 1.0 };
+        self
+    }
+
+    /// Combined density and text scale applied to sizes and paddings.
+    pub fn scale(&self) -> f32 {
+        self.density.scale() * self.text_scale
+    }
+
+    /// Base UI font size in logical px.
+    pub fn font_px(&self) -> f32 {
+        self.space(14.0)
     }
 
     pub fn compact(mut self) -> Theme {
@@ -355,9 +377,9 @@ impl Theme {
     pub fn chamfer_large(&self) -> f32 {
         self.chamfer[2] * self.density.scale()
     }
-    /// Base padding/height, scaled by density.
+    /// Base padding/height, scaled by density and text scale.
     pub fn space(&self, px: f32) -> f32 {
-        (px * self.density.scale()).round()
+        (px * self.scale()).round()
     }
 
     /// Button background for a variant and state.

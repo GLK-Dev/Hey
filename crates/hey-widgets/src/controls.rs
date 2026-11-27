@@ -226,6 +226,7 @@ impl<Msg: 'static> Slider<Msg> {
     pub fn add(ui: &mut Ui<Msg>, parent: NodeId, min: f32, max: f32, value: f32, width: f32, on_change: Callback<Msg, f32>) -> NodeId {
         let env = ui.env.clone();
         let h = (env.font_px * 1.6).round();
+        let width = env.theme.space(width);
         let w = Slider { min, max, value: value.clamp(min, max), on_change };
         ui.add_widget(parent, Style::leaf(), w, move |_| Size::new(width, h))
     }
@@ -310,6 +311,7 @@ pub struct ProgressBar {
 impl ProgressBar {
     pub fn add<Msg: 'static>(ui: &mut Ui<Msg>, parent: NodeId, value: f32, width: f32) -> NodeId {
         let h = (ui.env.font_px * 0.5).round().max(4.0);
+        let width = ui.env.theme.space(width);
         ui.add_widget(parent, Style::leaf(), ProgressBar { value: value.clamp(0.0, 1.0) }, move |_| Size::new(width, h))
     }
 

@@ -201,7 +201,7 @@ impl<Msg: 'static> Widget<Msg> for Dropdown<Msg> {
         let l = layout(&env.fonts, s, &text_style(env, None, false));
         push_text(env, s, Point::new(rect.x + env.theme.space(10.0), rect.y + (rect.h - l.height) / 2.0), color, out);
         // chevron ▾
-        let (cx, cy, k) = (rect.right() - env.theme.space(14.0), rect.y + rect.h / 2.0, 4.0);
+        let (cx, cy, k) = (rect.right() - env.theme.space(14.0), rect.y + rect.h / 2.0, env.theme.space(4.0));
         out.push(DrawCmd::Line { a: Point::new(cx - k, cy - k / 2.0), b: Point::new(cx, cy + k / 2.0), width: 1.5, color });
         out.push(DrawCmd::Line { a: Point::new(cx, cy + k / 2.0), b: Point::new(cx + k, cy - k / 2.0), width: 1.5, color });
     }
