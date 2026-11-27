@@ -277,3 +277,91 @@ fn extra_windows_have_own_views_and_close() {
     assert_eq!(rt.window_count(), 1);
     assert_eq!(rt.model().closed_by_user, vec![1]);
 }
+
+#[derive(Debug)]
+enum DMsg {
+    Select(u32),
+    Float(u32),
+    Closed(u32),
+}
+
+struct DModel {
+    dock: hey_widgets::Dock,
+}
+
+fn d_update(m: &mut DModel, msg: DMsg) -> Command<DMsg> {
+    match msg {
+        DMsg::Select(p) => {
+            m.dock.select(p);
+            Command::none()
+        }
+        DMsg::Float(p) => {
+            m.dock.float(p, p);
+            Command::open_window(p, hey_shell::WindowConfig::default())
+        }
+        DMsg::Closed(w) => {
+            m.dock.dock_back(w);
+            Command::none()
+        }
+    }
+}
+
+fn d_content(p: u32) -> Vec<View<DMsg>> {
+    vec![View::leaf("float", p, move |ui, parent| {
+        Button::add(ui, parent, "Float", Variant::Primary, Callback::new(move |_| DMsg::Float(p)))
+    })]
+}
+
+fn d_render(root: Option<&hey_widgets::DockNode>) -> Vec<View<DMsg>> {
+    match root {
+        Some(n) => vec![hey_widgets::dock_view(n, &|p| format!("Panel {p}"), &d_content, &Callback::new(DMsg::Select))],
+        None => Vec::new(),
+    }
+}
+
+#[test]
+fn docking_floats_a_panel_into_its_own_window() {
+    use hey_widgets::{Dock, DockNode};
+    let font = concat!(env!("CARGO_MANIFEST_DIR"), "/../../design/fonts/onest/Onest[wght].ttf");
+    let model = DModel { dock: Dock::new(DockNode::group([1, 2])) };
+    let mut rt = App::new(model)
+        .update(d_update)
+        .view(|m: &DModel| d_render(m.dock.main()))
+        .window_view(|w, m: &DModel| d_render(m.dock.floating(w)))
+        .on_window_closed(DMsg::Closed)
+        .font(font)
+        .build()
+        .unwrap();
+    let vp = Size::new(500.0, 400.0);
+    rt.frame(vp);
+    assert_eq!(rt.ui.tree.children(rt.ui.root()).len(), 1);
+
+    // Find the active panel's "Float" button: the deepest leaf of the tree.
+    fn deepest(rt: &impl Fn(hey_core::NodeId) -> Vec<hey_core::NodeId>, id: hey_core::NodeId) -> hey_core::NodeId {
+        let k = rt(id);
+        if k.is_empty() {
+            id
+        } else {
+            deepest(rt, *k.last().unwrap())
+        }
+    }
+    let kids = |id| rt.ui.tree.children(id).to_vec();
+    let leaf = deepest(&kids, rt.ui.root());
+    let r = rt.ui.tree.rect(leaf);
+    click(&mut rt, Point::new(r.x + 3.0, r.y + 3.0));
+    assert_eq!(rt.model().dock.main().unwrap().panels(), vec![2]);
+    assert_eq!(rt.model().dock.floating(1).unwrap().panels(), vec![1]);
+    assert_eq!(rt.window_count(), 2);
+
+    // The floating window renders its own root; closing it docks the panel back.
+    rt.focus_window(1);
+    rt.frame(vp);
+    assert_eq!(rt.ui.tree.children(rt.ui.root()).len(), 1);
+    rt.window_closed(1);
+    let t = Instant::now();
+    while rt.model().dock.floating(1).is_some() && t.elapsed() < Duration::from_secs(5) {
+        rt.tick();
+        std::thread::sleep(Duration::from_millis(2));
+    }
+    assert_eq!(rt.model().dock.main().unwrap().panels().len(), 2);
+}

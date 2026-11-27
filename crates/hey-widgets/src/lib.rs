@@ -6,6 +6,7 @@
 mod a11y;
 mod clipboard;
 mod controls;
+mod dock;
 mod list;
 mod overlay;
 mod scrollbar;
@@ -17,6 +18,7 @@ mod widgets;
 pub use a11y::{A11y, A11yAction, A11yNode, A11yTree, Role};
 pub use clipboard::{set_clipboard, SharedClipboard};
 pub use controls::{Checkbox, ProgressBar, Radio, RadioGroup, Slider, Toggle};
+pub use dock::{dock_view, Dock, DockNode, DropZone, PanelId};
 pub use list::List;
 pub use overlay::{Dropdown, Menu, Modal, Tooltip};
 pub use textarea::TextArea;
