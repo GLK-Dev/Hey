@@ -13,8 +13,33 @@
 //! ```
 
 mod audit;
+mod session;
 
 pub use audit::{audit_tree, Issue, IssueKind, MIN_TARGET};
+pub use session::{Entry, ParseError, Recording};
+
+/// A replayed frame hash differed from the recorded one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayMismatch {
+    /// Index into [`Recording::entries`].
+    pub entry: usize,
+    /// Recording timestamp in milliseconds.
+    pub ms: u64,
+    pub expected: u64,
+    pub actual: u64,
+}
+
+impl std::fmt::Display for ReplayMismatch {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "frame hash differs at entry {} ({} ms): recorded {:016x}, replayed {:016x}",
+            self.entry, self.ms, self.expected, self.actual
+        )
+    }
+}
+
+impl std::error::Error for ReplayMismatch {}
 
 use hey_core::{Color, Modifiers, MouseButton, MsgSink, NodeId, Point, Size, UiEvent};
 use hey_draw::{UiRenderer, Viewport};
@@ -31,6 +56,8 @@ pub struct Harness<Msg: 'static> {
     pub sink: MsgSink<Msg>,
     pub viewport: Size,
     fonts: Arc<Fonts>,
+    clock_ms: u64,
+    recording: Option<Recording>,
 }
 
 impl<Msg: 'static> Harness<Msg> {
@@ -45,7 +72,7 @@ impl<Msg: 'static> Harness<Msg> {
         let fonts = Arc::new(f);
         let sink = MsgSink::new();
         let ui = Ui::new(theme, fonts.clone(), vec![id], sink.clone());
-        let mut h = Self { ui, sink, viewport: Size::new(width, height), fonts };
+        let mut h = Self { ui, sink, viewport: Size::new(width, height), fonts, clock_ms: 0, recording: None };
         h.frame();
         h
     }
@@ -71,7 +98,75 @@ impl<Msg: 'static> Harness<Msg> {
     /// Dispatch a raw event; returns whether it was handled.
     pub fn send(&mut self, ev: UiEvent) -> bool {
         self.frame();
+        if let Some(rec) = &mut self.recording {
+            rec.push_event(self.clock_ms, ev.clone());
+        }
         self.ui.event(&ev)
+    }
+
+    /// Advance the simulated clock and animations (hover fades, ...) by `ms`.
+    pub fn advance(&mut self, ms: u64) {
+        self.clock_ms += ms;
+        self.ui.tick(ms as f32);
+        self.frame();
+    }
+
+    /// Start recording every event sent through the harness, with timestamps from [`advance`](Self::advance).
+    /// Events already sent are not included; start before the first interaction.
+    pub fn start_recording(&mut self) {
+        self.recording = Some(Recording::new());
+    }
+
+    /// Stop recording and return the session (empty if recording was never started).
+    pub fn stop_recording(&mut self) -> Recording {
+        self.recording.take().unwrap_or_default()
+    }
+
+    /// Hash of the current frame (FNV-1a of the CPU-rendered pixels): stable across platforms.
+    pub fn frame_hash(&mut self) -> u64 {
+        session::fnv1a(&self.render().data)
+    }
+
+    /// While recording, store the current frame hash so a replay can verify it.
+    pub fn checkpoint(&mut self) {
+        if self.recording.is_some() {
+            let h = self.frame_hash();
+            let ms = self.clock_ms;
+            if let Some(rec) = &mut self.recording {
+                rec.push_hash(ms, h);
+            }
+        }
+    }
+
+    /// Feed a recording through the UI at its original timing. Every `hash` checkpoint must match
+    /// the replayed frame; the first difference is returned.
+    pub fn replay(&mut self, rec: &Recording) -> Result<(), ReplayMismatch> {
+        for (i, (ms, entry)) in rec.entries.iter().enumerate() {
+            if *ms > self.clock_ms {
+                self.advance(*ms - self.clock_ms);
+            }
+            match entry {
+                Entry::Event(ev) => {
+                    if let UiEvent::Resize { width, height } = ev {
+                        self.viewport = Size::new(*width as f32, *height as f32);
+                    }
+                    self.send(ev.clone());
+                }
+                Entry::Hash(want) => {
+                    let got = self.frame_hash();
+                    if got != *want {
+                        return Err(ReplayMismatch { entry: i, ms: *ms, expected: *want, actual: got });
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Load a recording file and [`replay`](Self::replay) it.
+    pub fn replay_file(&mut self, path: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
+        let rec = Recording::load(path)?;
+        Ok(self.replay(&rec)?)
     }
 
     /// Move the pointer to the centre of `node`, then press and release.

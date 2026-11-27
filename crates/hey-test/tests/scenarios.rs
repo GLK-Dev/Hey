@@ -70,3 +70,61 @@ fn audit_passes_for_named_controls_and_flags_unnamed_ones() {
     assert_eq!(issues.len(), before + 1, "{issues:?}");
     assert!(issues.iter().any(|i| i.kind == IssueKind::Unnamed && i.label.is_empty()));
 }
+
+fn input_harness() -> Harness<String> {
+    let mut h = Harness::<String>::new(320.0, 80.0);
+    let root = h.ui.root();
+    TextInput::add(&mut h.ui, root, "", 240.0, Callback::new(|s| s));
+    h.frame();
+    h
+}
+
+#[test]
+fn recorded_session_replays_to_identical_frames() {
+    let mut a = input_harness();
+    a.start_recording();
+    let target = a.ui.tree.rect(a.ui.root());
+    a.advance(16);
+    a.click_at(hey_core::Point::new(target.x + 20.0, target.y + 20.0));
+    a.advance(120);
+    a.type_text("Hello, \u{43f}\u{440}\u{438}\u{432}\u{435}\u{442}");
+    a.advance(300);
+    a.undo();
+    a.checkpoint();
+    let rec = a.stop_recording();
+    let want = a.frame_hash();
+
+    // Through the text format and back, into a fresh UI.
+    let rec = hey_test::Recording::parse(&rec.to_text()).unwrap();
+    let mut b = input_harness();
+    b.replay(&rec).unwrap();
+    assert_eq!(b.frame_hash(), want);
+    assert_eq!(b.messages(), a.messages());
+}
+
+#[test]
+fn replay_reports_a_diverging_frame() {
+    let mut rec = hey_test::Recording::new();
+    rec.push_event(0, hey_core::UiEvent::Text("x".into()));
+    rec.push_hash(10, 1);
+    let err = input_harness().replay(&rec).unwrap_err();
+    assert_eq!((err.entry, err.ms, err.expected), (1, 10, 1));
+}
+
+/// A committed recording (written on first run, like goldens) stays replayable bit-exactly.
+#[test]
+fn committed_session_replays() {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/sessions/typing.hey-session");
+    if !std::path::Path::new(path).exists() || std::env::var_os("HEY_UPDATE_GOLDEN").is_some() {
+        let mut h = input_harness();
+        h.start_recording();
+        h.advance(10);
+        h.click_at(hey_core::Point::new(30.0, 30.0));
+        h.advance(50);
+        h.type_text("Hey");
+        h.checkpoint();
+        std::fs::create_dir_all(std::path::Path::new(path).parent().unwrap()).unwrap();
+        h.stop_recording().save(path).unwrap();
+    }
+    input_harness().replay_file(path).unwrap();
+}
