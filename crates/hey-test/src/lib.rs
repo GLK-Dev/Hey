@@ -13,10 +13,9 @@
 //! ```
 
 mod audit;
-mod session;
 
 pub use audit::{audit_tree, Issue, IssueKind, MIN_TARGET};
-pub use session::{Entry, ParseError, Recording};
+pub use hey_core::{Entry, ParseError, Recording};
 
 /// A replayed frame hash differed from the recorded one.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -124,7 +123,7 @@ impl<Msg: 'static> Harness<Msg> {
 
     /// Hash of the current frame (FNV-1a of the CPU-rendered pixels): stable across platforms.
     pub fn frame_hash(&mut self) -> u64 {
-        session::fnv1a(&self.render().data)
+        hey_core::fnv1a(&self.render().data)
     }
 
     /// While recording, store the current frame hash so a replay can verify it.
@@ -158,6 +157,7 @@ impl<Msg: 'static> Harness<Msg> {
                         return Err(ReplayMismatch { entry: i, ms: *ms, expected: *want, actual: got });
                     }
                 }
+                _ => {}
             }
         }
         Ok(())

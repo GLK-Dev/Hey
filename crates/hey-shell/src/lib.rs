@@ -249,6 +249,50 @@ fn is_switch_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
         && mods.shift
 }
 
+/// Dev hotkey Ctrl+Shift+F11: starts or stops recording the window's input to a `.hey-session` file.
+fn is_record_hotkey(event: &WindowEvent, mods: hey_core::Modifiers) -> bool {
+    matches!(event, WindowEvent::KeyboardInput { event: k, .. }
+        if k.state == ElementState::Pressed && !k.repeat && k.logical_key == Key::Named(NamedKey::F11))
+        && mods.ctrl
+        && mods.shift
+}
+
+/// Output path for a finished recording: `$HEY_SESSION_FILE`, else `hey-<unix seconds>.hey-session`.
+fn session_path() -> std::path::PathBuf {
+    if let Some(p) = std::env::var_os("HEY_SESSION_FILE") {
+        return p.into();
+    }
+    let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+    format!("hey-{secs}.hey-session").into()
+}
+
+impl Win {
+    /// Start a capture (seeded with the current size and scale so a replay lays out identically),
+    /// or stop it and write the file.
+    fn toggle_recording(&mut self) {
+        if let Some((_, rec)) = self.recording.take() {
+            let path = session_path();
+            match rec.save(&path) {
+                Ok(()) => eprintln!("hey: session saved to {}", path.display()),
+                Err(e) => eprintln!("hey: cannot save session to {}: {e}", path.display()),
+            }
+            return;
+        }
+        let sz = self.gfx.window.inner_size();
+        let mut rec = hey_core::Recording::new();
+        rec.push_event(0, UiEvent::Resize { width: sz.width, height: sz.height });
+        rec.push_event(0, UiEvent::ScaleFactor(self.gfx.window.scale_factor()));
+        self.recording = Some((std::time::Instant::now(), rec));
+        eprintln!("hey: recording session (Ctrl+Shift+F11 to stop)");
+    }
+
+    fn record(&mut self, ev: &UiEvent) {
+        if let Some((t0, rec)) = &mut self.recording {
+            rec.push_event(t0.elapsed().as_millis() as u64, ev.clone());
+        }
+    }
+}
+
 impl Gfx {
     fn is_gpu(&self) -> bool {
         #[cfg(feature = "gpu")]
@@ -307,6 +351,8 @@ struct Win {
     list: DisplayList,
     input: InputState,
     adapter: accesskit_winit::Adapter,
+    /// Live session capture (Ctrl+Shift+F11), see [`is_record_hotkey`].
+    recording: Option<(std::time::Instant, hey_core::Recording)>,
 }
 
 struct Shell<A> {
@@ -361,6 +407,7 @@ impl<A: ShellApp> Shell<A> {
             list: DisplayList::new(),
             input: InputState::default(),
             adapter,
+            recording: None,
         };
         self.windows.insert(id, win);
         true
@@ -439,9 +486,14 @@ impl<A: ShellApp> ApplicationHandler<a11y::UserEvent> for Shell<A> {
             g.gfx.switch_backend(g.clear, self.app.fonts(), vsync_setting(g.vsync));
             return;
         }
+        if is_record_hotkey(&event, g.input.mods) {
+            g.toggle_recording();
+            return;
+        }
         let mut redraw = false;
         g.input.scale = g.gfx.window.scale_factor();
         for ev in g.input.translate(&event) {
+            g.record(&ev);
             redraw |= self.app.event(ev);
         }
         g.gfx.window.set_cursor(cursor_icon(self.app.cursor()));

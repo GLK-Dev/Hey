@@ -14,7 +14,7 @@
 //! Each line is `<ms since start> <kind> <args>`. Strings escape `\`, space, newline, tab and
 //! carriage return. `hash` lines are checkpoints: the FNV-1a hash of the rendered frame.
 
-use hey_core::{Modifiers, MouseButton, Point, UiEvent};
+use crate::{Modifiers, MouseButton, Point, UiEvent};
 use std::fmt::Write as _;
 
 const HEADER: &str = "hey-session 1";
@@ -217,7 +217,6 @@ fn encode(ev: &UiEvent) -> Option<String> {
         UiEvent::FileHovered(p) => format!("filehover {}", esc(&p.to_string_lossy())),
         UiEvent::FileDropped(p) => format!("filedrop {}", esc(&p.to_string_lossy())),
         UiEvent::FileHoverCancelled => "filecancel".into(),
-        _ => return None,
     })
 }
 
@@ -249,7 +248,7 @@ fn decode(kind: &str, a: &[&str]) -> Option<Entry> {
 }
 
 /// FNV-1a over raw bytes: stable across platforms and Rust versions (unlike `DefaultHasher`).
-pub(crate) fn fnv1a(data: &[u8]) -> u64 {
+pub fn fnv1a(data: &[u8]) -> u64 {
     let mut h = 0xcbf2_9ce4_8422_2325u64;
     for &b in data {
         h ^= u64::from(b);

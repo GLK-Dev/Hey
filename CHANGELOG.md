@@ -8,6 +8,7 @@ All notable changes are documented here. The format is based on [Keep a Changelo
 - Text scale applied after the first build (system `TextScaleFactor` at window creation, or a live change) left widgets sized for 100%: `Ui::reconcile` kept leaves whose props were unchanged. A size-affecting `set_theme` (font size or scale) now rebuilds leaves, with state and focus carried over; a dark/light switch still keeps them.
 
 ### Added
+- Live session capture in `hey-shell`: Ctrl+Shift+F11 starts and stops recording a window's input; the `.hey-session` file goes to `$HEY_SESSION_FILE` or `hey-<time>.hey-session` and replays with `Harness::replay_file`. The format (`Recording`, `Entry`, `ParseError`, `fnv1a`) moved to `hey_core::session`; `hey-test` re-exports it.
 - Session replay in `hey-test`: `Harness::start_recording`/`stop_recording`/`advance`/`checkpoint`, `Recording` (line-based text format, `save`/`load`) and `Harness::replay`/`replay_file`. Checkpoints store an FNV-1a hash of the CPU frame, so a recorded bug replays headlessly and bit-exactly; `tests/sessions/typing.hey-session` runs on Windows and Linux CI.
 - `Harness::audit` and `audit_tree` in `hey-test`: accessibility lints for unnamed, smaller than 24 px or keyboard-unreachable controls (`Issue`, `IssueKind`).
 - `hey-shell` feature `gpu` (default on): build with `default-features = false` for a CPU-only binary without wgpu (counter: 5.2 MB to 2.0 MB with the release profile in `Cargo.toml`).
